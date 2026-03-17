@@ -1,3 +1,9 @@
+use jethe::lexer;
+
 fn main() {
-    println!("Hello, world!");
+    let test_code = "(+ 1 2)";
+
+    let tokens = lexer::lex(test_code);
+
+    println!("{:?}", tokens);
 }
