@@ -1,64 +1,49 @@
 #[derive(Debug, PartialEq)]
 pub enum Token<'a> {
     LeftParen,
+    RightParen,
+    Quote,
     Symbol(&'a str),
-    RigthParen,
 }
-
-const SPEACIAL_CHARS: [char; 5] = ['(', ')', '\'', '`', ','];
 
 pub fn lex<'a>(code: &'a str) -> Vec<Token<'a>> {
     let mut tokens = vec![];
 
     let mut last = 0;
     let mut building_string = false;
-    for (i, c) in code.chars().enumerate() {
-        if building_string {
-            if c != '"' {
-                continue;
-            }
-            building_string = false;
 
-            let sym = Token::Symbol(&code[last..i + 1]);
-            tokens.push(sym);
-            last = i + 1;
+    for (offset, c) in code.char_indices() {
+        if building_string && c != '"' {
             continue;
         }
 
-        if c == '"' {
-            building_string = true;
-        }
-
-        // pinch off or skip
-        if c.is_whitespace() {
-            if last == i {
-                last = i + 1;
+        let (buf_end, next_token) = match c {
+            '"' if !building_string => {
+                building_string = true;
                 continue;
             }
-
-            let sym = Token::Symbol(&code[last..i]);
-            tokens.push(sym);
-            last = i + 1;
-            continue;
-        }
-
-        // pinch off the buffered chars and get the new char
-        if SPEACIAL_CHARS.contains(&c) {
-            let token = char_transform(&code[i..i + 1]);
-
-            if last == i {
-                last = i + 1;
-                tokens.push(token);
-                continue;
+            '"' if building_string => {
+                building_string = false;
+                (offset + 1, None)
             }
+            '(' => (offset, Some(Token::LeftParen)),
+            ')' => (offset, Some(Token::RightParen)),
+            '\'' => (offset, Some(Token::Quote)),
+            c if c.is_whitespace() => (offset, None),
+            _ => continue,
+        };
 
-            let sym = Token::Symbol(&code[last..i]);
-            tokens.push(sym);
-
-            tokens.push(token);
-
-            last = i + 1;
+        // pinch off buffer
+        if last != buf_end {
+            tokens.push(Token::Symbol(&code[last..buf_end]));
         }
+
+        // grab the token
+        if let Some(t) = next_token {
+            tokens.push(t);
+        }
+
+        last = offset + c.len_utf8();
     }
 
     if last != code.len() {
@@ -67,17 +52,6 @@ pub fn lex<'a>(code: &'a str) -> Vec<Token<'a>> {
     }
 
     return tokens;
-}
-
-fn char_transform<'a>(glyph: &'a str) -> Token<'a> {
-    if glyph.len() != 1 {
-        panic!("a real string shouldn't be fed to this function")
-    }
-    match glyph {
-        "(" => Token::LeftParen,
-        ")" => Token::RigthParen,
-        _ => Token::Symbol(glyph),
-    }
 }
 
 #[cfg(test)]
@@ -112,7 +86,7 @@ mod tests {
 
     #[test]
     fn empty_parens() {
-        assert_eq!(lex("()"), vec![Token::LeftParen, Token::RigthParen]);
+        assert_eq!(lex("()"), vec![Token::LeftParen, Token::RightParen]);
     }
 
     // --- simple expressions ---
@@ -126,7 +100,7 @@ mod tests {
                 sym("+"),
                 Token::Symbol("1"),
                 Token::Symbol("2"),
-                Token::RigthParen,
+                Token::RightParen,
             ]
         );
     }
@@ -140,7 +114,7 @@ mod tests {
                 sym("define"),
                 sym("x"),
                 Token::Symbol("10"),
-                Token::RigthParen,
+                Token::RightParen,
             ]
         );
     }
@@ -156,7 +130,7 @@ mod tests {
                 sym("+"),
                 Token::Symbol("1"),
                 Token::Symbol("2"),
-                Token::RigthParen,
+                Token::RightParen,
             ]
         );
     }
@@ -170,7 +144,7 @@ mod tests {
                 sym("+"),
                 Token::Symbol("1"),
                 Token::Symbol("2"),
-                Token::RigthParen,
+                Token::RightParen,
             ]
         );
     }
@@ -188,9 +162,9 @@ mod tests {
                 sym("-"),
                 Token::Symbol("3"),
                 Token::Symbol("1"),
-                Token::RigthParen,
+                Token::RightParen,
                 Token::Symbol("2"),
-                Token::RigthParen,
+                Token::RightParen,
             ]
         );
     }
@@ -206,9 +180,9 @@ mod tests {
                 sym("b"),
                 Token::LeftParen,
                 sym("c"),
-                Token::RigthParen,
-                Token::RigthParen,
-                Token::RigthParen,
+                Token::RightParen,
+                Token::RightParen,
+                Token::RightParen,
             ]
         );
     }
@@ -268,7 +242,7 @@ mod tests {
                 sym("+"),
                 Token::Symbol("1"),
                 Token::Symbol("2"),
-                Token::RigthParen,
+                Token::RightParen,
             ]
         );
     }
@@ -283,7 +257,7 @@ mod tests {
                 sym("+"),
                 Token::Symbol("1"),
                 Token::Symbol("2"),
-                Token::RigthParen,
+                Token::RightParen,
             ]
         );
     }
@@ -301,7 +275,7 @@ mod tests {
                 Token::LeftParen,
                 sym("+"),
                 Token::Symbol("1"),
-                Token::RigthParen,
+                Token::RightParen,
             ]
         );
     }
@@ -325,7 +299,22 @@ mod tests {
                 Token::LeftParen,
                 sym("print"),
                 sym("\"hello world\""),
-                Token::RigthParen,
+                Token::RightParen,
+            ]
+        );
+    }
+
+    #[test]
+    fn two_string_literals_with_spaces() {
+        // the space causes "hello world" to be split into three tokens
+        assert_eq!(
+            lex("(print \"hello world\" \"hello world\")"),
+            vec![
+                Token::LeftParen,
+                sym("print"),
+                sym("\"hello world\""),
+                sym("\"hello world\""),
+                Token::RightParen,
             ]
         );
     }
@@ -341,6 +330,60 @@ mod tests {
         assert_eq!(lex("\"(not a paren)\""), vec![sym("\"(not a paren)\"")]);
     }
 
+    // --- known failures: quote ---
+
+    #[test]
+    fn quote_atom() {
+        assert_eq!(lex("'x"), vec![Token::Quote, sym("x")]);
+    }
+
+    #[test]
+    fn quote_number() {
+        assert_eq!(lex("'42"), vec![Token::Quote, sym("42")]);
+    }
+
+    #[test]
+    fn quote_list() {
+        assert_eq!(
+            lex("'(+ 1 2)"),
+            vec![
+                Token::Quote,
+                Token::LeftParen,
+                sym("+"),
+                sym("1"),
+                sym("2"),
+                Token::RightParen,
+            ]
+        );
+    }
+
+    #[test]
+    fn quote_inside_expression() {
+        assert_eq!(
+            lex("(eq 'a 'b)"),
+            vec![
+                Token::LeftParen,
+                sym("eq"),
+                Token::Quote,
+                sym("a"),
+                Token::Quote,
+                sym("b"),
+                Token::RightParen,
+            ]
+        );
+    }
+
+    #[test]
+    fn double_quote_shorthand() {
+        // ''x is (quote (quote x))
+        assert_eq!(lex("''x"), vec![Token::Quote, Token::Quote, sym("x")]);
+    }
+
+    #[test]
+    fn quote_string() {
+        assert_eq!(lex("'\"hello\""), vec![Token::Quote, sym("\"hello\"")]);
+    }
+
     // --- multiple top-level forms ---
 
     #[test]
@@ -352,12 +395,12 @@ mod tests {
                 sym("+"),
                 Token::Symbol("1"),
                 Token::Symbol("2"),
-                Token::RigthParen,
+                Token::RightParen,
                 Token::LeftParen,
                 sym("-"),
                 Token::Symbol("3"),
                 Token::Symbol("4"),
-                Token::RigthParen,
+                Token::RightParen,
             ]
         );
     }
