@@ -1,5 +1,3 @@
-use crate::split_keeping_delimiter::SplitKeepingDelimiterExt;
-
 #[derive(Debug, PartialEq)]
 pub enum Token<'a> {
     LeftParen,
@@ -7,22 +5,79 @@ pub enum Token<'a> {
     RigthParen,
 }
 
-impl<'a> Token<'a> {
-    fn from_str(s: &'a str) -> Self {
-        match s {
-            "(" => Self::LeftParen,
-            ")" => Self::RigthParen,
-            _ => Self::Symbol(s),
-        }
-    }
-}
+const SPEACIAL_CHARS: [char; 5] = ['(', ')', '\'', '`', ','];
 
 pub fn lex<'a>(code: &'a str) -> Vec<Token<'a>> {
-    code.split_keeping_delimiter(&[' ', '\n', '(', ')'])
-        .map(|s| s.trim())
-        .filter(|s| !s.is_empty())
-        .map(|s| Token::from_str(s))
-        .collect()
+    let mut tokens = vec![];
+
+    let mut last = 0;
+    let mut building_string = false;
+    for (i, c) in code.chars().enumerate() {
+        if building_string {
+            if c != '"' {
+                continue;
+            }
+            building_string = false;
+
+            let sym = Token::Symbol(&code[last..i + 1]);
+            tokens.push(sym);
+            last = i + 1;
+            continue;
+        }
+
+        if c == '"' {
+            building_string = true;
+        }
+
+        // pinch off or skip
+        if c.is_whitespace() {
+            if last == i {
+                last = i + 1;
+                continue;
+            }
+
+            let sym = Token::Symbol(&code[last..i]);
+            tokens.push(sym);
+            last = i + 1;
+            continue;
+        }
+
+        // pinch off the buffered chars and get the new char
+        if SPEACIAL_CHARS.contains(&c) {
+            let token = char_transform(&code[i..i + 1]);
+
+            if last == i {
+                last = i + 1;
+                tokens.push(token);
+                continue;
+            }
+
+            let sym = Token::Symbol(&code[last..i]);
+            tokens.push(sym);
+
+            tokens.push(token);
+
+            last = i + 1;
+        }
+    }
+
+    if last != code.len() {
+        let sym = Token::Symbol(&code[last..]);
+        tokens.push(sym);
+    }
+
+    return tokens;
+}
+
+fn char_transform<'a>(glyph: &'a str) -> Token<'a> {
+    if glyph.len() != 1 {
+        panic!("a real string shouldn't be fed to this function")
+    }
+    match glyph {
+        "(" => Token::LeftParen,
+        ")" => Token::RigthParen,
+        _ => Token::Symbol(glyph),
+    }
 }
 
 #[cfg(test)]
