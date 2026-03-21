@@ -7,25 +7,32 @@ pub enum Token<'a> {
 }
 
 pub fn lex<'a>(code: &'a str) -> Vec<Token<'a>> {
-    let mut tokens = vec![];
+    let mut tokens = Vec::with_capacity(code.len() / 4);
 
     let mut last = 0;
     let mut building_string = false;
+    let mut escape = false;
 
     for (offset, c) in code.char_indices() {
-        if building_string && c != '"' {
+        if escape {
+            escape = false;
             continue;
         }
 
         let (buf_end, next_token) = match c {
-            '"' if !building_string => {
-                building_string = true;
-                continue;
-            }
-            '"' if building_string => {
+            '"' => {
+                if !building_string {
+                    building_string = true;
+                    continue;
+                }
                 building_string = false;
                 (offset + 1, None)
             }
+            '\\' if building_string => {
+                escape = true;
+                continue;
+            }
+            _ if building_string => continue,
             '(' => (offset, Some(Token::LeftParen)),
             ')' => (offset, Some(Token::RightParen)),
             '\'' => (offset, Some(Token::Quote)),
@@ -382,6 +389,83 @@ mod tests {
     #[test]
     fn quote_string() {
         assert_eq!(lex("'\"hello\""), vec![Token::Quote, sym("\"hello\"")]);
+    }
+
+    // --- known failures: escape sequences ---
+    // the lexer must not treat a \" inside a string as the closing quote.
+    // all assertions use the raw slice including surrounding quotes and backslashes,
+    // since Symbol is a &str into the source — escape processing is the evaluator's job.
+
+    #[test]
+    fn escaped_quote_in_string() {
+        // "say \"hi\"" should be one symbol, not split at the inner quotes
+        assert_eq!(lex(r#""say \"hi\"""#), vec![sym(r#""say \"hi\"""#)]);
+    }
+
+    #[test]
+    fn escaped_backslash_in_string() {
+        // "foo\\bar" — the \\ is a literal backslash, should not split
+        assert_eq!(lex(r#""foo\\bar""#), vec![sym(r#""foo\\bar""#)]);
+    }
+
+    #[test]
+    fn escaped_quote_at_end_of_string() {
+        // "hello\"" — the \" is escaped, so this string is actually unclosed,
+        // but "hello\\" ends with an escaped backslash and a real closing quote
+        assert_eq!(lex(r#""hello\\""#), vec![sym(r#""hello\\""#)]);
+    }
+
+    #[test]
+    fn string_with_only_escaped_quote() {
+        // "\"" — one escaped quote inside, not a closed empty string followed by junk
+        assert_eq!(lex(r#""\"""#), vec![sym(r#""\"""#)]);
+    }
+
+    #[test]
+    fn escaped_quote_does_not_break_surrounding_tokens() {
+        assert_eq!(
+            lex(r#"(print "say \"hi\"")"#),
+            vec![
+                Token::LeftParen,
+                sym("print"),
+                sym(r#""say \"hi\"""#),
+                Token::RightParen,
+            ]
+        );
+    }
+
+    // --- known failures: backslash outside strings ---
+    // escape is not scoped to building_string, so \ outside a string
+    // silently consumes the following character as if it were escaped.
+
+    #[test]
+    fn backslash_before_quote_shorthand() {
+        // \'x — backslash outside a string should not eat the Quote token
+        assert_eq!(lex(r"\'x"), vec![sym(r"\"), Token::Quote, sym("x")]);
+    }
+
+    #[test]
+    fn backslash_before_left_paren() {
+        // \( — backslash outside a string should not eat the paren
+        assert_eq!(
+            lex(r"\(foo)"),
+            vec![sym(r"\"), Token::LeftParen, sym("foo"), Token::RightParen]
+        );
+    }
+
+    #[test]
+    fn backslash_as_symbol_character() {
+        // a lone \ with whitespace on both sides is just a symbol
+        assert_eq!(
+            lex(r"(foo \ bar)"),
+            vec![
+                Token::LeftParen,
+                sym("foo"),
+                sym(r"\"),
+                sym("bar"),
+                Token::RightParen,
+            ]
+        );
     }
 
     // --- multiple top-level forms ---
