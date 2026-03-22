@@ -26,46 +26,30 @@ pub fn parse_expr<'a>(tokens: &'a [Token<'a>]) -> ParseResult<'a> {
         return Err(ParseError::EmptyInput);
     }
 
-    if let [
-        Token {
-            kind: TokenKind::Symbol(s),
-            span,
-        },
-        rest @ ..,
-    ] = tokens
-    {
-        return Ok((Expr::Atom(s, *span), rest));
-    }
+    let first = &tokens[0];
 
-    let first_token = &tokens[0];
-    match first_token.kind {
-        TokenKind::LeftParen => parse_list(&tokens[1..]),
-        TokenKind::Quote => {
-            if tokens.len() < 2 {
-                return Err(ParseError::UnexpectedEof {
-                    span: first_token.span,
-                });
-            }
-            let (expr, rest) = parse_expr(&tokens[1..])?;
-            Ok((
-                Expr::List(
-                    vec![Expr::Atom("quote", first_token.span), expr],
-                    first_token.span,
-                ),
-                rest,
-            ))
+    match first.kind {
+        TokenKind::Symbol(s) => {
+            let span = first.span;
+            let rest = &tokens[1..];
+            return Ok((Expr::Atom(s, span), rest));
         }
-        _ => Err(ParseError::UnexpectedToken {
-            span: first_token.span,
-        }),
+        TokenKind::Quote if tokens.len() < 2 => Err(ParseError::UnexpectedEof { span: first.span }),
+        TokenKind::Quote => {
+            let (expr, rest) = parse_expr(&tokens[1..])?;
+            let quote = Expr::Atom("quote", first.span);
+            Ok((Expr::List(vec![quote, expr], first.span), rest))
+        }
+        TokenKind::LeftParen => parse_list(&tokens[1..]),
+        _ => Err(ParseError::UnexpectedToken { span: first.span }),
     }
 }
 
 fn parse_list<'a>(tokens: &'a [Token<'a>]) -> ParseResult<'a> {
+    let span = tokens[0].span;
+
     let mut list = vec![];
     let mut i = 0;
-
-    let span = tokens[0].span;
 
     loop {
         if i >= tokens.len() {

@@ -75,9 +75,8 @@ pub fn lex<'a>(code: &'a str) -> Vec<Token<'a>> {
 
         // pinch off buffer
         if last != buf_end {
-            let kind = TokenKind::Symbol(&code[last..buf_end]);
             let token = Token {
-                kind,
+                kind: TokenKind::Symbol(&code[last..buf_end]),
                 span: Span {
                     line,
                     column: token_start_col,
@@ -98,10 +97,10 @@ pub fn lex<'a>(code: &'a str) -> Vec<Token<'a>> {
         last = offset + c.len_utf8();
     }
 
+    // pinch off what is left
     if last != code.len() {
-        let kind = TokenKind::Symbol(&code[last..]);
         let token = Token {
-            kind,
+            kind: TokenKind::Symbol(&code[last..]),
             span: Span {
                 line,
                 column: token_start_col,
@@ -110,7 +109,7 @@ pub fn lex<'a>(code: &'a str) -> Vec<Token<'a>> {
         tokens.push(token);
     }
 
-    return tokens;
+    tokens
 }
 
 #[cfg(test)]
