@@ -1,0 +1,31 @@
+# jethe
+
+A Lisp interpreter written in Rust, built as a learning project for exploring programming language implementation.
+
+## Roadmap
+
+### Frontend
+- [x] Lexer — tokenizes source into `LeftParen`, `RightParen`, `Quote`, `Symbol`
+- [x] Source spans — line/column attached to every token
+- [x] String literals — space-safe quoted strings
+- [x] Escape sequences — `\"` and `\\` inside strings
+- [x] Parser — recursive descent, produces `Expr::Atom` / `Expr::List`
+- [x] Quote expansion — `'x` → `(quote x)` at parse time
+- [x] Parse errors with source location
+- [ ] Lexer iterator
+- [ ] Arena allocation ast
+
+### Evaluator
+- [ ] Value type design
+- [ ] Basic eval — literals, arithmetic, `quote`
+- [ ] Environment — `define`, variable lookup
+- [ ] Lambdas and closures
+- [ ] Tail call optimization
+- [ ] Macros — `define-macro`, quasiquote/unquote
+
+### Runtime
+- [ ] Standard library — `car`, `cdr`, `cons`, `map`, etc.
+- [ ] REPL
+- [ ] File loader — cursor-based multi-expression evaluation
+- [ ] Runtime errors with source location
+
