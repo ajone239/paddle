@@ -1,12 +1,13 @@
-use std::io;
+use std::io::{Write, stdin, stdout};
 
 use anyhow::Result;
 use jethe::{eval::eval, lexer, parser};
 
 fn main() -> Result<()> {
-    let stdin = io::stdin();
+    let stdin = stdin();
 
     print!("> ");
+    stdout().flush().unwrap();
     for line in stdin.lines() {
         let line = line?;
 
@@ -18,6 +19,7 @@ fn main() -> Result<()> {
 
         println!("{:?}", val);
         print!("> ");
+        stdout().flush().unwrap();
     }
 
     Ok(())

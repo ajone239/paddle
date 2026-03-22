@@ -1,45 +1,47 @@
+use core::panic;
+
 use crate::parser::Expr;
 
 #[derive(Debug, PartialEq)]
-pub enum Value<'a> {
+pub enum Value {
     Nil,
     Bool(bool),
     Num(f64),
-    Str(&'a str),
-    List(Vec<Value<'a>>),
+    Symbol(String),
+    Str(String),
+    List(Vec<Value>),
 }
 
-pub fn eval<'a>(ast: &Expr<'a>) -> Value<'a> {
+pub fn eval<'a>(ast: &Expr<'a>) -> Value {
     match ast {
         Expr::Atom(atom, _) => resolve(atom),
         Expr::List(list, _) => apply(&list),
     }
 }
 
-fn apply<'a>(list: &[Expr<'a>]) -> Value<'a> {
+fn apply<'a>(list: &[Expr<'a>]) -> Value {
     if list.is_empty() {
         return Value::Nil;
     }
 
-    let func = list.first().unwrap();
+    let vals: Vec<_> = list.iter().map(|e| eval(e)).collect();
+    let func = &vals[0];
+    let args = &vals[1..];
 
-    let args: Vec<_> = list.iter().skip(1).map(|e| eval(e)).collect();
-
-    call(func, &args)
+    call(func, args)
 }
 
-fn call<'a>(func: &Expr<'_>, args: &[Value<'a>]) -> Value<'a> {
-    let Expr::Atom(s, _) = func else { panic!() };
+fn call<'a>(func: &Value, args: &[Value]) -> Value {
+    let mut args = args.iter().map(|v| match v {
+        Value::Num(n) => n,
+        _ => todo!(),
+    });
 
-    let mut args = args
-        .iter()
-        .filter(|a| matches!(a, Value::Num(_)))
-        .map(|v| match v {
-            Value::Num(n) => n,
-            _ => todo!(),
-        });
+    let Value::Symbol(s) = func else {
+        panic!("bad expr head")
+    };
 
-    let num = match *s {
+    let num = match s.as_str() {
         "+" => args.fold(0.0, |acc, x| acc + x),
         "*" => args.fold(1.0, |acc, x| acc * x),
         "-" => {
@@ -55,10 +57,16 @@ fn call<'a>(func: &Expr<'_>, args: &[Value<'a>]) -> Value<'a> {
     Value::Num(num)
 }
 
-fn resolve<'a>(atom: &'a str) -> Value<'a> {
+fn resolve<'a>(atom: &'a str) -> Value {
     if let Ok(num) = atom.parse::<f64>() {
         return Value::Num(num);
     }
 
-    return Value::Str(atom);
+    match atom {
+        "nil" => Value::Nil,
+        "#t" => Value::Bool(true),
+        "#f" => Value::Bool(false),
+        "+" | "*" | "-" | "/" => Value::Symbol(atom.to_owned()),
+        _ => Value::Str(atom.to_owned()),
+    }
 }
