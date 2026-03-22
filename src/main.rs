@@ -1,15 +1,24 @@
+use std::io;
+
 use anyhow::Result;
-use jethe::{lexer, parser};
+use jethe::{eval::eval, lexer, parser};
 
 fn main() -> Result<()> {
-    let test_code = "(+ 1 2)";
+    let stdin = io::stdin();
 
-    let tokens = lexer::lex(test_code);
+    print!("> ");
+    for line in stdin.lines() {
+        let line = line?;
 
-    let (ast, rest) = parser::parse_expr(&tokens)?;
+        let tokens = lexer::lex(&line);
 
-    println!("{:?}", ast);
-    println!("{:?}", rest);
+        let (ast, _) = parser::parse_expr(&tokens)?;
+
+        let val = eval(&ast);
+
+        println!("{:?}", val);
+        print!("> ");
+    }
 
     Ok(())
 }
