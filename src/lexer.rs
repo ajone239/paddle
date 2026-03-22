@@ -1,5 +1,23 @@
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Span {
+    pub line: usize,
+    pub column: usize,
+}
+
+impl std::fmt::Display for Span {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}:{}", self.line, self.column)
+    }
+}
+
 #[derive(Debug, PartialEq)]
-pub enum Token<'a> {
+pub struct Token<'a> {
+    pub kind: TokenKind<'a>,
+    pub span: Span,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum TokenKind<'a> {
     LeftParen,
     RightParen,
     Quote,
@@ -9,17 +27,22 @@ pub enum Token<'a> {
 pub fn lex<'a>(code: &'a str) -> Vec<Token<'a>> {
     let mut tokens = Vec::with_capacity(code.len() / 4);
 
+    let mut line = 0;
+    let mut column = 0;
+    let mut token_start_col = 0;
     let mut last = 0;
     let mut building_string = false;
     let mut escape = false;
 
     for (offset, c) in code.char_indices() {
+        column += 1;
+
         if escape {
             escape = false;
             continue;
         }
 
-        let (buf_end, next_token) = match c {
+        let (buf_end, next_kind) = match c {
             '"' => {
                 if !building_string {
                     building_string = true;
@@ -33,29 +56,58 @@ pub fn lex<'a>(code: &'a str) -> Vec<Token<'a>> {
                 continue;
             }
             _ if building_string => continue,
-            '(' => (offset, Some(Token::LeftParen)),
-            ')' => (offset, Some(Token::RightParen)),
-            '\'' => (offset, Some(Token::Quote)),
+            '(' => (offset, Some(TokenKind::LeftParen)),
+            ')' => (offset, Some(TokenKind::RightParen)),
+            '\'' => (offset, Some(TokenKind::Quote)),
+            c if c == '\n' => {
+                line += 1;
+                column = 0;
+                (offset, None)
+            }
             c if c.is_whitespace() => (offset, None),
-            _ => continue,
+            _ => {
+                if last == offset {
+                    token_start_col = column;
+                }
+                continue;
+            }
         };
 
         // pinch off buffer
         if last != buf_end {
-            tokens.push(Token::Symbol(&code[last..buf_end]));
+            let kind = TokenKind::Symbol(&code[last..buf_end]);
+            let token = Token {
+                kind,
+                span: Span {
+                    line,
+                    column: token_start_col,
+                },
+            };
+            tokens.push(token);
         }
 
         // grab the token
-        if let Some(t) = next_token {
-            tokens.push(t);
+        if let Some(kind) = next_kind {
+            let token = Token {
+                kind,
+                span: Span { line, column },
+            };
+            tokens.push(token);
         }
 
         last = offset + c.len_utf8();
     }
 
     if last != code.len() {
-        let sym = Token::Symbol(&code[last..]);
-        tokens.push(sym);
+        let kind = TokenKind::Symbol(&code[last..]);
+        let token = Token {
+            kind,
+            span: Span {
+                line,
+                column: token_start_col,
+            },
+        };
+        tokens.push(token);
     }
 
     return tokens;
@@ -65,8 +117,19 @@ pub fn lex<'a>(code: &'a str) -> Vec<Token<'a>> {
 mod tests {
     use super::*;
 
-    fn sym(s: &str) -> Token<'_> {
-        Token::Symbol(s)
+    fn kinds(tokens: Vec<Token>) -> Vec<TokenKind> {
+        tokens.into_iter().map(|t| t.kind).collect()
+    }
+
+    fn tok(kind: TokenKind, line: usize, column: usize) -> Token {
+        Token {
+            kind,
+            span: Span { line, column },
+        }
+    }
+
+    fn sym(s: &str) -> TokenKind<'_> {
+        TokenKind::Symbol(s)
     }
 
     // --- basic structure ---
@@ -83,17 +146,20 @@ mod tests {
 
     #[test]
     fn single_number() {
-        assert_eq!(lex("42"), vec![Token::Symbol("42")]);
+        assert_eq!(kinds(lex("42")), vec![sym("42")]);
     }
 
     #[test]
     fn single_symbol() {
-        assert_eq!(lex("foo"), vec![sym("foo")]);
+        assert_eq!(kinds(lex("foo")), vec![sym("foo")]);
     }
 
     #[test]
     fn empty_parens() {
-        assert_eq!(lex("()"), vec![Token::LeftParen, Token::RightParen]);
+        assert_eq!(
+            kinds(lex("()")),
+            vec![TokenKind::LeftParen, TokenKind::RightParen]
+        );
     }
 
     // --- simple expressions ---
@@ -101,13 +167,13 @@ mod tests {
     #[test]
     fn simple_addition() {
         assert_eq!(
-            lex("(+ 1 2)"),
+            kinds(lex("(+ 1 2)")),
             vec![
-                Token::LeftParen,
+                TokenKind::LeftParen,
                 sym("+"),
-                Token::Symbol("1"),
-                Token::Symbol("2"),
-                Token::RightParen,
+                sym("1"),
+                sym("2"),
+                TokenKind::RightParen
             ]
         );
     }
@@ -115,13 +181,13 @@ mod tests {
     #[test]
     fn define_expression() {
         assert_eq!(
-            lex("(define x 10)"),
+            kinds(lex("(define x 10)")),
             vec![
-                Token::LeftParen,
+                TokenKind::LeftParen,
                 sym("define"),
                 sym("x"),
-                Token::Symbol("10"),
-                Token::RightParen,
+                sym("10"),
+                TokenKind::RightParen
             ]
         );
     }
@@ -131,13 +197,13 @@ mod tests {
     #[test]
     fn extra_spaces_between_tokens() {
         assert_eq!(
-            lex("(+   1   2)"),
+            kinds(lex("(+   1   2)")),
             vec![
-                Token::LeftParen,
+                TokenKind::LeftParen,
                 sym("+"),
-                Token::Symbol("1"),
-                Token::Symbol("2"),
-                Token::RightParen,
+                sym("1"),
+                sym("2"),
+                TokenKind::RightParen
             ]
         );
     }
@@ -145,13 +211,13 @@ mod tests {
     #[test]
     fn newlines_between_tokens() {
         assert_eq!(
-            lex("(+\n1\n2)"),
+            kinds(lex("(+\n1\n2)")),
             vec![
-                Token::LeftParen,
+                TokenKind::LeftParen,
                 sym("+"),
-                Token::Symbol("1"),
-                Token::Symbol("2"),
-                Token::RightParen,
+                sym("1"),
+                sym("2"),
+                TokenKind::RightParen
             ]
         );
     }
@@ -161,17 +227,17 @@ mod tests {
     #[test]
     fn nested_expression() {
         assert_eq!(
-            lex("(+ (- 3 1) 2)"),
+            kinds(lex("(+ (- 3 1) 2)")),
             vec![
-                Token::LeftParen,
+                TokenKind::LeftParen,
                 sym("+"),
-                Token::LeftParen,
+                TokenKind::LeftParen,
                 sym("-"),
-                Token::Symbol("3"),
-                Token::Symbol("1"),
-                Token::RightParen,
-                Token::Symbol("2"),
-                Token::RightParen,
+                sym("3"),
+                sym("1"),
+                TokenKind::RightParen,
+                sym("2"),
+                TokenKind::RightParen,
             ]
         );
     }
@@ -179,17 +245,17 @@ mod tests {
     #[test]
     fn deeply_nested() {
         assert_eq!(
-            lex("(a (b (c)))"),
+            kinds(lex("(a (b (c)))")),
             vec![
-                Token::LeftParen,
+                TokenKind::LeftParen,
                 sym("a"),
-                Token::LeftParen,
+                TokenKind::LeftParen,
                 sym("b"),
-                Token::LeftParen,
+                TokenKind::LeftParen,
                 sym("c"),
-                Token::RightParen,
-                Token::RightParen,
-                Token::RightParen,
+                TokenKind::RightParen,
+                TokenKind::RightParen,
+                TokenKind::RightParen,
             ]
         );
     }
@@ -198,17 +264,17 @@ mod tests {
 
     #[test]
     fn float_number() {
-        assert_eq!(lex("3.14"), vec![Token::Symbol("3.14")]);
+        assert_eq!(kinds(lex("3.14")), vec![sym("3.14")]);
     }
 
     #[test]
     fn negative_number() {
-        assert_eq!(lex("-7"), vec![Token::Symbol("-7")]);
+        assert_eq!(kinds(lex("-7")), vec![sym("-7")]);
     }
 
     #[test]
     fn negative_float() {
-        assert_eq!(lex("-0.5"), vec![Token::Symbol("-0.5")]);
+        assert_eq!(kinds(lex("-0.5")), vec![sym("-0.5")]);
     }
 
     // --- symbols ---
@@ -216,55 +282,51 @@ mod tests {
     #[test]
     fn operator_symbols() {
         for op in ["+", "-", "*", "/", "=", "<", ">", "<=", ">="] {
-            assert_eq!(lex(op), vec![sym(op)], "operator: {op}");
+            assert_eq!(kinds(lex(op)), vec![sym(op)], "operator: {op}");
         }
     }
 
     #[test]
     fn multi_char_symbol() {
-        assert_eq!(lex("lambda"), vec![sym("lambda")]);
+        assert_eq!(kinds(lex("lambda")), vec![sym("lambda")]);
     }
 
     #[test]
     fn symbol_with_hyphen() {
-        assert_eq!(lex("my-var"), vec![sym("my-var")]);
+        assert_eq!(kinds(lex("my-var")), vec![sym("my-var")]);
     }
 
     #[test]
     fn symbol_with_question_mark() {
-        assert_eq!(lex("nil?"), vec![sym("nil?")]);
+        assert_eq!(kinds(lex("nil?")), vec![sym("nil?")]);
     }
 
-    // --- known failures: whacky whitespace ---
-    // tabs and carriage returns are not treated as whitespace delimiters,
-    // so they get absorbed into adjacent tokens as garbage characters.
+    // --- whacky whitespace ---
 
     #[test]
     fn tab_between_tokens() {
-        // "\t" should be whitespace, not part of the symbol "+\t"1"
         assert_eq!(
-            lex("(+\t1\t2)"),
+            kinds(lex("(+\t1\t2)")),
             vec![
-                Token::LeftParen,
+                TokenKind::LeftParen,
                 sym("+"),
-                Token::Symbol("1"),
-                Token::Symbol("2"),
-                Token::RightParen,
+                sym("1"),
+                sym("2"),
+                TokenKind::RightParen
             ]
         );
     }
 
     #[test]
     fn carriage_return_between_tokens() {
-        // "\r\n" Windows line endings should be treated as whitespace
         assert_eq!(
-            lex("(+\r\n1\r\n2)"),
+            kinds(lex("(+\r\n1\r\n2)")),
             vec![
-                Token::LeftParen,
+                TokenKind::LeftParen,
                 sym("+"),
-                Token::Symbol("1"),
-                Token::Symbol("2"),
-                Token::RightParen,
+                sym("1"),
+                sym("2"),
+                TokenKind::RightParen
             ]
         );
     }
@@ -277,89 +339,86 @@ mod tests {
     #[test]
     fn mixed_whitespace_between_tokens() {
         assert_eq!(
-            lex("(+  \t  1)"),
+            kinds(lex("(+  \t  1)")),
             vec![
-                Token::LeftParen,
+                TokenKind::LeftParen,
                 sym("+"),
-                Token::Symbol("1"),
-                Token::RightParen,
+                sym("1"),
+                TokenKind::RightParen
             ]
         );
     }
 
-    // --- known failures: string literals ---
-    // spaces inside quotes are treated as delimiters, shattering the string
-    // into separate tokens instead of one Symbol containing the whole literal.
+    // --- string literals ---
 
     #[test]
     fn string_literal_no_spaces() {
-        // even without spaces, the quotes are still part of the symbol
-        assert_eq!(lex("\"hello\""), vec![sym("\"hello\"")]);
+        assert_eq!(kinds(lex("\"hello\"")), vec![sym("\"hello\"")]);
     }
 
     #[test]
     fn string_literal_with_spaces() {
-        // the space causes "hello world" to be split into three tokens
         assert_eq!(
-            lex("(print \"hello world\")"),
+            kinds(lex("(print \"hello world\")")),
             vec![
-                Token::LeftParen,
+                TokenKind::LeftParen,
                 sym("print"),
                 sym("\"hello world\""),
-                Token::RightParen,
+                TokenKind::RightParen
             ]
         );
     }
 
     #[test]
     fn two_string_literals_with_spaces() {
-        // the space causes "hello world" to be split into three tokens
         assert_eq!(
-            lex("(print \"hello world\" \"hello world\")"),
+            kinds(lex("(print \"hello world\" \"hello world\")")),
             vec![
-                Token::LeftParen,
+                TokenKind::LeftParen,
                 sym("print"),
                 sym("\"hello world\""),
                 sym("\"hello world\""),
-                Token::RightParen,
+                TokenKind::RightParen,
             ]
         );
     }
 
     #[test]
     fn empty_string_literal() {
-        assert_eq!(lex("\"\""), vec![sym("\"\"")]);
+        assert_eq!(kinds(lex("\"\"")), vec![sym("\"\"")]);
     }
 
     #[test]
     fn string_containing_parens() {
-        // parens inside a string should not produce LeftParen/RightParen tokens
-        assert_eq!(lex("\"(not a paren)\""), vec![sym("\"(not a paren)\"")]);
+        assert_eq!(
+            kinds(lex("\"(not a paren)\"")),
+            vec![sym("\"(not a paren)\"")]
+        );
     }
 
-    // --- known failures: quote ---
+    // --- quote ---
 
     #[test]
     fn quote_atom() {
-        assert_eq!(lex("'x"), vec![Token::Quote, sym("x")]);
+        assert_eq!(kinds(lex("'x")), vec![TokenKind::Quote, sym("x")]);
     }
 
     #[test]
     fn quote_number() {
-        assert_eq!(lex("'42"), vec![Token::Quote, sym("42")]);
+        assert_eq!(kinds(lex("'42")), vec![TokenKind::Quote, sym("42")]);
     }
 
     #[test]
     fn quote_list() {
         assert_eq!(
-            lex("'(+ 1 2)"),
+            kinds(lex("'(+ 1 2)")),
             vec![
-                Token::Quote,
-                Token::LeftParen,
+                TokenKind::Quote,
+                TokenKind::LeftParen,
                 sym("+"),
                 sym("1"),
                 sym("2"),
-                Token::RightParen,
+                TokenKind::RightParen
             ]
         );
     }
@@ -367,103 +426,103 @@ mod tests {
     #[test]
     fn quote_inside_expression() {
         assert_eq!(
-            lex("(eq 'a 'b)"),
+            kinds(lex("(eq 'a 'b)")),
             vec![
-                Token::LeftParen,
+                TokenKind::LeftParen,
                 sym("eq"),
-                Token::Quote,
+                TokenKind::Quote,
                 sym("a"),
-                Token::Quote,
+                TokenKind::Quote,
                 sym("b"),
-                Token::RightParen,
+                TokenKind::RightParen,
             ]
         );
     }
 
     #[test]
     fn double_quote_shorthand() {
-        // ''x is (quote (quote x))
-        assert_eq!(lex("''x"), vec![Token::Quote, Token::Quote, sym("x")]);
+        assert_eq!(
+            kinds(lex("''x")),
+            vec![TokenKind::Quote, TokenKind::Quote, sym("x")]
+        );
     }
 
     #[test]
     fn quote_string() {
-        assert_eq!(lex("'\"hello\""), vec![Token::Quote, sym("\"hello\"")]);
+        assert_eq!(
+            kinds(lex("'\"hello\"")),
+            vec![TokenKind::Quote, sym("\"hello\"")]
+        );
     }
 
-    // --- known failures: escape sequences ---
-    // the lexer must not treat a \" inside a string as the closing quote.
-    // all assertions use the raw slice including surrounding quotes and backslashes,
-    // since Symbol is a &str into the source — escape processing is the evaluator's job.
+    // --- escape sequences ---
 
     #[test]
     fn escaped_quote_in_string() {
-        // "say \"hi\"" should be one symbol, not split at the inner quotes
-        assert_eq!(lex(r#""say \"hi\"""#), vec![sym(r#""say \"hi\"""#)]);
+        assert_eq!(kinds(lex(r#""say \"hi\"""#)), vec![sym(r#""say \"hi\"""#)]);
     }
 
     #[test]
     fn escaped_backslash_in_string() {
-        // "foo\\bar" — the \\ is a literal backslash, should not split
-        assert_eq!(lex(r#""foo\\bar""#), vec![sym(r#""foo\\bar""#)]);
+        assert_eq!(kinds(lex(r#""foo\\bar""#)), vec![sym(r#""foo\\bar""#)]);
     }
 
     #[test]
     fn escaped_quote_at_end_of_string() {
-        // "hello\"" — the \" is escaped, so this string is actually unclosed,
-        // but "hello\\" ends with an escaped backslash and a real closing quote
-        assert_eq!(lex(r#""hello\\""#), vec![sym(r#""hello\\""#)]);
+        assert_eq!(kinds(lex(r#""hello\\""#)), vec![sym(r#""hello\\""#)]);
     }
 
     #[test]
     fn string_with_only_escaped_quote() {
-        // "\"" — one escaped quote inside, not a closed empty string followed by junk
-        assert_eq!(lex(r#""\"""#), vec![sym(r#""\"""#)]);
+        assert_eq!(kinds(lex(r#""\"""#)), vec![sym(r#""\"""#)]);
     }
 
     #[test]
     fn escaped_quote_does_not_break_surrounding_tokens() {
         assert_eq!(
-            lex(r#"(print "say \"hi\"")"#),
+            kinds(lex(r#"(print "say \"hi\"")"#)),
             vec![
-                Token::LeftParen,
+                TokenKind::LeftParen,
                 sym("print"),
                 sym(r#""say \"hi\"""#),
-                Token::RightParen,
+                TokenKind::RightParen
             ]
         );
     }
 
-    // --- known failures: backslash outside strings ---
-    // escape is not scoped to building_string, so \ outside a string
-    // silently consumes the following character as if it were escaped.
+    // --- backslash outside strings ---
 
     #[test]
     fn backslash_before_quote_shorthand() {
-        // \'x — backslash outside a string should not eat the Quote token
-        assert_eq!(lex(r"\'x"), vec![sym(r"\"), Token::Quote, sym("x")]);
+        assert_eq!(
+            kinds(lex(r"\'x")),
+            vec![sym(r"\"), TokenKind::Quote, sym("x")]
+        );
     }
 
     #[test]
     fn backslash_before_left_paren() {
-        // \( — backslash outside a string should not eat the paren
         assert_eq!(
-            lex(r"\(foo)"),
-            vec![sym(r"\"), Token::LeftParen, sym("foo"), Token::RightParen]
+            kinds(lex(r"\(foo)")),
+            vec![
+                sym(r"\"),
+                TokenKind::LeftParen,
+                sym("foo"),
+                TokenKind::RightParen
+            ]
         );
     }
 
     #[test]
     fn backslash_as_symbol_character() {
-        // a lone \ with whitespace on both sides is just a symbol
         assert_eq!(
-            lex(r"(foo \ bar)"),
+            kinds(lex(r"(foo \ bar)")),
             vec![
-                Token::LeftParen,
+                TokenKind::LeftParen,
                 sym("foo"),
                 sym(r"\"),
                 sym("bar"),
-                Token::RightParen,
+                TokenKind::RightParen
             ]
         );
     }
@@ -473,19 +532,50 @@ mod tests {
     #[test]
     fn two_top_level_expressions() {
         assert_eq!(
-            lex("(+ 1 2) (- 3 4)"),
+            kinds(lex("(+ 1 2) (- 3 4)")),
             vec![
-                Token::LeftParen,
+                TokenKind::LeftParen,
                 sym("+"),
-                Token::Symbol("1"),
-                Token::Symbol("2"),
-                Token::RightParen,
-                Token::LeftParen,
+                sym("1"),
+                sym("2"),
+                TokenKind::RightParen,
+                TokenKind::LeftParen,
                 sym("-"),
-                Token::Symbol("3"),
-                Token::Symbol("4"),
-                Token::RightParen,
+                sym("3"),
+                sym("4"),
+                TokenKind::RightParen,
             ]
         );
+    }
+
+    // --- spans ---
+
+    #[test]
+    fn symbol_span() {
+        assert_eq!(lex("foo")[0], tok(sym("foo"), 0, 1));
+    }
+
+    #[test]
+    fn symbol_span_after_whitespace() {
+        // "   foo" — column increments per char, foo starts after 3 spaces
+        assert_eq!(lex("   foo")[0], tok(sym("foo"), 0, 4));
+    }
+
+    #[test]
+    fn paren_span() {
+        assert_eq!(lex("(foo)")[0], tok(TokenKind::LeftParen, 0, 1));
+    }
+
+    #[test]
+    fn second_line_span() {
+        let tokens = lex("foo\nbar");
+        assert_eq!(tokens[1], tok(sym("bar"), 1, 1));
+    }
+
+    #[test]
+    fn column_resets_after_newline() {
+        // "(+\n1)" — 1 is at line 1, column 1
+        let tokens = lex("(+\n1)");
+        assert_eq!(tokens[2], tok(sym("1"), 1, 1));
     }
 }
