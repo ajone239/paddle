@@ -45,11 +45,11 @@ fn call<'a>(func: &Value, args: &[Value]) -> Value {
         "+" => args.fold(0.0, |acc, x| acc + x),
         "*" => args.fold(1.0, |acc, x| acc * x),
         "-" => {
-            let init = *args.next().unwrap();
+            let init = *args.next().expect("must have args with -");
             args.fold(init, |acc, x| acc - x)
         }
         "/" => {
-            let init = *args.next().unwrap();
+            let init = *args.next().expect("must have args with /");
             args.fold(init, |acc, x| acc / x)
         }
         _ => panic!("operation not supported"),
@@ -68,5 +68,146 @@ fn resolve<'a>(atom: &'a str) -> Value {
         "#f" => Value::Bool(false),
         "+" | "*" | "-" | "/" => Value::Symbol(atom.to_owned()),
         _ => Value::Str(atom.to_owned()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::lexer::lex;
+    use crate::parser::parse_expr;
+
+    fn eval_str(s: &str) -> Value {
+        let tokens = lex(s);
+        let (expr, _) = parse_expr(&tokens).unwrap();
+        eval(&expr)
+    }
+
+    fn num(n: f64) -> Value {
+        Value::Num(n)
+    }
+
+    // --- atoms ---
+
+    #[test]
+    fn integer_literal() {
+        assert_eq!(eval_str("42"), num(42.0));
+    }
+
+    #[test]
+    fn float_literal() {
+        assert_eq!(eval_str("3.14"), num(3.14));
+    }
+
+    #[test]
+    fn negative_literal() {
+        assert_eq!(eval_str("-7"), num(-7.0));
+    }
+
+    #[test]
+    fn nil_literal() {
+        assert_eq!(eval_str("nil"), Value::Nil);
+    }
+
+    #[test]
+    fn true_literal() {
+        assert_eq!(eval_str("#t"), Value::Bool(true));
+    }
+
+    #[test]
+    fn false_literal() {
+        assert_eq!(eval_str("#f"), Value::Bool(false));
+    }
+
+    // --- addition ---
+
+    #[test]
+    fn add_two() {
+        assert_eq!(eval_str("(+ 1 2)"), num(3.0));
+    }
+
+    #[test]
+    fn add_three() {
+        assert_eq!(eval_str("(+ 1 2 3)"), num(6.0));
+    }
+
+    #[test]
+    fn add_no_args() {
+        assert_eq!(eval_str("(+)"), num(0.0));
+    }
+
+    #[test]
+    fn add_one_arg() {
+        assert_eq!(eval_str("(+ 5)"), num(5.0));
+    }
+
+    // --- subtraction ---
+
+    #[test]
+    fn sub_two() {
+        assert_eq!(eval_str("(- 10 3)"), num(7.0));
+    }
+
+    #[test]
+    fn sub_three() {
+        assert_eq!(eval_str("(- 10 3 2)"), num(5.0));
+    }
+
+    #[test]
+    fn sub_one_arg() {
+        assert_eq!(eval_str("(- 5)"), num(5.0));
+    }
+
+    // --- multiplication ---
+
+    #[test]
+    fn mul_two() {
+        assert_eq!(eval_str("(* 3 4)"), num(12.0));
+    }
+
+    #[test]
+    fn mul_no_args() {
+        assert_eq!(eval_str("(*)"), num(1.0));
+    }
+
+    #[test]
+    fn mul_one_arg() {
+        assert_eq!(eval_str("(* 7)"), num(7.0));
+    }
+
+    // --- division ---
+
+    #[test]
+    fn div_two() {
+        assert_eq!(eval_str("(/ 10 2)"), num(5.0));
+    }
+
+    #[test]
+    fn div_three() {
+        assert_eq!(eval_str("(/ 24 4 3)"), num(2.0));
+    }
+
+    // --- nesting ---
+
+    #[test]
+    fn nested_add() {
+        assert_eq!(eval_str("(+ 1 (+ 2 3))"), num(6.0));
+    }
+
+    #[test]
+    fn nested_mixed() {
+        assert_eq!(eval_str("(* (+ 1 2) (- 5 2))"), num(9.0));
+    }
+
+    #[test]
+    fn deeply_nested() {
+        assert_eq!(eval_str("(+ 1 (* 2 (- 10 (/ 6 2))))"), num(15.0));
+    }
+
+    // --- empty list ---
+
+    #[test]
+    fn empty_list() {
+        assert_eq!(eval_str("()"), Value::Nil);
     }
 }
