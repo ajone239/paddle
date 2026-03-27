@@ -66,8 +66,8 @@ fn resolve<'a>(atom: &'a str) -> Value {
         "nil" => Value::Nil,
         "#t" => Value::Bool(true),
         "#f" => Value::Bool(false),
-        "+" | "*" | "-" | "/" => Value::Symbol(atom.to_owned()),
-        _ => Value::Str(atom.to_owned()),
+        _ if atom.chars().nth(0).unwrap() == '"' => Value::Str(atom.to_owned()),
+        _ => Value::Symbol(atom.to_owned()),
     }
 }
 

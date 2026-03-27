@@ -16,8 +16,8 @@ A Lisp interpreter written in Rust, built as a learning project for exploring pr
 - [ ] Arena allocation ast
 
 ### Evaluator
-- [ ] Value type design
-- [ ] Basic eval — literals, arithmetic, `quote`
+- [x] Value type design
+- [x] Basic eval — literals, arithmetic, `quote`
 - [ ] Environment — `define`, variable lookup
 - [ ] Lambdas and closures
 - [ ] Tail call optimization
