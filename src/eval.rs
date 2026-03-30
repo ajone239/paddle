@@ -1,8 +1,29 @@
 use core::panic;
+use std::{collections::HashMap, rc::Rc};
 
 use crate::parser::Expr;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
+pub struct Env {
+    env: HashMap<String, Value>,
+}
+
+impl Env {
+    pub fn default() -> Self {
+        let env = HashMap::new();
+        Self { env }
+    }
+
+    fn define(&mut self, name: &str, value: Value) {
+        self.env.insert(name.to_owned(), value);
+    }
+
+    fn resolve(&self, name: &str) -> Option<&Value> {
+        self.env.get(name)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     Nil,
     Bool(bool),
@@ -12,37 +33,69 @@ pub enum Value {
     Str(String),
     // TODO(ajone239): move this to a ref when copies get expensive
     List(Vec<Value>),
+    Func {
+        name: String,
+        args: Vec<String>,
+        body: Rc<Value>,
+    },
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Form {
     Quote,
+    Define,
 }
 
 impl Form {
     fn from_str(s: &str) -> Option<Self> {
         match s {
             "quote" | "'" => Some(Self::Quote),
+            "define" | "def" => Some(Self::Define),
             _ => None,
         }
     }
 }
 
-pub fn eval<'a>(ast: &Expr<'a>) -> Value {
+pub fn eval(ast: &Expr, env: &mut Env) -> Value {
     match ast {
-        Expr::Atom(atom, _) => resolve(atom),
-        Expr::List(list, _) => apply(&list),
+        Expr::Atom(atom, _) => resolve(atom, env),
+        Expr::List(list, _) => apply(&list, env),
     }
 }
 
-fn quote_eval<'a>(ast: &Expr<'a>) -> Value {
-    match ast {
-        Expr::Atom(atom, _) => resolve(atom),
-        Expr::List(list, _) => Value::List(list.iter().map(quote_eval).collect()),
+fn quote_eval_list(ast: &[Expr]) -> Value {
+    match ast.len() {
+        1 => quote_eval(&ast[0]),
+        _ => {
+            let list = ast.iter().map(|expr| quote_eval(expr)).collect();
+            Value::List(list)
+        }
     }
 }
 
-fn resolve<'a>(atom: &'a str) -> Value {
+fn quote_eval(ast: &Expr) -> Value {
+    match ast {
+        Expr::Atom(atom, _) => classify(atom),
+        Expr::List(list, _) => {
+            let list = list.iter().map(quote_eval).collect();
+            Value::List(list)
+        }
+    }
+}
+
+fn resolve(atom: &str, env: &Env) -> Value {
+    if let Some(form) = Form::from_str(atom) {
+        return Value::Form(form);
+    }
+
+    if let Some(val) = env.resolve(atom) {
+        return val.clone();
+    }
+
+    classify(atom)
+}
+
+fn classify(atom: &str) -> Value {
     if let Ok(num) = atom.parse::<f64>() {
         return Value::Num(num);
     }
@@ -51,33 +104,90 @@ fn resolve<'a>(atom: &'a str) -> Value {
         "nil" => Value::Nil,
         "#t" => Value::Bool(true),
         "#f" => Value::Bool(false),
-        s if Form::from_str(s).is_some() => Value::Form(Form::from_str(s).unwrap()),
         _ if atom.chars().nth(0).unwrap() == '"' => Value::Str(atom.to_owned()),
         _ => Value::Symbol(atom.to_owned()),
     }
 }
 
-fn apply<'a>(list: &[Expr<'a>]) -> Value {
+fn apply(list: &[Expr], env: &mut Env) -> Value {
     if list.is_empty() {
         return Value::Nil;
     }
 
-    let mut vals = list.iter().map(|e| eval(e));
+    // env captured here -- very fragile
+    let mut vals = list.iter().map(|e| eval(e, env));
 
     match vals.next().unwrap() {
         Value::Form(Form::Quote) => {
             let tail = &list[1..];
-            return match tail.len() {
-                1 => quote_eval(&list[1]),
-                _ => Value::List(tail.iter().map(quote_eval).collect()),
-            };
+            return quote_eval_list(tail);
         }
+        Value::Form(Form::Define) => {
+            if list.len() < 3 {
+                panic!("Bad define");
+            }
+            let head = &list[1];
+            let tail = &list[2..];
+
+            match head {
+                Expr::Atom(atom, _) => {
+                    let value = eval(&tail[0], env);
+                    env.define(atom, value);
+                    Value::Nil
+                }
+                Expr::List(exprs, _) => {
+                    let mut atoms =
+                        exprs
+                            .iter()
+                            .filter(|e| matches!(e, Expr::Atom(_, _)))
+                            .map(|e| match e {
+                                Expr::Atom(a, _) => (*a).to_owned(),
+                                Expr::List(_, _) => panic!("come on man"),
+                            });
+                    let name = atoms.next().unwrap();
+                    let body = quote_eval_list(tail);
+
+                    let func = Value::Func {
+                        name: name.clone(),
+                        args: atoms.collect(),
+                        body: Rc::new(body),
+                    };
+
+                    env.define(&name, func);
+
+                    Value::Nil
+                }
+            }
+        }
+        // env used here
         Value::Symbol(func) => call(&func, &vals.collect::<Vec<Value>>()),
+        Value::Func {
+            name: _,
+            args,
+            body,
+        } => {
+            // define the args in context
+            // TODO(ajone239): cache old context
+            let vals: Vec<Value> = vals.collect();
+
+            if vals.len() != args.len() {
+                panic!("Expected {} args got {}", args.len(), vals.len());
+            }
+
+            for (arg, val) in args.iter().zip(vals) {
+                env.define(arg, val);
+            }
+
+            // eval the body with the new env
+
+            // return the value
+            todo!()
+        }
         _ => panic!("shouldn't hit this"),
     }
 }
 
-fn call<'a>(func: &str, args: &[Value]) -> Value {
+fn call(func: &str, args: &[Value]) -> Value {
     let mut args = args.iter().map(|v| match v {
         Value::Num(n) => n,
         _ => todo!(),
@@ -106,9 +216,25 @@ mod tests {
     use crate::parser::parse_expr;
 
     fn eval_str(s: &str) -> Value {
+        let mut env = Env::default();
         let tokens = lex(s);
         let (expr, _) = parse_expr(&tokens).unwrap();
-        eval(&expr)
+        eval(&expr, &mut env)
+    }
+
+    fn eval_str_env(exprs: &[&str]) -> Value {
+        let mut env = Env::default();
+
+        let mut last = None;
+
+        for expr in exprs {
+            let tokens = lex(expr);
+            let (e, _) = parse_expr(&tokens).unwrap();
+            let val = eval(&e, &mut env);
+            last = Some(val);
+        }
+
+        last.unwrap()
     }
 
     fn num(n: f64) -> Value {
@@ -237,5 +363,72 @@ mod tests {
     #[test]
     fn empty_list() {
         assert_eq!(eval_str("()"), Value::Nil);
+    }
+
+    // --- quote ---
+
+    #[test]
+    fn quote_symbol() {
+        assert_eq!(eval_str("(quote x)"), Value::Symbol("x".to_owned()));
+    }
+
+    #[test]
+    fn quote_number() {
+        assert_eq!(eval_str("(quote 42)"), num(42.0));
+        assert_eq!(eval_str("'42"), num(42.0));
+    }
+
+    #[test]
+    fn quote_nil() {
+        assert_eq!(eval_str("(quote nil)"), Value::Nil);
+    }
+
+    #[test]
+    fn quote_define() {
+        assert_eq!(
+            eval_str("(quote define)"),
+            Value::Symbol("define".to_owned())
+        );
+    }
+
+    #[test]
+    fn quote_list() {
+        assert_eq!(
+            eval_str("(quote (1 2 3))"),
+            Value::List(vec![num(1.0), num(2.0), num(3.0)])
+        );
+    }
+
+    #[test]
+    fn quote_suppresses_eval() {
+        assert_eq!(
+            eval_str("(quote (+ 1 2))"),
+            Value::List(vec![Value::Symbol("+".to_owned()), num(1.0), num(2.0),])
+        );
+    }
+
+    #[test]
+    fn define_and_resolve() {
+        assert_eq!(eval_str_env(&vec!["(def x 5)", "(+ x 1)"]), num(6.0));
+    }
+
+    #[test]
+    fn redefine() {
+        assert_eq!(eval_str_env(&vec!["(def x 1)", "(def x 2)", "x"]), num(2.0));
+    }
+
+    #[test]
+    fn define_returns_nil() {
+        assert_eq!(eval_str("(def x 5)"), Value::Nil);
+    }
+
+    #[test]
+    fn define_expression_value() {
+        assert_eq!(eval_str_env(&vec!["(def x (+ 1 2))", "x"]), num(3.0));
+    }
+
+    #[test]
+    fn undefined_symbol() {
+        assert_eq!(eval_str("x"), Value::Symbol("x".to_owned()));
     }
 }

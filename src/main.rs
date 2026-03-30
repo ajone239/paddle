@@ -1,7 +1,10 @@
 use std::io::{Write, stdin, stdout};
 
 use anyhow::Result;
-use jethe::{eval::eval, lexer, parser};
+use jethe::{
+    eval::{Env, eval},
+    lexer, parser,
+};
 
 fn main() -> Result<()> {
     let stdin = stdin();
@@ -11,8 +14,21 @@ fn main() -> Result<()> {
 
     let mut input = String::new();
 
+    let mut env = Env::default();
+
     for line in stdin.lines() {
         let line = line?;
+
+        if input.is_empty() {
+            match line.as_str() {
+                ":env" => {
+                    println!("{:#?}", env);
+                    prompt(0);
+                    continue;
+                }
+                _ => {}
+            }
+        }
 
         input += &line;
 
@@ -29,7 +45,7 @@ fn main() -> Result<()> {
 
                 let (ast, _) = parser::parse_expr(&tokens)?;
 
-                let val = eval(&ast);
+                let val = eval(&ast, &mut env);
 
                 println!("{:?}", val);
             }
