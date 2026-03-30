@@ -2,7 +2,7 @@ use std::io::{Write, stdin, stdout};
 
 use anyhow::Result;
 use jethe::{
-    eval::{Env, eval},
+    eval::{Env, eval, lower},
     lexer, parser,
 };
 
@@ -42,10 +42,9 @@ fn main() -> Result<()> {
             }
             _ => {
                 let tokens = lexer::lex(&line);
-
                 let (ast, _) = parser::parse_expr(&tokens)?;
-
-                let val = eval(&ast, &mut env);
+                let expr = lower(&ast);
+                let val = eval(&expr, &mut env);
 
                 println!("{:?}", val);
             }
