@@ -8,8 +8,24 @@ pub enum Value {
     Bool(bool),
     Num(f64),
     Symbol(String),
+    Form(Form),
     Str(String),
+    // TODO(ajone239): move this to a ref when copies get expensive
     List(Vec<Value>),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Form {
+    Quote,
+}
+
+impl Form {
+    fn from_str(s: &str) -> Option<Self> {
+        match s {
+            "quote" | "'" => Some(Self::Quote),
+            _ => None,
+        }
+    }
 }
 
 pub fn eval<'a>(ast: &Expr<'a>) -> Value {
@@ -19,29 +35,55 @@ pub fn eval<'a>(ast: &Expr<'a>) -> Value {
     }
 }
 
+fn quote_eval<'a>(ast: &Expr<'a>) -> Value {
+    match ast {
+        Expr::Atom(atom, _) => resolve(atom),
+        Expr::List(list, _) => Value::List(list.iter().map(quote_eval).collect()),
+    }
+}
+
+fn resolve<'a>(atom: &'a str) -> Value {
+    if let Ok(num) = atom.parse::<f64>() {
+        return Value::Num(num);
+    }
+
+    match atom {
+        "nil" => Value::Nil,
+        "#t" => Value::Bool(true),
+        "#f" => Value::Bool(false),
+        s if Form::from_str(s).is_some() => Value::Form(Form::from_str(s).unwrap()),
+        _ if atom.chars().nth(0).unwrap() == '"' => Value::Str(atom.to_owned()),
+        _ => Value::Symbol(atom.to_owned()),
+    }
+}
+
 fn apply<'a>(list: &[Expr<'a>]) -> Value {
     if list.is_empty() {
         return Value::Nil;
     }
 
-    let vals: Vec<_> = list.iter().map(|e| eval(e)).collect();
-    let func = &vals[0];
-    let args = &vals[1..];
+    let mut vals = list.iter().map(|e| eval(e));
 
-    call(func, args)
+    match vals.next().unwrap() {
+        Value::Form(Form::Quote) => {
+            let tail = &list[1..];
+            return match tail.len() {
+                1 => quote_eval(&list[1]),
+                _ => Value::List(tail.iter().map(quote_eval).collect()),
+            };
+        }
+        Value::Symbol(func) => call(&func, &vals.collect::<Vec<Value>>()),
+        _ => panic!("shouldn't hit this"),
+    }
 }
 
-fn call<'a>(func: &Value, args: &[Value]) -> Value {
+fn call<'a>(func: &str, args: &[Value]) -> Value {
     let mut args = args.iter().map(|v| match v {
         Value::Num(n) => n,
         _ => todo!(),
     });
 
-    let Value::Symbol(s) = func else {
-        panic!("bad expr head")
-    };
-
-    let num = match s.as_str() {
+    let num = match func {
         "+" => args.fold(0.0, |acc, x| acc + x),
         "*" => args.fold(1.0, |acc, x| acc * x),
         "-" => {
@@ -55,20 +97,6 @@ fn call<'a>(func: &Value, args: &[Value]) -> Value {
         _ => panic!("operation not supported"),
     };
     Value::Num(num)
-}
-
-fn resolve<'a>(atom: &'a str) -> Value {
-    if let Ok(num) = atom.parse::<f64>() {
-        return Value::Num(num);
-    }
-
-    match atom {
-        "nil" => Value::Nil,
-        "#t" => Value::Bool(true),
-        "#f" => Value::Bool(false),
-        _ if atom.chars().nth(0).unwrap() == '"' => Value::Str(atom.to_owned()),
-        _ => Value::Symbol(atom.to_owned()),
-    }
 }
 
 #[cfg(test)]
