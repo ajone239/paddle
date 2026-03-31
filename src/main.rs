@@ -19,9 +19,10 @@ fn main() -> Result<()> {
 
     for line in stdin.lines() {
         let line = line?;
+        let line = line.trim();
 
         if input.is_empty() {
-            match line.as_str() {
+            match line {
                 ":env" => {
                     println!("{:#?}", env);
                     prompt(0);

@@ -23,8 +23,29 @@ pub enum Value {
     },
 }
 
+impl Value {
+    fn truthy(&self) -> bool {
+        match self {
+            Value::Nil => false,
+            Value::Bool(val) => *val,
+            Value::Num(num) => num.ne(&0.0),
+            Value::Str(s) => !s.is_empty(),
+            Value::List(v) | Value::Progn(v) => !v.is_empty(),
+            Value::Symbol(_)
+            | Value::Form(_)
+            | Value::Builtin(_)
+            | Value::Func {
+                name: _,
+                args: _,
+                body: _,
+            } => true,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Form {
+    If,
     Quote,
     Define,
 }
@@ -32,6 +53,7 @@ pub enum Form {
 impl Form {
     fn from_str(s: &str) -> Option<Self> {
         match s {
+            "if" => Some(Self::If),
             "quote" | "'" => Some(Self::Quote),
             "define" | "def" => Some(Self::Define),
             _ => None,
@@ -96,6 +118,23 @@ pub fn eval(ast: &Value, env: &mut Env) -> Value {
                     define(&list[1], &list[2..], env);
 
                     return Value::Nil;
+                }
+                Value::Form(Form::If) => {
+                    if list.len() < 3 {
+                        panic!("Bad if");
+                    }
+
+                    let cond = &list[1];
+                    let t_branch = &list[2];
+                    let f_branch = &list[3];
+
+                    let cond = eval(&cond, env);
+
+                    return if cond.truthy() {
+                        eval(t_branch, env)
+                    } else {
+                        eval(f_branch, env)
+                    };
                 }
                 _ => {}
             }
@@ -441,6 +480,33 @@ mod tests {
     }
 
     #[test]
+    fn define_func_fact() {
+        assert_eq!(
+            eval_str_env(&vec![
+                "(def (fact n) (if (< n 1) 1 (* n (fact (- n 1)))))",
+                "(fact 5)"
+            ]),
+            Value::Num(120.0)
+        );
+    }
+
+    #[test]
+    fn define_func_fact_cute() {
+        assert_eq!(
+            eval_str_env(&vec![
+                "
+(def (fact n)
+    (if (< n 1)
+     1
+     (* n (fact (- n 1)))))
+",
+                "(fact 5)"
+            ]),
+            Value::Num(120.0)
+        );
+    }
+
+    #[test]
     fn define_func_nested_call() {
         assert_eq!(
             eval_str_env(&[
@@ -456,5 +522,65 @@ mod tests {
     #[should_panic]
     fn define_func_wrong_arity() {
         eval_str_env(&["(def (f x) (+ x 1))", "(f 1 2)"]);
+    }
+
+    // --- if ---
+
+    #[test]
+    fn if_true_branch() {
+        assert_eq!(eval_str("(if #t 1 2)"), num(1.0));
+    }
+
+    #[test]
+    fn if_false_branch() {
+        assert_eq!(eval_str("(if #f 1 2)"), num(2.0));
+    }
+
+    #[test]
+    fn if_truthy_num() {
+        assert_eq!(eval_str("(if 1 10 20)"), num(10.0));
+    }
+
+    #[test]
+    fn if_falsy_zero() {
+        assert_eq!(eval_str("(if 0 10 20)"), num(20.0));
+    }
+
+    #[test]
+    fn if_falsy_nil() {
+        assert_eq!(eval_str("(if nil 10 20)"), num(20.0));
+    }
+
+    #[test]
+    fn if_condition_is_expression() {
+        assert_eq!(eval_str("(if (< 1 2) 10 20)"), num(10.0));
+    }
+
+    #[test]
+    fn if_only_evaluates_true_branch() {
+        // if the false branch were evaluated it would panic (undefined symbol)
+        eval_str_env(&["(def x 1)", "(if #t x undefined)"]);
+    }
+
+    #[test]
+    fn if_only_evaluates_false_branch() {
+        eval_str_env(&["(def x 1)", "(if #f undefined x)"]);
+    }
+
+    #[test]
+    fn if_nested() {
+        assert_eq!(eval_str("(if #t (if #f 1 2) 3)"), num(2.0));
+    }
+
+    #[test]
+    #[should_panic]
+    fn if_no_else_true() {
+        assert_eq!(eval_str("(if #t 42)"), num(42.0));
+    }
+
+    #[test]
+    #[should_panic]
+    fn if_no_else_false() {
+        assert_eq!(eval_str("(if #f 42)"), Value::Nil);
     }
 }
