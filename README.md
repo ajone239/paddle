@@ -19,14 +19,16 @@ A Lisp interpreter written in Rust, built as a learning project for exploring pr
 - [x] Value type design
 - [x] Basic eval — literals, arithmetic
 - [x] `quote`
-- [-] Environment — `define`
+- [x] Environment — `define`
     + [x] variable lookup
-    + [ ] function lookup
+    + [x] function lookup
+- [ ] Environment — scope
 - [ ] Lambdas and closures
 - [ ] Tail call optimization
 - [ ] Macros — `define-macro`, quasiquote/unquote
 
 ### Runtime
+- [-] Standard library — arithmetic
 - [ ] Standard library — `car`, `cdr`, `cons`, `map`, etc.
 - [ ] REPL
     - [x] Basic

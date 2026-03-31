@@ -2,7 +2,8 @@ use std::io::{Write, stdin, stdout};
 
 use anyhow::Result;
 use jethe::{
-    eval::{Env, eval, lower},
+    env::Env,
+    eval::{eval, lower},
     lexer, parser,
 };
 
