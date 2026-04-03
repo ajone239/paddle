@@ -17,6 +17,10 @@ impl Env {
         env.insert("/".to_string(), Value::Builtin(div));
         env.insert("<".to_string(), Value::Builtin(lt));
 
+        env.insert("cons".to_string(), Value::Builtin(cons));
+        env.insert("car".to_string(), Value::Builtin(car));
+        env.insert("cdr".to_string(), Value::Builtin(cdr));
+
         Self { env }
     }
 
@@ -70,4 +74,47 @@ pub fn lt(args: &[Value]) -> Value {
         panic!("ahhh")
     };
     Value::Bool(penu < last)
+}
+
+pub fn cons(args: &[Value]) -> Value {
+    if args.len() != 2 {
+        panic!("cons takes 2 args");
+    }
+
+    let head = args[0].clone();
+    let tail = args[1].clone();
+
+    Value::List(vec![head, tail])
+}
+
+pub fn car(args: &[Value]) -> Value {
+    if args.len() != 1 {
+        panic!("car takes 1 args");
+    }
+
+    let Value::List(pair) = &args[0] else {
+        panic!("car expected list");
+    };
+
+    pair.get(0).expect("car expected items in list").clone()
+}
+
+pub fn cdr(args: &[Value]) -> Value {
+    if args.len() != 1 {
+        panic!("cdr takes 1 args");
+    }
+
+    let Value::List(pair) = &args[0] else {
+        panic!("cdr expected list");
+    };
+
+    if pair.is_empty() {
+        panic!("cdr expected items in list");
+    }
+
+    if pair.len() == 2 && matches!(&pair[1], Value::List(_)) {
+        return pair[1].clone();
+    }
+
+    Value::List(pair[1..].to_vec())
 }

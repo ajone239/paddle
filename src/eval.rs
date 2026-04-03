@@ -498,8 +498,7 @@ mod tests {
 (def (fact n)
     (if (< n 1)
      1
-     (* n (fact (- n 1))))
-)
+     (* n (fact (- n 1)))))
 ",
                 "(fact 5)"
             ]),
@@ -583,5 +582,135 @@ mod tests {
     #[should_panic]
     fn if_no_else_false() {
         assert_eq!(eval_str("(if #f 42)"), Value::Nil);
+    }
+
+    // --- cons ---
+
+    #[test]
+    fn cons_two_atoms() {
+        assert_eq!(
+            eval_str("(cons 1 2)"),
+            Value::List(vec![num(1.0), num(2.0)])
+        );
+    }
+
+    #[test]
+    fn cons_with_nil_tail() {
+        assert_eq!(
+            eval_str("(cons 1 nil)"),
+            Value::List(vec![num(1.0), Value::Nil])
+        );
+    }
+
+    #[test]
+    fn cons_with_list_tail() {
+        // cons does not flatten — tail stays as a nested list
+        assert_eq!(
+            eval_str("(cons 1 '(2 3))"),
+            Value::List(vec![num(1.0), Value::List(vec![num(2.0), num(3.0)])])
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn cons_wrong_arity_one() {
+        eval_str("(cons 1)");
+    }
+
+    #[test]
+    #[should_panic]
+    fn cons_wrong_arity_three() {
+        eval_str("(cons 1 2 3)");
+    }
+
+    // --- car ---
+
+    #[test]
+    fn car_of_cons() {
+        assert_eq!(eval_str("(car (cons 1 2))"), num(1.0));
+    }
+
+    #[test]
+    fn car_of_quoted_list() {
+        assert_eq!(eval_str("(car '(10 20 30))"), num(10.0));
+    }
+
+    #[test]
+    fn car_of_single_element_list() {
+        assert_eq!(eval_str("(car '(42))"), num(42.0));
+    }
+
+    #[test]
+    #[should_panic]
+    fn car_of_nil() {
+        eval_str("(car nil)");
+    }
+
+    #[test]
+    #[should_panic]
+    fn car_of_atom() {
+        eval_str("(car 1)");
+    }
+
+    #[test]
+    #[should_panic]
+    fn car_wrong_arity() {
+        eval_str("(car '(1) '(2))");
+    }
+
+    // --- cdr ---
+
+    #[test]
+    fn cdr_of_cons() {
+        // cdr of (cons 1 2) is List([2]), not the atom 2
+        assert_eq!(eval_str("(cdr (cons 1 2))"), Value::List(vec![num(2.0)]));
+    }
+
+    #[test]
+    fn cdr_of_quoted_list() {
+        assert_eq!(
+            eval_str("(cdr '(1 2 3))"),
+            Value::List(vec![num(2.0), num(3.0)])
+        );
+    }
+
+    #[test]
+    fn cdr_of_single_element_list_is_empty_list() {
+        // cdr drops the head, leaving an empty Vec — not Nil
+        assert_eq!(eval_str("(cdr '(1))"), Value::List(vec![]));
+    }
+
+    #[test]
+    #[should_panic]
+    fn cdr_of_nil() {
+        eval_str("(cdr nil)");
+    }
+
+    #[test]
+    #[should_panic]
+    fn cdr_of_atom() {
+        eval_str("(cdr 1)");
+    }
+
+    #[test]
+    #[should_panic]
+    fn cdr_wrong_arity() {
+        eval_str("(cdr '(1) '(2))");
+    }
+
+    // --- car/cdr composition ---
+
+    #[test]
+    fn car_of_cdr_gives_second_element() {
+        assert_eq!(eval_str("(car (cdr '(1 2 3)))"), num(2.0));
+    }
+
+    #[test]
+    fn nested_cons_car_cdr() {
+        // (cons 20 30) => List([20, 30])
+        // (cons 10 ...) => List([10, List([20, 30])])
+        // cdr         => List([20, 30])
+        // car         => 20
+        assert_eq!(eval_str("(car (cdr (cons 10 (cons 20 30))))"), num(20.0));
     }
 }
