@@ -1,4 +1,8 @@
-use std::io::{Write, stdin, stdout};
+use std::{
+    cell::RefCell,
+    io::{Write, stdin, stdout},
+    rc::Rc,
+};
 
 use anyhow::Result;
 use jethe::{
@@ -15,7 +19,7 @@ fn main() -> Result<()> {
 
     let mut input = String::new();
 
-    let mut env = Env::default();
+    let env = Rc::new(RefCell::new(Env::default()));
 
     for line in stdin.lines() {
         let line = line?;
@@ -24,7 +28,7 @@ fn main() -> Result<()> {
         if input.is_empty() {
             match line {
                 ":env" => {
-                    println!("{:#?}", env);
+                    println!("{:#?}", env.borrow());
                     prompt(0);
                     continue;
                 }
@@ -46,7 +50,7 @@ fn main() -> Result<()> {
                 let tokens = lexer::lex(&input);
                 let (ast, _) = parser::parse_expr(&tokens)?;
                 let expr = lower(&ast);
-                let val = eval(&expr, &mut env);
+                let val = eval(&expr, env.clone());
 
                 println!("{:?}", val);
             }

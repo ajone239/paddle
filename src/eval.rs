@@ -1,4 +1,5 @@
 use core::panic;
+use std::cell::RefCell;
 use std::{ops::Deref, rc::Rc};
 
 use crate::env::Env;
@@ -99,7 +100,7 @@ fn classify(atom: &str) -> Value {
     }
 }
 
-pub fn eval(ast: &Value, env: &mut Env) -> Value {
+pub fn eval(ast: &Value, env: Rc<RefCell<Env>>) -> Value {
     match ast {
         Value::Symbol(atom) => resolve(&atom, env),
         Value::List(list) if list.is_empty() => Value::Nil,
@@ -128,7 +129,7 @@ pub fn eval(ast: &Value, env: &mut Env) -> Value {
                     let t_branch = &list[2];
                     let f_branch = &list[3];
 
-                    let cond = eval(&cond, env);
+                    let cond = eval(&cond, env.clone());
 
                     return if cond.truthy() {
                         eval(t_branch, env)
@@ -139,22 +140,21 @@ pub fn eval(ast: &Value, env: &mut Env) -> Value {
                 _ => {}
             }
 
-            let list: Vec<Value> = list.iter().map(|v| eval(v, env)).collect();
+            let list: Vec<Value> = list.iter().map(|v| eval(v, env.clone())).collect();
             apply(&list, env)
         }
         _ => ast.clone(),
     }
 }
 
-fn resolve(atom: &str, env: &Env) -> Value {
-    if let Some(val) = env.resolve(atom) {
-        return val.clone();
+fn resolve(atom: &str, env: Rc<RefCell<Env>>) -> Value {
+    match env.borrow().resolve(atom) {
+        Some(val) => return val,
+        _ => panic!("symbol {} undefined", atom),
     }
-
-    panic!("symbol {} undefined", atom);
 }
 
-fn apply(list: &[Value], env: &mut Env) -> Value {
+fn apply(list: &[Value], env: Rc<RefCell<Env>>) -> Value {
     let args = &list[1..];
 
     match &list[0] {
@@ -164,14 +164,14 @@ fn apply(list: &[Value], env: &mut Env) -> Value {
             args: fargs,
             body,
         } => {
-            // define the args in context
-            // TODO(ajone239): cache old context
+            let env = Rc::new(RefCell::new(Env::new_child(env)));
+
             if fargs.len() != args.len() {
                 panic!("Expected {} args got {}", fargs.len(), args.len());
             }
 
             for (arg, val) in fargs.iter().zip(args) {
-                env.define(arg, val.clone());
+                env.borrow_mut().define(arg, val.clone());
             }
 
             // eval the body with the new env
@@ -179,9 +179,9 @@ fn apply(list: &[Value], env: &mut Env) -> Value {
             match body.deref() {
                 Value::Progn(body) => {
                     for b in &body[..body.len() - 1] {
-                        eval(&b, env);
+                        eval(&b, env.clone());
                     }
-                    eval(&body.last().unwrap(), env)
+                    eval(&body.last().unwrap(), env.clone())
                 }
                 _ => eval(&body, env),
             }
@@ -190,11 +190,11 @@ fn apply(list: &[Value], env: &mut Env) -> Value {
     }
 }
 
-fn define(head: &Value, tail: &[Value], env: &mut Env) {
+fn define(head: &Value, tail: &[Value], env: Rc<RefCell<Env>>) {
     match head {
         Value::Symbol(atom) => {
-            let value = eval(&tail[0], env);
-            env.define(atom, value);
+            let value = eval(&tail[0], env.clone());
+            env.borrow_mut().define(atom, value);
         }
         Value::List(exprs) => {
             let mut atoms = exprs.iter().map(|e| match e {
@@ -214,7 +214,7 @@ fn define(head: &Value, tail: &[Value], env: &mut Env) {
                 body,
             };
 
-            env.define(&name, func);
+            env.borrow_mut().define(&name, func);
         }
         _ => panic!("bad define"),
     };
@@ -227,15 +227,15 @@ mod tests {
     use crate::parser::parse_expr;
 
     fn eval_str(s: &str) -> Value {
-        let mut env = Env::default();
+        let env = Env::default();
         let tokens = lex(s);
         let (expr, _) = parse_expr(&tokens).unwrap();
         let expr = lower(&expr);
-        eval(&expr, &mut env)
+        eval(&expr, Rc::new(RefCell::new(env)))
     }
 
     fn eval_str_env(exprs: &[&str]) -> Value {
-        let mut env = Env::default();
+        let env = Rc::new(RefCell::new(Env::default()));
 
         let mut last = None;
 
@@ -243,7 +243,7 @@ mod tests {
             let tokens = lex(expr);
             let (e, _) = parse_expr(&tokens).unwrap();
             let e = lower(&e);
-            let val = eval(&e, &mut env);
+            let val = eval(&e, env.clone());
             last = Some(val);
         }
 
@@ -446,6 +446,15 @@ mod tests {
     fn define_func_and_call() {
         assert_eq!(
             eval_str_env(&["(def (double x) (* x 2))", "(double 3)"]),
+            num(6.0)
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn define_func_scope() {
+        assert_eq!(
+            eval_str_env(&["(def (double x) (* x 2))", "(double 3)", "x"]),
             num(6.0)
         );
     }

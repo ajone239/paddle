@@ -1,10 +1,11 @@
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::eval::Value;
 
 #[derive(Debug)]
 pub struct Env {
     env: HashMap<String, Value>,
+    parent: Option<Rc<RefCell<Self>>>,
 }
 
 impl Env {
@@ -21,15 +22,33 @@ impl Env {
         env.insert("car".to_string(), Value::Builtin(car));
         env.insert("cdr".to_string(), Value::Builtin(cdr));
 
-        Self { env }
+        Self { env, parent: None }
+    }
+
+    pub fn new_child(parent: Rc<RefCell<Self>>) -> Self {
+        let env = HashMap::new();
+        let parent = Some(parent.clone());
+
+        Self { env, parent }
     }
 
     pub fn define(&mut self, name: &str, value: Value) {
         self.env.insert(name.to_owned(), value);
     }
 
-    pub fn resolve(&self, name: &str) -> Option<&Value> {
-        self.env.get(name)
+    pub fn resolve(&self, name: &str) -> Option<Value> {
+        // walk resolve here
+        if let Some(val) = self.env.get(name) {
+            return Some(val.clone());
+        }
+
+        match self.parent.clone() {
+            None => None,
+            Some(penv) => {
+                let penv = penv.borrow();
+                penv.resolve(name)
+            }
+        }
     }
 }
 

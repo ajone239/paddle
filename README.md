@@ -22,7 +22,7 @@ A Lisp interpreter written in Rust, built as a learning project for exploring pr
 - [x] Environment — `define`
     + [x] variable lookup
     + [x] function lookup
-- [ ] Environment — scope
+- [x] Environment — scope
 - [ ] Lambdas and closures
 - [ ] Tail call optimization
 - [ ] Macros — `define-macro`, quasiquote/unquote
