@@ -43,6 +43,8 @@ impl Default for Env {
         env.insert("/".to_string(), tobi(div));
         env.insert("<".to_string(), tobi(lt));
 
+        env.insert("not".to_string(), tobi(not));
+
         env.insert("cons".to_string(), tobi(cons));
         env.insert("car".to_string(), tobi(car));
         env.insert("cdr".to_string(), tobi(cdr));
@@ -96,6 +98,14 @@ pub fn lt(args: &[Value]) -> Value {
         panic!("ahhh")
     };
     Value::Bool(penu < last)
+}
+
+pub fn not(args: &[Value]) -> Value {
+    if args.len() != 1 {
+        panic!("cons takes 2 args");
+    }
+    let val = &args[0];
+    Value::Bool(!val.truthy())
 }
 
 pub fn cons(args: &[Value]) -> Value {

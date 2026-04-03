@@ -41,7 +41,7 @@ pub enum Value {
 }
 
 impl Value {
-    fn truthy(&self) -> bool {
+    pub fn truthy(&self) -> bool {
         match self {
             Value::Nil => false,
             Value::Bool(val) => *val,
