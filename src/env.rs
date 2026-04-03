@@ -21,7 +21,6 @@ impl Env {
     }
 
     pub fn resolve(&self, name: &str) -> Option<Value> {
-        // walk resolve here
         if let Some(val) = self.env.get(name) {
             return Some(val.clone());
         }

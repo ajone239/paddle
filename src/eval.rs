@@ -2,10 +2,29 @@ use core::panic;
 use std::cell::RefCell;
 use std::{ops::Deref, rc::Rc};
 
+use anyhow::Result;
+use thiserror::Error;
+
 use crate::env::Env;
 use crate::parser::Expr;
 
-pub type Builtin = fn(&[Value]) -> Value;
+#[derive(Debug, PartialEq, Error)]
+pub enum EvalError {
+    #[error("Too few arguments were provided to the define statement")]
+    BadDefineArgs,
+    #[error("Too few arguments were provided to the if statement")]
+    BadIfArgs,
+    #[error("Too few arguments were provided to the lambda statement")]
+    BadLambdaArgs,
+    #[error("A list is required for lambda args")]
+    BadLambdaArgsList,
+    #[error("Symbol [{0}] is undefined in current env.")]
+    SymbolUndefined(String),
+    #[error("Symbol or list expected.")]
+    BadDefineHead,
+}
+
+pub type Builtin = fn(&[Value]) -> Result<Value>;
 
 #[derive(Debug, Clone, Copy)]
 pub struct BuiltinFn(pub Builtin);
@@ -115,36 +134,36 @@ fn classify(atom: &str) -> Value {
     }
 }
 
-pub fn eval(ast: &Value, env: Rc<RefCell<Env>>) -> Value {
+pub fn eval(ast: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
     match ast {
         Value::Symbol(atom) => resolve(atom, env),
-        Value::List(list) if list.is_empty() => Value::Nil,
+        Value::List(list) if list.is_empty() => Ok(Value::Nil),
         Value::List(list) => {
             let head = &list[0];
 
             match head {
                 Value::Form(Form::Quote) => {
-                    return list[1].clone();
+                    return Ok(list[1].clone());
                 }
                 Value::Form(Form::Define) => {
                     if list.len() < 3 {
-                        panic!("Bad define");
+                        return Err(EvalError::BadDefineArgs);
                     }
 
                     define(&list[1], &list[2..], env);
 
-                    return Value::Nil;
+                    return Ok(Value::Nil);
                 }
                 Value::Form(Form::If) => {
                     if list.len() < 3 {
-                        panic!("Bad if");
+                        return Err(EvalError::BadIfArgs);
                     }
 
                     let cond = &list[1];
                     let t_branch = &list[2];
                     let f_branch = &list[3];
 
-                    let cond = eval(cond, env.clone());
+                    let cond = eval(cond, env.clone())?;
 
                     return if cond.truthy() {
                         eval(t_branch, env)
@@ -154,11 +173,11 @@ pub fn eval(ast: &Value, env: Rc<RefCell<Env>>) -> Value {
                 }
                 Value::Form(Form::Lambda) => {
                     if list.len() < 3 {
-                        panic!("Bad lambda");
+                        return Err(EvalError::BadLambdaArgs);
                     }
 
                     let Value::List(args) = &list[1] else {
-                        panic!("bad args");
+                        return Err(EvalError::BadLambdaArgsList);
                     };
 
                     let args = args
@@ -176,30 +195,31 @@ pub fn eval(ast: &Value, env: Rc<RefCell<Env>>) -> Value {
                     } else {
                         Rc::new(Value::Progn(tail.to_vec()))
                     };
-                    return Value::Lambda {
+                    return Ok(Value::Lambda {
                         args,
                         body,
                         env: env.clone(),
-                    };
+                    });
                 }
                 _ => {}
             }
 
-            let list: Vec<Value> = list.iter().map(|v| eval(v, env.clone())).collect();
+            // TODO(ajone239): kill this unwrap
+            let list: Vec<Value> = list.iter().map(|v| eval(v, env.clone()).unwrap()).collect();
             apply(&list, env)
         }
-        _ => ast.clone(),
+        _ => Ok(ast.clone()),
     }
 }
 
-fn resolve(atom: &str, env: Rc<RefCell<Env>>) -> Value {
+fn resolve(atom: &str, env: Rc<RefCell<Env>>) -> Result<Value> {
     match env.borrow().resolve(atom) {
-        Some(val) => val,
-        _ => panic!("symbol {} undefined", atom),
+        Some(val) => Ok(val),
+        _ => Err(EvalError::SymbolUndefined(atom.to_string())),
     }
 }
 
-fn apply(list: &[Value], env: Rc<RefCell<Env>>) -> Value {
+fn apply(list: &[Value], env: Rc<RefCell<Env>>) -> Result<Value> {
     let args = &list[1..];
 
     let (fargs, body, new_env) = match &list[0] {
@@ -220,7 +240,7 @@ fn apply(list: &[Value], env: Rc<RefCell<Env>>) -> Value {
             (fargs, body, env)
         }
         Value::Builtin(f) => return f.0(args),
-        v => return v.clone(),
+        v => return Ok(v.clone()),
     };
 
     if fargs.len() != args.len() {
@@ -244,15 +264,16 @@ fn apply(list: &[Value], env: Rc<RefCell<Env>>) -> Value {
     }
 }
 
-fn define(head: &Value, tail: &[Value], env: Rc<RefCell<Env>>) {
+fn define(head: &Value, tail: &[Value], env: Rc<RefCell<Env>>) -> Result<()> {
     match head {
         Value::Symbol(atom) => {
-            let value = eval(&tail[0], env.clone());
+            let value = eval(&tail[0], env.clone())?;
             env.borrow_mut().define(atom, value);
         }
         Value::List(exprs) => {
             let mut atoms = exprs.iter().map(|e| match e {
                 Value::Symbol(a) => (*a).to_owned(),
+                // Fix this panic
                 _ => panic!("come on man"),
             });
             let name = atoms.next().unwrap();
@@ -272,8 +293,10 @@ fn define(head: &Value, tail: &[Value], env: Rc<RefCell<Env>>) {
 
             env.borrow_mut().define(&name, func);
         }
-        _ => panic!("bad define"),
+        _ => return Err(EvalError::BadDefineHead),
     };
+
+    Ok(())
 }
 
 #[cfg(test)]
