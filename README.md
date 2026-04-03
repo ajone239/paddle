@@ -28,11 +28,12 @@ A Lisp interpreter written in Rust, built as a learning project for exploring pr
 - [ ] Macros — `define-macro`, quasiquote/unquote
 
 ### Runtime
-- [-] Standard library — arithmetic
+- [x] Standard library — arithmetic
 - [ ] Standard library — `car`, `cdr`, `cons`, `map`, etc.
 - [ ] REPL
     - [x] Basic
     - [ ] Dev features
 - [ ] File loader — cursor-based multi-expression evaluation
 - [ ] Runtime errors with source location
+- [ ] better printing
 
