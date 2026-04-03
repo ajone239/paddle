@@ -25,18 +25,13 @@ fn main() -> Result<()> {
         let line = line?;
         let line = line.trim();
 
-        if input.is_empty() {
-            match line {
-                ":env" => {
-                    println!("{:#?}", env.borrow());
-                    prompt(0);
-                    continue;
-                }
-                _ => {}
-            }
+        if input.is_empty() && ":env" == line {
+            println!("{:#?}", env.borrow());
+            prompt(0);
+            continue;
         }
 
-        input += &line;
+        input += line;
 
         let pcount = count_paren(&input);
 

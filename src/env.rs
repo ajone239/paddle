@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use crate::eval::Value;
+use crate::eval::{Builtin, BuiltinFn, Value};
 
 #[derive(Debug)]
 pub struct Env {
@@ -9,27 +9,11 @@ pub struct Env {
 }
 
 impl Env {
-    pub fn default() -> Self {
-        let mut env = HashMap::new();
-
-        env.insert("+".to_string(), Value::Builtin(add));
-        env.insert("*".to_string(), Value::Builtin(mul));
-        env.insert("-".to_string(), Value::Builtin(min));
-        env.insert("/".to_string(), Value::Builtin(div));
-        env.insert("<".to_string(), Value::Builtin(lt));
-
-        env.insert("cons".to_string(), Value::Builtin(cons));
-        env.insert("car".to_string(), Value::Builtin(car));
-        env.insert("cdr".to_string(), Value::Builtin(cdr));
-
-        Self { env, parent: None }
-    }
-
     pub fn new_child(parent: Rc<RefCell<Self>>) -> Self {
-        let env = HashMap::new();
-        let parent = Some(parent.clone());
-
-        Self { env, parent }
+        Self {
+            env: HashMap::new(),
+            parent: Some(parent),
+        }
     }
 
     pub fn define(&mut self, name: &str, value: Value) {
@@ -42,17 +26,36 @@ impl Env {
             return Some(val.clone());
         }
 
-        match self.parent.clone() {
+        match &self.parent {
             None => None,
-            Some(penv) => {
-                let penv = penv.borrow();
-                penv.resolve(name)
-            }
+            Some(penv) => penv.borrow().resolve(name),
         }
     }
 }
 
-fn args_to_num<'a>(args: &'a [Value]) -> impl Iterator<Item = &'a f64> {
+impl Default for Env {
+    fn default() -> Self {
+        let mut env = HashMap::new();
+
+        env.insert("+".to_string(), tobi(add));
+        env.insert("*".to_string(), tobi(mul));
+        env.insert("-".to_string(), tobi(min));
+        env.insert("/".to_string(), tobi(div));
+        env.insert("<".to_string(), tobi(lt));
+
+        env.insert("cons".to_string(), tobi(cons));
+        env.insert("car".to_string(), tobi(car));
+        env.insert("cdr".to_string(), tobi(cdr));
+
+        Self { env, parent: None }
+    }
+}
+
+fn tobi(f: Builtin) -> Value {
+    Value::Builtin(BuiltinFn(f))
+}
+
+fn args_to_num(args: &[Value]) -> impl Iterator<Item = &f64> {
     args.iter().map(move |v| match v {
         Value::Num(n) => n,
         _ => todo!("bad call args: {:?}", args),
@@ -115,7 +118,7 @@ pub fn car(args: &[Value]) -> Value {
         panic!("car expected list");
     };
 
-    pair.get(0).expect("car expected items in list").clone()
+    pair.first().expect("car expected items in list").clone()
 }
 
 pub fn cdr(args: &[Value]) -> Value {

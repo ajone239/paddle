@@ -5,6 +5,17 @@ use std::{ops::Deref, rc::Rc};
 use crate::env::Env;
 use crate::parser::Expr;
 
+pub type Builtin = fn(&[Value]) -> Value;
+
+#[derive(Debug, Clone, Copy)]
+pub struct BuiltinFn(pub Builtin);
+
+impl PartialEq for BuiltinFn {
+    fn eq(&self, _: &Self) -> bool {
+        false
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     Nil,
@@ -16,7 +27,7 @@ pub enum Value {
     // TODO(ajone239): move this to a ref when copies get expensive
     List(Vec<Value>),
     Progn(Vec<Value>),
-    Builtin(fn(&[Value]) -> Value),
+    Builtin(BuiltinFn),
     Func {
         name: String,
         args: Vec<String>,
@@ -89,7 +100,7 @@ fn classify(atom: &str) -> Value {
         "nil" => Value::Nil,
         "#t" => Value::Bool(true),
         "#f" => Value::Bool(false),
-        _ if atom.chars().nth(0).unwrap() == '"' => Value::Str(
+        _ if atom.starts_with('\"') => Value::Str(
             atom.strip_prefix("\"")
                 .unwrap()
                 .strip_suffix("\"")
@@ -102,7 +113,7 @@ fn classify(atom: &str) -> Value {
 
 pub fn eval(ast: &Value, env: Rc<RefCell<Env>>) -> Value {
     match ast {
-        Value::Symbol(atom) => resolve(&atom, env),
+        Value::Symbol(atom) => resolve(atom, env),
         Value::List(list) if list.is_empty() => Value::Nil,
         Value::List(list) => {
             let head = &list[0];
@@ -129,7 +140,7 @@ pub fn eval(ast: &Value, env: Rc<RefCell<Env>>) -> Value {
                     let t_branch = &list[2];
                     let f_branch = &list[3];
 
-                    let cond = eval(&cond, env.clone());
+                    let cond = eval(cond, env.clone());
 
                     return if cond.truthy() {
                         eval(t_branch, env)
@@ -149,7 +160,7 @@ pub fn eval(ast: &Value, env: Rc<RefCell<Env>>) -> Value {
 
 fn resolve(atom: &str, env: Rc<RefCell<Env>>) -> Value {
     match env.borrow().resolve(atom) {
-        Some(val) => return val,
+        Some(val) => val,
         _ => panic!("symbol {} undefined", atom),
     }
 }
@@ -158,7 +169,7 @@ fn apply(list: &[Value], env: Rc<RefCell<Env>>) -> Value {
     let args = &list[1..];
 
     match &list[0] {
-        Value::Builtin(f) => f(&args),
+        Value::Builtin(f) => f.0(args),
         Value::Func {
             name: _,
             args: fargs,
@@ -179,11 +190,11 @@ fn apply(list: &[Value], env: Rc<RefCell<Env>>) -> Value {
             match body.deref() {
                 Value::Progn(body) => {
                     for b in &body[..body.len() - 1] {
-                        eval(&b, env.clone());
+                        eval(b, env.clone());
                     }
-                    eval(&body.last().unwrap(), env.clone())
+                    eval(body.last().unwrap(), env.clone())
                 }
-                _ => eval(&body, env),
+                _ => eval(body, env),
             }
         }
         v => v.clone(),
@@ -456,6 +467,14 @@ mod tests {
         assert_eq!(
             eval_str_env(&["(def (double x) (* x 2))", "(double 3)", "x"]),
             num(6.0)
+        );
+    }
+
+    #[test]
+    fn define_func_shadow() {
+        assert_eq!(
+            eval_str_env(&["(def x 10)", "(def (double x) (* x 2))", "(double 3)", "x"]),
+            num(10.0)
         );
     }
 

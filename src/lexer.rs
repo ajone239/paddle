@@ -59,7 +59,7 @@ pub fn lex<'a>(code: &'a str) -> Vec<Token<'a>> {
             '(' => (offset, Some(TokenKind::LeftParen)),
             ')' => (offset, Some(TokenKind::RightParen)),
             '\'' => (offset, Some(TokenKind::Quote)),
-            c if c == '\n' => {
+            '\n' => {
                 line += 1;
                 column = 0;
                 (offset, None)

@@ -32,7 +32,7 @@ pub fn parse_expr<'a>(tokens: &'a [Token<'a>]) -> ParseResult<'a> {
         TokenKind::Symbol(s) => {
             let span = first.span;
             let rest = &tokens[1..];
-            return Ok((Expr::Atom(s, span), rest));
+            Ok((Expr::Atom(s, span), rest))
         }
         TokenKind::Quote if tokens.len() < 2 => Err(ParseError::UnexpectedEof { span: first.span }),
         TokenKind::Quote => {
@@ -76,7 +76,7 @@ fn parse_list<'a>(tokens: &'a [Token<'a>]) -> ParseResult<'a> {
         &tokens[i + 1..]
     };
 
-    return Ok((Expr::List(list, span), rest));
+    Ok((Expr::List(list, span), rest))
 }
 
 #[cfg(test)]
