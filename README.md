@@ -23,7 +23,7 @@ A Lisp interpreter written in Rust, built as a learning project for exploring pr
     + [x] variable lookup
     + [x] function lookup
 - [x] Environment — scope
-- [ ] Lambdas and closures
+- [x] Lambdas and closures
 - [ ] Tail call optimization
 - [ ] Macros — `define-macro`, quasiquote/unquote
 - [ ] kill clone being everywhere
@@ -35,6 +35,6 @@ A Lisp interpreter written in Rust, built as a learning project for exploring pr
     - [x] Basic
     - [ ] Dev features
 - [ ] File loader — cursor-based multi-expression evaluation
-- [ ] Runtime errors with source location
+- [ ] Runtime errors with source location instead of panics
 - [ ] better printing
 

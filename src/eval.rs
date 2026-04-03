@@ -33,6 +33,11 @@ pub enum Value {
         args: Vec<String>,
         body: Rc<Value>,
     },
+    Lambda {
+        args: Vec<String>,
+        body: Rc<Value>,
+        env: Rc<RefCell<Env>>,
+    },
 }
 
 impl Value {
@@ -46,11 +51,8 @@ impl Value {
             Value::Symbol(_)
             | Value::Form(_)
             | Value::Builtin(_)
-            | Value::Func {
-                name: _,
-                args: _,
-                body: _,
-            } => true,
+            | Value::Func { .. }
+            | Value::Lambda { .. } => true,
         }
     }
 }
@@ -60,6 +62,7 @@ pub enum Form {
     If,
     Quote,
     Define,
+    Lambda,
 }
 
 impl Form {
@@ -68,6 +71,7 @@ impl Form {
             "if" => Some(Self::If),
             "quote" | "'" => Some(Self::Quote),
             "define" | "def" => Some(Self::Define),
+            "lambda" | "lamda" | ".\\" => Some(Self::Lambda),
             _ => None,
         }
     }
@@ -148,6 +152,36 @@ pub fn eval(ast: &Value, env: Rc<RefCell<Env>>) -> Value {
                         eval(f_branch, env)
                     };
                 }
+                Value::Form(Form::Lambda) => {
+                    if list.len() < 3 {
+                        panic!("Bad lambda");
+                    }
+
+                    let Value::List(args) = &list[1] else {
+                        panic!("bad args");
+                    };
+
+                    let args = args
+                        .iter()
+                        .map(|e| match e {
+                            Value::Symbol(a) => (*a).to_owned(),
+                            _ => panic!("come on man"),
+                        })
+                        .collect();
+
+                    let tail = &list[2..];
+
+                    let body = if tail.len() == 1 {
+                        Rc::new(tail[0].clone())
+                    } else {
+                        Rc::new(Value::Progn(tail.to_vec()))
+                    };
+                    return Value::Lambda {
+                        args,
+                        body,
+                        env: env.clone(),
+                    };
+                }
                 _ => {}
             }
 
@@ -168,36 +202,45 @@ fn resolve(atom: &str, env: Rc<RefCell<Env>>) -> Value {
 fn apply(list: &[Value], env: Rc<RefCell<Env>>) -> Value {
     let args = &list[1..];
 
-    match &list[0] {
-        Value::Builtin(f) => f.0(args),
+    let (fargs, body, new_env) = match &list[0] {
+        Value::Lambda {
+            args: fargs,
+            body,
+            env: lenv,
+        } => {
+            let lenv = Rc::new(RefCell::new(Env::new_child(lenv.clone())));
+            (fargs, body, lenv)
+        }
         Value::Func {
             name: _,
             args: fargs,
             body,
         } => {
             let env = Rc::new(RefCell::new(Env::new_child(env)));
-
-            if fargs.len() != args.len() {
-                panic!("Expected {} args got {}", fargs.len(), args.len());
-            }
-
-            for (arg, val) in fargs.iter().zip(args) {
-                env.borrow_mut().define(arg, val.clone());
-            }
-
-            // eval the body with the new env
-            // return the value
-            match body.deref() {
-                Value::Progn(body) => {
-                    for b in &body[..body.len() - 1] {
-                        eval(b, env.clone());
-                    }
-                    eval(body.last().unwrap(), env.clone())
-                }
-                _ => eval(body, env),
-            }
+            (fargs, body, env)
         }
-        v => v.clone(),
+        Value::Builtin(f) => return f.0(args),
+        v => return v.clone(),
+    };
+
+    if fargs.len() != args.len() {
+        panic!("Expected {} args got {}", fargs.len(), args.len());
+    }
+
+    for (arg, val) in fargs.iter().zip(args) {
+        new_env.borrow_mut().define(arg, val.clone());
+    }
+
+    // eval the body with the new env
+    // return the value
+    match body.deref() {
+        Value::Progn(body) => {
+            for b in &body[..body.len() - 1] {
+                eval(b, new_env.clone());
+            }
+            eval(body.last().unwrap(), new_env.clone())
+        }
+        _ => eval(body, new_env.clone()),
     }
 }
 
@@ -213,6 +256,8 @@ fn define(head: &Value, tail: &[Value], env: Rc<RefCell<Env>>) {
                 _ => panic!("come on man"),
             });
             let name = atoms.next().unwrap();
+            let args = atoms.collect();
+
             let body = if tail.len() == 1 {
                 Rc::new(tail[0].clone())
             } else {
@@ -221,7 +266,7 @@ fn define(head: &Value, tail: &[Value], env: Rc<RefCell<Env>>) {
 
             let func = Value::Func {
                 name: name.clone(),
-                args: atoms.collect(),
+                args,
                 body,
             };
 
@@ -742,6 +787,93 @@ mod tests {
             eval_str("(cdr '(1) '(2))");
         }
     }
+
+    mod lambda {
+        use super::*;
+
+        #[test]
+        fn call_immediately() {
+            assert_eq!(eval_str("((lambda (x) (* x 2)) 5)"), num(10.0));
+        }
+
+        #[test]
+        fn no_args() {
+            assert_eq!(eval_str("((lambda () 42))"), num(42.0));
+        }
+
+        #[test]
+        fn multi_arg() {
+            assert_eq!(eval_str("((lambda (x y) (+ x y)) 3 4)"), num(7.0));
+        }
+
+        #[test]
+        fn assign_and_call() {
+            assert_eq!(
+                eval_str_env(&["(def double (lambda (x) (* x 2)))", "(double 6)"]),
+                num(12.0)
+            );
+        }
+
+        #[test]
+        fn multi_body_returns_last() {
+            // body is (progn): intermediate exprs evaluated, last value returned
+            assert_eq!(eval_str("((lambda (x) (+ x 1) (* x 2)) 3)"), num(6.0));
+        }
+
+        #[test]
+        fn captures_outer_var() {
+            assert_eq!(
+                eval_str_env(&["(def y 10)", "((lambda (x) (+ x y)) 5)"]),
+                num(15.0)
+            );
+        }
+
+        #[test]
+        fn args_do_not_leak() {
+            // lambda arg `x` must not pollute the outer env
+            assert_eq!(
+                eval_str_env(&["(def x 99)", "((lambda (x) (* x 2)) 3)", "x"]),
+                num(99.0)
+            );
+        }
+
+        #[test]
+        fn closure_captures_creation_env() {
+            // classic adder: lambda closes over `n` from make-adder's call env
+            assert_eq!(
+                eval_str_env(&[
+                    "(def (make-adder n) (lambda (x) (+ x n)))",
+                    "(def add5 (make-adder 5))",
+                    "(add5 3)"
+                ]),
+                num(8.0)
+            );
+        }
+
+        #[test]
+        fn higher_order_apply() {
+            // pass a lambda as an argument and call it
+            assert_eq!(
+                eval_str_env(&[
+                    "(def (apply-fn f x) (f x))",
+                    "(apply-fn (lambda (x) (* x x)) 4)"
+                ]),
+                num(16.0)
+            );
+        }
+
+        #[test]
+        #[should_panic]
+        fn wrong_arity() {
+            eval_str("((lambda (x) x) 1 2)");
+        }
+
+        #[test]
+        fn alternate_syntax_backslash() {
+            assert_eq!(eval_str("((.\\  (x) (+ x 1)) 9)"), num(10.0));
+        }
+    }
+
     mod cadr {
         use super::*;
 

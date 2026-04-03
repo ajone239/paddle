@@ -2,7 +2,7 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::eval::{Builtin, BuiltinFn, Value};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Env {
     env: HashMap<String, Value>,
     parent: Option<Rc<RefCell<Self>>>,
