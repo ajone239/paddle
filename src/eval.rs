@@ -265,480 +265,498 @@ mod tests {
         Value::Num(n)
     }
 
-    // --- atoms ---
+    mod atoms {
+        use super::*;
 
-    #[test]
-    fn integer_literal() {
-        assert_eq!(eval_str("42"), num(42.0));
+        #[test]
+        fn integer_literal() {
+            assert_eq!(eval_str("42"), num(42.0));
+        }
+
+        #[test]
+        fn float_literal() {
+            assert_eq!(eval_str("3.14"), num(3.14));
+        }
+
+        #[test]
+        fn negative_literal() {
+            assert_eq!(eval_str("-7"), num(-7.0));
+        }
+
+        #[test]
+        fn nil_literal() {
+            assert_eq!(eval_str("nil"), Value::Nil);
+        }
+
+        #[test]
+        fn true_literal() {
+            assert_eq!(eval_str("#t"), Value::Bool(true));
+        }
+
+        #[test]
+        fn false_literal() {
+            assert_eq!(eval_str("#f"), Value::Bool(false));
+        }
     }
 
-    #[test]
-    fn float_literal() {
-        assert_eq!(eval_str("3.14"), num(3.14));
+    mod addition {
+        use super::*;
+
+        #[test]
+        fn add_two() {
+            assert_eq!(eval_str("(+ 1 2)"), num(3.0));
+        }
+
+        #[test]
+        fn add_three() {
+            assert_eq!(eval_str("(+ 1 2 3)"), num(6.0));
+        }
+
+        #[test]
+        fn add_no_args() {
+            assert_eq!(eval_str("(+)"), num(0.0));
+        }
+
+        #[test]
+        fn add_one_arg() {
+            assert_eq!(eval_str("(+ 5)"), num(5.0));
+        }
     }
+    mod subtraction {
+        use super::*;
 
-    #[test]
-    fn negative_literal() {
-        assert_eq!(eval_str("-7"), num(-7.0));
+        #[test]
+        fn sub_two() {
+            assert_eq!(eval_str("(- 10 3)"), num(7.0));
+        }
+
+        #[test]
+        fn sub_three() {
+            assert_eq!(eval_str("(- 10 3 2)"), num(5.0));
+        }
+
+        #[test]
+        fn sub_one_arg() {
+            assert_eq!(eval_str("(- 5)"), num(5.0));
+        }
     }
+    mod multiplication {
+        use super::*;
 
-    #[test]
-    fn nil_literal() {
-        assert_eq!(eval_str("nil"), Value::Nil);
+        #[test]
+        fn mul_two() {
+            assert_eq!(eval_str("(* 3 4)"), num(12.0));
+        }
+
+        #[test]
+        fn mul_no_args() {
+            assert_eq!(eval_str("(*)"), num(1.0));
+        }
+
+        #[test]
+        fn mul_one_arg() {
+            assert_eq!(eval_str("(* 7)"), num(7.0));
+        }
     }
+    mod division {
+        use super::*;
 
-    #[test]
-    fn true_literal() {
-        assert_eq!(eval_str("#t"), Value::Bool(true));
+        #[test]
+        fn div_two() {
+            assert_eq!(eval_str("(/ 10 2)"), num(5.0));
+        }
+
+        #[test]
+        fn div_three() {
+            assert_eq!(eval_str("(/ 24 4 3)"), num(2.0));
+        }
     }
+    mod nesting {
+        use super::*;
 
-    #[test]
-    fn false_literal() {
-        assert_eq!(eval_str("#f"), Value::Bool(false));
+        #[test]
+        fn nested_add() {
+            assert_eq!(eval_str("(+ 1 (+ 2 3))"), num(6.0));
+        }
+
+        #[test]
+        fn nested_mixed() {
+            assert_eq!(eval_str("(* (+ 1 2) (- 5 2))"), num(9.0));
+        }
+
+        #[test]
+        fn deeply_nested() {
+            assert_eq!(eval_str("(+ 1 (* 2 (- 10 (/ 6 2))))"), num(15.0));
+        }
     }
+    mod empty {
+        use super::*;
 
-    // --- addition ---
-
-    #[test]
-    fn add_two() {
-        assert_eq!(eval_str("(+ 1 2)"), num(3.0));
+        #[test]
+        fn empty_list() {
+            assert_eq!(eval_str("()"), Value::Nil);
+        }
     }
+    mod quote {
+        use super::*;
 
-    #[test]
-    fn add_three() {
-        assert_eq!(eval_str("(+ 1 2 3)"), num(6.0));
+        #[test]
+        fn quote_symbol() {
+            assert_eq!(eval_str("(quote x)"), Value::Symbol("x".to_owned()));
+        }
+
+        #[test]
+        fn quote_number() {
+            assert_eq!(eval_str("(quote 42)"), num(42.0));
+            assert_eq!(eval_str("'42"), num(42.0));
+        }
+
+        #[test]
+        fn quote_nil() {
+            assert_eq!(eval_str("(quote nil)"), Value::Nil);
+        }
+
+        #[test]
+        fn quote_list() {
+            assert_eq!(
+                eval_str("(quote (1 2 3))"),
+                Value::List(vec![num(1.0), num(2.0), num(3.0)])
+            );
+        }
+
+        #[test]
+        fn quote_suppresses_eval() {
+            assert_eq!(
+                eval_str("(quote (+ 1 2))"),
+                Value::List(vec![Value::Symbol("+".to_owned()), num(1.0), num(2.0),])
+            );
+        }
     }
+    mod evalenv {
+        use super::*;
 
-    #[test]
-    fn add_no_args() {
-        assert_eq!(eval_str("(+)"), num(0.0));
+        #[test]
+        fn define_and_resolve() {
+            assert_eq!(eval_str_env(&vec!["(def x 5)", "(+ x 1)"]), num(6.0));
+        }
+
+        #[test]
+        fn redefine() {
+            assert_eq!(eval_str_env(&vec!["(def x 1)", "(def x 2)", "x"]), num(2.0));
+        }
+
+        #[test]
+        fn define_returns_nil() {
+            assert_eq!(eval_str("(def x 5)"), Value::Nil);
+        }
+
+        #[test]
+        fn define_expression_value() {
+            assert_eq!(eval_str_env(&vec!["(def x (+ 1 2))", "x"]), num(3.0));
+        }
+
+        #[test]
+        #[should_panic]
+        fn undefined_symbol() {
+            assert_eq!(eval_str("x"), Value::Symbol("x".to_owned()));
+        }
     }
+    mod env {
+        use super::*;
 
-    #[test]
-    fn add_one_arg() {
-        assert_eq!(eval_str("(+ 5)"), num(5.0));
-    }
+        #[test]
+        fn define_func_and_call() {
+            assert_eq!(
+                eval_str_env(&["(def (double x) (* x 2))", "(double 3)"]),
+                num(6.0)
+            );
+        }
 
-    // --- subtraction ---
+        #[test]
+        #[should_panic]
+        fn define_func_scope() {
+            assert_eq!(
+                eval_str_env(&["(def (double x) (* x 2))", "(double 3)", "x"]),
+                num(6.0)
+            );
+        }
 
-    #[test]
-    fn sub_two() {
-        assert_eq!(eval_str("(- 10 3)"), num(7.0));
-    }
+        #[test]
+        fn define_func_shadow() {
+            assert_eq!(
+                eval_str_env(&["(def x 10)", "(def (double x) (* x 2))", "(double 3)", "x"]),
+                num(10.0)
+            );
+        }
 
-    #[test]
-    fn sub_three() {
-        assert_eq!(eval_str("(- 10 3 2)"), num(5.0));
-    }
+        #[test]
+        fn define_func_two_args() {
+            assert_eq!(
+                eval_str_env(&["(def (add x y) (+ x y))", "(add 3 4)"]),
+                num(7.0)
+            );
+        }
 
-    #[test]
-    fn sub_one_arg() {
-        assert_eq!(eval_str("(- 5)"), num(5.0));
-    }
+        #[test]
+        fn define_func_no_args() {
+            assert_eq!(
+                eval_str_env(&["(def (forty-two) 42)", "(forty-two)"]),
+                num(42.0)
+            );
+        }
 
-    // --- multiplication ---
+        #[test]
+        fn define_func_multi_body() {
+            assert_eq!(
+                eval_str_env(&["(def (f x) (+ x 1) (* x 2))", "(f 3)"]),
+                num(6.0)
+            );
+        }
 
-    #[test]
-    fn mul_two() {
-        assert_eq!(eval_str("(* 3 4)"), num(12.0));
-    }
+        #[test]
+        fn define_func_returns_nil() {
+            assert_eq!(eval_str("(def (f x) (+ x 1))"), Value::Nil);
+        }
 
-    #[test]
-    fn mul_no_args() {
-        assert_eq!(eval_str("(*)"), num(1.0));
-    }
+        #[test]
+        fn define_func_fact() {
+            assert_eq!(
+                eval_str_env(&vec![
+                    "(def (fact n) (if (< n 1) 1 (* n (fact (- n 1)))))",
+                    "(fact 5)"
+                ]),
+                Value::Num(120.0)
+            );
+        }
 
-    #[test]
-    fn mul_one_arg() {
-        assert_eq!(eval_str("(* 7)"), num(7.0));
-    }
-
-    // --- division ---
-
-    #[test]
-    fn div_two() {
-        assert_eq!(eval_str("(/ 10 2)"), num(5.0));
-    }
-
-    #[test]
-    fn div_three() {
-        assert_eq!(eval_str("(/ 24 4 3)"), num(2.0));
-    }
-
-    // --- nesting ---
-
-    #[test]
-    fn nested_add() {
-        assert_eq!(eval_str("(+ 1 (+ 2 3))"), num(6.0));
-    }
-
-    #[test]
-    fn nested_mixed() {
-        assert_eq!(eval_str("(* (+ 1 2) (- 5 2))"), num(9.0));
-    }
-
-    #[test]
-    fn deeply_nested() {
-        assert_eq!(eval_str("(+ 1 (* 2 (- 10 (/ 6 2))))"), num(15.0));
-    }
-
-    // --- empty list ---
-
-    #[test]
-    fn empty_list() {
-        assert_eq!(eval_str("()"), Value::Nil);
-    }
-
-    // --- quote ---
-
-    #[test]
-    fn quote_symbol() {
-        assert_eq!(eval_str("(quote x)"), Value::Symbol("x".to_owned()));
-    }
-
-    #[test]
-    fn quote_number() {
-        assert_eq!(eval_str("(quote 42)"), num(42.0));
-        assert_eq!(eval_str("'42"), num(42.0));
-    }
-
-    #[test]
-    fn quote_nil() {
-        assert_eq!(eval_str("(quote nil)"), Value::Nil);
-    }
-
-    #[test]
-    fn quote_list() {
-        assert_eq!(
-            eval_str("(quote (1 2 3))"),
-            Value::List(vec![num(1.0), num(2.0), num(3.0)])
-        );
-    }
-
-    #[test]
-    fn quote_suppresses_eval() {
-        assert_eq!(
-            eval_str("(quote (+ 1 2))"),
-            Value::List(vec![Value::Symbol("+".to_owned()), num(1.0), num(2.0),])
-        );
-    }
-
-    // --- env vars ---
-
-    #[test]
-    fn define_and_resolve() {
-        assert_eq!(eval_str_env(&vec!["(def x 5)", "(+ x 1)"]), num(6.0));
-    }
-
-    #[test]
-    fn redefine() {
-        assert_eq!(eval_str_env(&vec!["(def x 1)", "(def x 2)", "x"]), num(2.0));
-    }
-
-    #[test]
-    fn define_returns_nil() {
-        assert_eq!(eval_str("(def x 5)"), Value::Nil);
-    }
-
-    #[test]
-    fn define_expression_value() {
-        assert_eq!(eval_str_env(&vec!["(def x (+ 1 2))", "x"]), num(3.0));
-    }
-
-    #[test]
-    #[should_panic]
-    fn undefined_symbol() {
-        assert_eq!(eval_str("x"), Value::Symbol("x".to_owned()));
-    }
-
-    // --- env funs ---
-
-    #[test]
-    fn define_func_and_call() {
-        assert_eq!(
-            eval_str_env(&["(def (double x) (* x 2))", "(double 3)"]),
-            num(6.0)
-        );
-    }
-
-    #[test]
-    #[should_panic]
-    fn define_func_scope() {
-        assert_eq!(
-            eval_str_env(&["(def (double x) (* x 2))", "(double 3)", "x"]),
-            num(6.0)
-        );
-    }
-
-    #[test]
-    fn define_func_shadow() {
-        assert_eq!(
-            eval_str_env(&["(def x 10)", "(def (double x) (* x 2))", "(double 3)", "x"]),
-            num(10.0)
-        );
-    }
-
-    #[test]
-    fn define_func_two_args() {
-        assert_eq!(
-            eval_str_env(&["(def (add x y) (+ x y))", "(add 3 4)"]),
-            num(7.0)
-        );
-    }
-
-    #[test]
-    fn define_func_no_args() {
-        assert_eq!(
-            eval_str_env(&["(def (forty-two) 42)", "(forty-two)"]),
-            num(42.0)
-        );
-    }
-
-    #[test]
-    fn define_func_multi_body() {
-        assert_eq!(
-            eval_str_env(&["(def (f x) (+ x 1) (* x 2))", "(f 3)"]),
-            num(6.0)
-        );
-    }
-
-    #[test]
-    fn define_func_returns_nil() {
-        assert_eq!(eval_str("(def (f x) (+ x 1))"), Value::Nil);
-    }
-
-    #[test]
-    fn define_func_fact() {
-        assert_eq!(
-            eval_str_env(&vec![
-                "(def (fact n) (if (< n 1) 1 (* n (fact (- n 1)))))",
-                "(fact 5)"
-            ]),
-            Value::Num(120.0)
-        );
-    }
-
-    #[test]
-    fn define_func_fact_cute() {
-        assert_eq!(
-            eval_str_env(&vec![
-                "
+        #[test]
+        fn define_func_fact_cute() {
+            assert_eq!(
+                eval_str_env(&vec![
+                    "
 (def (fact n)
     (if (< n 1)
      1
      (* n (fact (- n 1)))))
 ",
-                "(fact 5)"
-            ]),
-            Value::Num(120.0)
-        );
+                    "(fact 5)"
+                ]),
+                Value::Num(120.0)
+            );
+        }
+
+        #[test]
+        fn define_func_nested_call() {
+            assert_eq!(
+                eval_str_env(&[
+                    "(def (double x) (* x 2))",
+                    "(def (quad x) (double (double x)))",
+                    "(quad 3)"
+                ]),
+                num(12.0)
+            );
+        }
+
+        #[test]
+        #[should_panic]
+        fn define_func_wrong_arity() {
+            eval_str_env(&["(def (f x) (+ x 1))", "(f 1 2)"]);
+        }
     }
 
-    #[test]
-    fn define_func_nested_call() {
-        assert_eq!(
-            eval_str_env(&[
-                "(def (double x) (* x 2))",
-                "(def (quad x) (double (double x)))",
-                "(quad 3)"
-            ]),
-            num(12.0)
-        );
+    mod evalif {
+        use super::*;
+
+        #[test]
+        fn if_true_branch() {
+            assert_eq!(eval_str("(if #t 1 2)"), num(1.0));
+        }
+
+        #[test]
+        fn if_false_branch() {
+            assert_eq!(eval_str("(if #f 1 2)"), num(2.0));
+        }
+
+        #[test]
+        fn if_truthy_num() {
+            assert_eq!(eval_str("(if 1 10 20)"), num(10.0));
+        }
+
+        #[test]
+        fn if_falsy_zero() {
+            assert_eq!(eval_str("(if 0 10 20)"), num(20.0));
+        }
+
+        #[test]
+        fn if_falsy_nil() {
+            assert_eq!(eval_str("(if nil 10 20)"), num(20.0));
+        }
+
+        #[test]
+        fn if_condition_is_expression() {
+            assert_eq!(eval_str("(if (< 1 2) 10 20)"), num(10.0));
+        }
+
+        #[test]
+        fn if_only_evaluates_true_branch() {
+            // if the false branch were evaluated it would panic (undefined symbol)
+            eval_str_env(&["(def x 1)", "(if #t x undefined)"]);
+        }
+
+        #[test]
+        fn if_only_evaluates_false_branch() {
+            eval_str_env(&["(def x 1)", "(if #f undefined x)"]);
+        }
+
+        #[test]
+        fn if_nested() {
+            assert_eq!(eval_str("(if #t (if #f 1 2) 3)"), num(2.0));
+        }
+
+        #[test]
+        #[should_panic]
+        fn if_no_else_true() {
+            assert_eq!(eval_str("(if #t 42)"), num(42.0));
+        }
+
+        #[test]
+        #[should_panic]
+        fn if_no_else_false() {
+            assert_eq!(eval_str("(if #f 42)"), Value::Nil);
+        }
     }
+    mod cons {
+        use super::*;
 
-    #[test]
-    #[should_panic]
-    fn define_func_wrong_arity() {
-        eval_str_env(&["(def (f x) (+ x 1))", "(f 1 2)"]);
+        #[test]
+        fn cons_two_atoms() {
+            assert_eq!(
+                eval_str("(cons 1 2)"),
+                Value::List(vec![num(1.0), num(2.0)])
+            );
+        }
+
+        #[test]
+        fn cons_with_nil_tail() {
+            assert_eq!(
+                eval_str("(cons 1 nil)"),
+                Value::List(vec![num(1.0), Value::Nil])
+            );
+        }
+
+        #[test]
+        fn cons_with_list_tail() {
+            // cons does not flatten — tail stays as a nested list
+            assert_eq!(
+                eval_str("(cons 1 '(2 3))"),
+                Value::List(vec![num(1.0), Value::List(vec![num(2.0), num(3.0)])])
+            );
+        }
+
+        #[test]
+        #[should_panic]
+        fn cons_wrong_arity_one() {
+            eval_str("(cons 1)");
+        }
+
+        #[test]
+        #[should_panic]
+        fn cons_wrong_arity_three() {
+            eval_str("(cons 1 2 3)");
+        }
     }
+    mod car {
+        use super::*;
 
-    // --- if ---
+        #[test]
+        fn car_of_cons() {
+            assert_eq!(eval_str("(car (cons 1 2))"), num(1.0));
+        }
 
-    #[test]
-    fn if_true_branch() {
-        assert_eq!(eval_str("(if #t 1 2)"), num(1.0));
+        #[test]
+        fn car_of_quoted_list() {
+            assert_eq!(eval_str("(car '(10 20 30))"), num(10.0));
+        }
+
+        #[test]
+        fn car_of_single_element_list() {
+            assert_eq!(eval_str("(car '(42))"), num(42.0));
+        }
+
+        #[test]
+        #[should_panic]
+        fn car_of_nil() {
+            eval_str("(car nil)");
+        }
+
+        #[test]
+        #[should_panic]
+        fn car_of_atom() {
+            eval_str("(car 1)");
+        }
+
+        #[test]
+        #[should_panic]
+        fn car_wrong_arity() {
+            eval_str("(car '(1) '(2))");
+        }
     }
+    mod cdr {
+        use super::*;
 
-    #[test]
-    fn if_false_branch() {
-        assert_eq!(eval_str("(if #f 1 2)"), num(2.0));
+        #[test]
+        fn cdr_of_cons() {
+            // cdr of (cons 1 2) is List([2]), not the atom 2
+            assert_eq!(eval_str("(cdr (cons 1 2))"), Value::List(vec![num(2.0)]));
+        }
+
+        #[test]
+        fn cdr_of_quoted_list() {
+            assert_eq!(
+                eval_str("(cdr '(1 2 3))"),
+                Value::List(vec![num(2.0), num(3.0)])
+            );
+        }
+
+        #[test]
+        fn cdr_of_single_element_list_is_empty_list() {
+            // cdr drops the head, leaving an empty Vec — not Nil
+            assert_eq!(eval_str("(cdr '(1))"), Value::List(vec![]));
+        }
+
+        #[test]
+        #[should_panic]
+        fn cdr_of_nil() {
+            eval_str("(cdr nil)");
+        }
+
+        #[test]
+        #[should_panic]
+        fn cdr_of_atom() {
+            eval_str("(cdr 1)");
+        }
+
+        #[test]
+        #[should_panic]
+        fn cdr_wrong_arity() {
+            eval_str("(cdr '(1) '(2))");
+        }
     }
+    mod cadr {
+        use super::*;
 
-    #[test]
-    fn if_truthy_num() {
-        assert_eq!(eval_str("(if 1 10 20)"), num(10.0));
-    }
+        #[test]
+        fn car_of_cdr_gives_second_element() {
+            assert_eq!(eval_str("(car (cdr '(1 2 3)))"), num(2.0));
+        }
 
-    #[test]
-    fn if_falsy_zero() {
-        assert_eq!(eval_str("(if 0 10 20)"), num(20.0));
-    }
-
-    #[test]
-    fn if_falsy_nil() {
-        assert_eq!(eval_str("(if nil 10 20)"), num(20.0));
-    }
-
-    #[test]
-    fn if_condition_is_expression() {
-        assert_eq!(eval_str("(if (< 1 2) 10 20)"), num(10.0));
-    }
-
-    #[test]
-    fn if_only_evaluates_true_branch() {
-        // if the false branch were evaluated it would panic (undefined symbol)
-        eval_str_env(&["(def x 1)", "(if #t x undefined)"]);
-    }
-
-    #[test]
-    fn if_only_evaluates_false_branch() {
-        eval_str_env(&["(def x 1)", "(if #f undefined x)"]);
-    }
-
-    #[test]
-    fn if_nested() {
-        assert_eq!(eval_str("(if #t (if #f 1 2) 3)"), num(2.0));
-    }
-
-    #[test]
-    #[should_panic]
-    fn if_no_else_true() {
-        assert_eq!(eval_str("(if #t 42)"), num(42.0));
-    }
-
-    #[test]
-    #[should_panic]
-    fn if_no_else_false() {
-        assert_eq!(eval_str("(if #f 42)"), Value::Nil);
-    }
-
-    // --- cons ---
-
-    #[test]
-    fn cons_two_atoms() {
-        assert_eq!(
-            eval_str("(cons 1 2)"),
-            Value::List(vec![num(1.0), num(2.0)])
-        );
-    }
-
-    #[test]
-    fn cons_with_nil_tail() {
-        assert_eq!(
-            eval_str("(cons 1 nil)"),
-            Value::List(vec![num(1.0), Value::Nil])
-        );
-    }
-
-    #[test]
-    fn cons_with_list_tail() {
-        // cons does not flatten — tail stays as a nested list
-        assert_eq!(
-            eval_str("(cons 1 '(2 3))"),
-            Value::List(vec![num(1.0), Value::List(vec![num(2.0), num(3.0)])])
-        );
-    }
-
-    #[test]
-    #[should_panic]
-    fn cons_wrong_arity_one() {
-        eval_str("(cons 1)");
-    }
-
-    #[test]
-    #[should_panic]
-    fn cons_wrong_arity_three() {
-        eval_str("(cons 1 2 3)");
-    }
-
-    // --- car ---
-
-    #[test]
-    fn car_of_cons() {
-        assert_eq!(eval_str("(car (cons 1 2))"), num(1.0));
-    }
-
-    #[test]
-    fn car_of_quoted_list() {
-        assert_eq!(eval_str("(car '(10 20 30))"), num(10.0));
-    }
-
-    #[test]
-    fn car_of_single_element_list() {
-        assert_eq!(eval_str("(car '(42))"), num(42.0));
-    }
-
-    #[test]
-    #[should_panic]
-    fn car_of_nil() {
-        eval_str("(car nil)");
-    }
-
-    #[test]
-    #[should_panic]
-    fn car_of_atom() {
-        eval_str("(car 1)");
-    }
-
-    #[test]
-    #[should_panic]
-    fn car_wrong_arity() {
-        eval_str("(car '(1) '(2))");
-    }
-
-    // --- cdr ---
-
-    #[test]
-    fn cdr_of_cons() {
-        // cdr of (cons 1 2) is List([2]), not the atom 2
-        assert_eq!(eval_str("(cdr (cons 1 2))"), Value::List(vec![num(2.0)]));
-    }
-
-    #[test]
-    fn cdr_of_quoted_list() {
-        assert_eq!(
-            eval_str("(cdr '(1 2 3))"),
-            Value::List(vec![num(2.0), num(3.0)])
-        );
-    }
-
-    #[test]
-    fn cdr_of_single_element_list_is_empty_list() {
-        // cdr drops the head, leaving an empty Vec — not Nil
-        assert_eq!(eval_str("(cdr '(1))"), Value::List(vec![]));
-    }
-
-    #[test]
-    #[should_panic]
-    fn cdr_of_nil() {
-        eval_str("(cdr nil)");
-    }
-
-    #[test]
-    #[should_panic]
-    fn cdr_of_atom() {
-        eval_str("(cdr 1)");
-    }
-
-    #[test]
-    #[should_panic]
-    fn cdr_wrong_arity() {
-        eval_str("(cdr '(1) '(2))");
-    }
-
-    // --- car/cdr composition ---
-
-    #[test]
-    fn car_of_cdr_gives_second_element() {
-        assert_eq!(eval_str("(car (cdr '(1 2 3)))"), num(2.0));
-    }
-
-    #[test]
-    fn nested_cons_car_cdr() {
-        // (cons 20 30) => List([20, 30])
-        // (cons 10 ...) => List([10, List([20, 30])])
-        // cdr         => List([20, 30])
-        // car         => 20
-        assert_eq!(eval_str("(car (cdr (cons 10 (cons 20 30))))"), num(20.0));
+        #[test]
+        fn nested_cons_car_cdr() {
+            // (cons 20 30) => List([20, 30])
+            // (cons 10 ...) => List([10, List([20, 30])])
+            // cdr         => List([20, 30])
+            // car         => 20
+            assert_eq!(eval_str("(car (cdr (cons 10 (cons 20 30))))"), num(20.0));
+        }
     }
 }
