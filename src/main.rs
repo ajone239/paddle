@@ -43,7 +43,7 @@ fn main() -> Result<()> {
                 continue;
             }
             _ => {
-                let tokens = lexer::lex(&line);
+                let tokens = lexer::lex(&input);
                 let (ast, _) = parser::parse_expr(&tokens)?;
                 let expr = lower(&ast);
                 let val = eval(&expr, &mut env);
