@@ -990,31 +990,46 @@ mod tests {
         fn car_empty_list() {
             // (car nil) hits WrongCarArgType; need a real empty list
             let err = eval_err("(car '())");
-            assert_eq!(err.downcast_ref::<BuiltinError>(), Some(&BuiltinError::CarOnEmptyList));
+            assert_eq!(
+                err.downcast_ref::<BuiltinError>(),
+                Some(&BuiltinError::CarOnEmptyList)
+            );
         }
 
         #[test]
         fn cdr_empty_list() {
             let err = eval_err("(cdr '())");
-            assert_eq!(err.downcast_ref::<BuiltinError>(), Some(&BuiltinError::CdrOnEmptyList));
+            assert_eq!(
+                err.downcast_ref::<BuiltinError>(),
+                Some(&BuiltinError::CdrOnEmptyList)
+            );
         }
 
         #[test]
         fn expected_num_arg() {
             let err = eval_err(r#"(+ "foo" 1)"#);
-            assert_eq!(err.downcast_ref::<BuiltinError>(), Some(&BuiltinError::ExpectedNumArg));
+            assert_eq!(
+                err.downcast_ref::<BuiltinError>(),
+                Some(&BuiltinError::ExpectedNumArg)
+            );
         }
 
         #[test]
         fn minus_no_args() {
             let err = eval_err("(-)");
-            assert_eq!(err.downcast_ref::<BuiltinError>(), Some(&BuiltinError::NoInitforMinus));
+            assert_eq!(
+                err.downcast_ref::<BuiltinError>(),
+                Some(&BuiltinError::NoInitforMinus)
+            );
         }
 
         #[test]
         fn div_no_args() {
             let err = eval_err("(/)");
-            assert_eq!(err.downcast_ref::<BuiltinError>(), Some(&BuiltinError::NoInitforDiv));
+            assert_eq!(
+                err.downcast_ref::<BuiltinError>(),
+                Some(&BuiltinError::NoInitforDiv)
+            );
         }
 
         #[test]
@@ -1029,7 +1044,10 @@ mod tests {
         #[test]
         fn lt_bad_arg_types() {
             let err = eval_err(r#"(< "a" "b")"#);
-            assert_eq!(err.downcast_ref::<BuiltinError>(), Some(&BuiltinError::BadLtArgTypes));
+            assert_eq!(
+                err.downcast_ref::<BuiltinError>(),
+                Some(&BuiltinError::BadLtArgTypes)
+            );
         }
     }
 
@@ -1040,49 +1058,70 @@ mod tests {
         fn bad_define_args() {
             // (def x) — missing value
             let err = eval_err("(def x)");
-            assert_eq!(err.downcast_ref::<EvalError>(), Some(&EvalError::BadDefineArgs));
+            assert_eq!(
+                err.downcast_ref::<EvalError>(),
+                Some(&EvalError::BadDefineArgs)
+            );
         }
 
         #[test]
         fn bad_lambda_args() {
             // (lambda (x)) — missing body
             let err = eval_err("(lambda (x))");
-            assert_eq!(err.downcast_ref::<EvalError>(), Some(&EvalError::BadLambdaArgs));
+            assert_eq!(
+                err.downcast_ref::<EvalError>(),
+                Some(&EvalError::BadLambdaArgs)
+            );
         }
 
         #[test]
         fn bad_lambda_args_list() {
             // args must be a list, not a symbol
             let err = eval_err("(lambda x x)");
-            assert_eq!(err.downcast_ref::<EvalError>(), Some(&EvalError::BadLambdaArgsList));
+            assert_eq!(
+                err.downcast_ref::<EvalError>(),
+                Some(&EvalError::BadLambdaArgsList)
+            );
         }
 
         #[test]
         fn bad_lambda_args_list_type() {
             // args list may only contain symbols
             let err = eval_err("(lambda (1) x)");
-            assert_eq!(err.downcast_ref::<EvalError>(), Some(&EvalError::BadLambdaArgsListType));
+            assert_eq!(
+                err.downcast_ref::<EvalError>(),
+                Some(&EvalError::BadLambdaArgsListType)
+            );
         }
 
         #[test]
         fn bad_define_head() {
             // head must be a symbol or list, not a number
             let err = eval_err("(def 5 x)");
-            assert_eq!(err.downcast_ref::<EvalError>(), Some(&EvalError::BadDefineHead));
+            assert_eq!(
+                err.downcast_ref::<EvalError>(),
+                Some(&EvalError::BadDefineHead)
+            );
         }
 
         #[test]
         fn bad_define_function_head() {
             // function def with empty head list has no name
             let err = eval_err("(def () x)");
-            assert_eq!(err.downcast_ref::<EvalError>(), Some(&EvalError::BadDefineFunctionHead));
+            assert_eq!(
+                err.downcast_ref::<EvalError>(),
+                Some(&EvalError::BadDefineFunctionHead)
+            );
         }
 
         #[test]
         fn bad_define_function_head_types() {
             // function head list may only contain symbols
             let err = eval_err("(def (1 x) x)");
-            assert_eq!(err.downcast_ref::<EvalError>(), Some(&EvalError::BadDefineFunctionHeadTypes));
+            assert_eq!(
+                err.downcast_ref::<EvalError>(),
+                Some(&EvalError::BadDefineFunctionHeadTypes)
+            );
         }
     }
 
