@@ -1,5 +1,6 @@
-use anyhow::Result;
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
+
+use anyhow::Result;
 use thiserror::Error;
 
 use crate::eval::value::{Builtin, BuiltinFn, Value};
@@ -38,17 +39,21 @@ impl Default for Env {
     fn default() -> Self {
         let mut env = HashMap::new();
 
-        env.insert("+".to_string(), tobi(add));
-        env.insert("*".to_string(), tobi(mul));
-        env.insert("-".to_string(), tobi(min));
-        env.insert("/".to_string(), tobi(div));
-        env.insert("<".to_string(), tobi(lt));
+        let bins: &[(&str, Builtin)] = &[
+            ("+", add),
+            ("*", mul),
+            ("-", min),
+            ("/", div),
+            ("<", lt),
+            ("not", not),
+            ("cons", cons),
+            ("car", car),
+            ("cdr", cdr),
+        ];
 
-        env.insert("not".to_string(), tobi(not));
-
-        env.insert("cons".to_string(), tobi(cons));
-        env.insert("car".to_string(), tobi(car));
-        env.insert("cdr".to_string(), tobi(cdr));
+        for (name, f) in bins {
+            env.insert(name.to_string(), tobi(*f, name));
+        }
 
         Self { env, parent: None }
     }
@@ -84,8 +89,8 @@ pub enum BuiltinError {
     CarOnEmptyList,
 }
 
-fn tobi(f: Builtin) -> Value {
-    Value::Builtin(BuiltinFn(f))
+fn tobi(f: Builtin, name: &str) -> Value {
+    Value::Builtin(BuiltinFn(f), name.to_owned())
 }
 
 fn args_to_num(args: &[Value]) -> impl Iterator<Item = Result<&f64>> {

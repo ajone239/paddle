@@ -39,7 +39,10 @@ fn main() -> Result<()> {
                     _ => {
                         rl.add_history_entry(&input)?;
                         let val = lpe(&input, env.clone());
-                        println!("{:?}", val);
+                        match val {
+                            Ok(val) => println!("{}", val),
+                            Err(err) => println!("ERROR: {:?}", err),
+                        }
                     }
                 }
 

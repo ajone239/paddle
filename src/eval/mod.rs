@@ -184,7 +184,7 @@ fn apply(list: &[Value], env: Rc<RefCell<Env>>) -> Result<Value> {
             let env = Rc::new(RefCell::new(Env::new_child(env)));
             (fargs, body, env)
         }
-        Value::Builtin(f) => return f.0(args),
+        Value::Builtin(f, _) => return f.0(args),
         v => return Ok(v.clone()),
     };
 
