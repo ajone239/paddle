@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use thiserror::Error;
 
-use crate::eval::{Builtin, BuiltinFn, Value};
+use crate::eval::value::{Builtin, BuiltinFn, Value};
 
 #[derive(Debug, PartialEq)]
 pub struct Env {

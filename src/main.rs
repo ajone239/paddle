@@ -6,8 +6,7 @@ use std::{
 
 use anyhow::Result;
 use jethe::{
-    env::Env,
-    eval::{Value, eval, lower},
+    eval::{env::Env, eval, lower, value::Value},
     lexer, parser,
 };
 
