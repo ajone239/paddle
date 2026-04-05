@@ -46,6 +46,10 @@ pub fn parse_expr<'a>(tokens: &'a [Token<'a>]) -> ParseResult<'a> {
 }
 
 fn parse_list<'a>(tokens: &'a [Token<'a>]) -> ParseResult<'a> {
+    if tokens.is_empty() {
+        return Err(ParseError::EmptyInput);
+    }
+
     let span = tokens[0].span;
 
     let mut list = vec![];
@@ -244,7 +248,7 @@ mod tests {
         if let Expr::List(_, span) = expr {
             assert_eq!(span, sp!(0, 2)); // '+' is at column 2
         } else {
-            panic!("expected list");
+            assert_eq!(0, 1, "expected list");
         }
     }
 

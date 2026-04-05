@@ -1,4 +1,6 @@
+use anyhow::Result;
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use thiserror::Error;
 
 use crate::eval::{Builtin, BuiltinFn, Value};
 
@@ -52,100 +54,152 @@ impl Default for Env {
     }
 }
 
+#[derive(Debug, PartialEq, Error)]
+pub enum BuiltinError {
+    #[error("Not: Expected 1 argument got {0}.")]
+    WrongNotArgCount(usize),
+    #[error("Cons: Expected 2 arguments got {0}.")]
+    WrongConsArgCount(usize),
+    #[error("Car: Expected 1 argument got {0}.")]
+    WrongCarArgCount(usize),
+    #[error("Car: Must be applied to a list.")]
+    WrongCarArgType,
+    #[error("Cdr: Expected 1 argument got {0}.")]
+    WrongCdrArgCount(usize),
+    #[error("Cdr: Must be applied to a list.")]
+    WrongCdrArgType,
+    #[error("Cdr: Cannot be applied to an empty list.")]
+    CdrOnEmptyList,
+    #[error("Expected Number for arithmetic builtin.")]
+    ExpectedNumArg,
+    #[error("Minus: initial argument required.")]
+    NoInitforMinus,
+    #[error("LessThan: Expected Numbers")]
+    BadLtArgTypes,
+    #[error("LessThan: Expected 1 argument got {0}")]
+    BadLtArgCount(usize),
+    #[error("Div: initial argument required.")]
+    NoInitforDiv,
+    #[error("Car: Cannot be applied to an empty list.")]
+    CarOnEmptyList,
+}
+
 fn tobi(f: Builtin) -> Value {
     Value::Builtin(BuiltinFn(f))
 }
 
-fn args_to_num(args: &[Value]) -> impl Iterator<Item = &f64> {
+fn args_to_num(args: &[Value]) -> impl Iterator<Item = Result<&f64>> {
     args.iter().map(move |v| match v {
-        Value::Num(n) => n,
-        _ => todo!("bad call args: {:?}", args),
+        Value::Num(n) => Ok(n),
+        _ => Err(BuiltinError::ExpectedNumArg.into()),
     })
 }
 
-pub fn add(args: &[Value]) -> Value {
-    let args = args_to_num(args);
+pub fn add(args: &[Value]) -> Result<Value> {
+    let args = args_to_num(args)
+        .collect::<Result<Vec<_>, _>>()?
+        .into_iter();
+
     let num = args.fold(0.0, |acc, x| acc + x);
-    Value::Num(num)
+    Ok(Value::Num(num))
 }
 
-pub fn min(args: &[Value]) -> Value {
-    let mut args = args_to_num(args);
-    let init = *args.next().unwrap();
-    let num = args.fold(init, |acc, x| acc - x);
-    Value::Num(num)
+pub fn min(args: &[Value]) -> Result<Value> {
+    let mut args = args_to_num(args)
+        .collect::<Result<Vec<_>, _>>()?
+        .into_iter();
+
+    let Some(init) = args.next() else {
+        return Err(BuiltinError::NoInitforMinus.into());
+    };
+
+    let num = args.fold(*init, |acc, x| acc - x);
+    Ok(Value::Num(num))
 }
 
-pub fn mul(args: &[Value]) -> Value {
-    let args = args_to_num(args);
+pub fn mul(args: &[Value]) -> Result<Value> {
+    let args = args_to_num(args)
+        .collect::<Result<Vec<_>, _>>()?
+        .into_iter();
     let num = args.fold(1.0, |acc, x| acc * x);
-    Value::Num(num)
+    Ok(Value::Num(num))
 }
 
-pub fn div(args: &[Value]) -> Value {
-    let mut args = args_to_num(args);
-    let init = *args.next().unwrap();
-    let num = args.fold(init, |acc, x| acc / x);
-    Value::Num(num)
-}
+pub fn div(args: &[Value]) -> Result<Value> {
+    let mut args = args_to_num(args)
+        .collect::<Result<Vec<_>, _>>()?
+        .into_iter();
 
-pub fn lt(args: &[Value]) -> Value {
-    let Value::Num(last) = args[args.len() - 1] else {
-        panic!("ahhh")
+    let Some(init) = args.next() else {
+        return Err(BuiltinError::NoInitforDiv.into());
     };
-    let Value::Num(penu) = args[args.len() - 2] else {
-        panic!("ahhh")
-    };
-    Value::Bool(penu < last)
+
+    let num = args.fold(*init, |acc, x| acc / x);
+    Ok(Value::Num(num))
 }
 
-pub fn not(args: &[Value]) -> Value {
+pub fn lt(args: &[Value]) -> Result<Value> {
+    if args.len() < 2 {
+        return Err(BuiltinError::BadLtArgCount(args.len()).into());
+    }
+
+    match (&args[args.len() - 1], &args[args.len() - 2]) {
+        (Value::Num(last), Value::Num(penu)) => Ok(Value::Bool(penu < last)),
+        _ => Err(BuiltinError::BadLtArgTypes.into()),
+    }
+}
+
+pub fn not(args: &[Value]) -> Result<Value> {
     if args.len() != 1 {
-        panic!("cons takes 2 args");
+        return Err(BuiltinError::WrongNotArgCount(args.len()).into());
     }
     let val = &args[0];
-    Value::Bool(!val.truthy())
+    Ok(Value::Bool(!val.truthy()))
 }
 
-pub fn cons(args: &[Value]) -> Value {
+pub fn cons(args: &[Value]) -> Result<Value> {
     if args.len() != 2 {
-        panic!("cons takes 2 args");
+        return Err(BuiltinError::WrongConsArgCount(args.len()).into());
     }
 
     let head = args[0].clone();
     let tail = args[1].clone();
 
-    Value::List(vec![head, tail])
+    Ok(Value::List(vec![head, tail]))
 }
 
-pub fn car(args: &[Value]) -> Value {
+pub fn car(args: &[Value]) -> Result<Value> {
     if args.len() != 1 {
-        panic!("car takes 1 args");
+        return Err(BuiltinError::WrongCarArgCount(args.len()).into());
     }
 
     let Value::List(pair) = &args[0] else {
-        panic!("car expected list");
-    };
-
-    pair.first().expect("car expected items in list").clone()
-}
-
-pub fn cdr(args: &[Value]) -> Value {
-    if args.len() != 1 {
-        panic!("cdr takes 1 args");
-    }
-
-    let Value::List(pair) = &args[0] else {
-        panic!("cdr expected list");
+        return Err(BuiltinError::WrongCarArgType.into());
     };
 
     if pair.is_empty() {
-        panic!("cdr expected items in list");
+        return Err(BuiltinError::CarOnEmptyList.into());
+    }
+
+    Ok(pair.first().expect("car expected items in list").clone())
+}
+
+pub fn cdr(args: &[Value]) -> Result<Value> {
+    if args.len() != 1 {
+        return Err(BuiltinError::WrongCdrArgCount(args.len()).into());
+    }
+
+    let Value::List(pair) = &args[0] else {
+        return Err(BuiltinError::WrongCdrArgType.into());
+    };
+
+    if pair.is_empty() {
+        return Err(BuiltinError::CdrOnEmptyList.into());
     }
 
     if pair.len() == 2 && matches!(&pair[1], Value::List(_)) {
-        return pair[1].clone();
+        return Ok(pair[1].clone());
     }
 
-    Value::List(pair[1..].to_vec())
+    Ok(Value::List(pair[1..].to_vec()))
 }

@@ -7,7 +7,7 @@ use std::{
 use anyhow::Result;
 use jethe::{
     env::Env,
-    eval::{eval, lower},
+    eval::{Value, eval, lower},
     lexer, parser,
 };
 
@@ -15,7 +15,7 @@ fn main() -> Result<()> {
     let stdin = stdin();
 
     print!("> ");
-    stdout().flush().unwrap();
+    stdout().flush()?;
 
     let mut input = String::new();
 
@@ -27,7 +27,7 @@ fn main() -> Result<()> {
 
         if input.is_empty() && ":env" == line {
             println!("{:#?}", env.borrow());
-            prompt(0);
+            prompt(0)?;
             continue;
         }
 
@@ -38,27 +38,30 @@ fn main() -> Result<()> {
         match pcount {
             c if c < 0 => println!("Err: bad paren structure!"),
             c if c > 0 => {
-                prompt(pcount as usize);
+                prompt(pcount as usize)?;
                 continue;
             }
             _ => {
-                let tokens = lexer::lex(&input);
-                let (ast, _) = parser::parse_expr(&tokens)?;
-                let expr = lower(&ast);
-                let val = eval(&expr, env.clone());
-
+                let val = lpe(&input, env.clone());
                 println!("{:?}", val);
             }
         }
 
         input.clear();
-        prompt(0);
+        prompt(0)?;
     }
 
     Ok(())
 }
 
-fn prompt(indent: usize) {
+fn lpe(input: &str, env: Rc<RefCell<Env>>) -> Result<Value> {
+    let tokens = lexer::lex(input);
+    let (ast, _) = parser::parse_expr(&tokens)?;
+    let expr = lower(&ast);
+    eval(&expr, env)
+}
+
+fn prompt(indent: usize) -> Result<()> {
     if indent == 0 {
         print!("> ");
     } else {
@@ -66,7 +69,9 @@ fn prompt(indent: usize) {
         print!("* {}", p);
     }
 
-    stdout().flush().unwrap();
+    stdout().flush()?;
+
+    Ok(())
 }
 
 fn count_paren(line: &str) -> i32 {
