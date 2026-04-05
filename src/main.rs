@@ -1,53 +1,53 @@
-use std::{
-    cell::RefCell,
-    io::{Write, stdin, stdout},
-    rc::Rc,
-};
+use std::{cell::RefCell, rc::Rc};
 
 use anyhow::Result;
+use rustyline::{DefaultEditor, error::ReadlineError};
+
 use jethe::{
     eval::{env::Env, eval, lower, value::Value},
     lexer, parser,
 };
 
 fn main() -> Result<()> {
-    let stdin = stdin();
-
-    print!("> ");
-    stdout().flush()?;
+    let mut rl = DefaultEditor::new()?;
 
     let mut input = String::new();
 
     let env = Rc::new(RefCell::new(Env::default()));
 
-    for line in stdin.lines() {
-        let line = line?;
-        let line = line.trim();
-
-        if input.is_empty() && ":env" == line {
-            println!("{:#?}", env.borrow());
-            prompt(0)?;
-            continue;
-        }
-
-        input += line;
-
+    loop {
         let pcount = count_paren(&input);
+        let prompt = make_prompt(pcount as usize);
 
-        match pcount {
-            c if c < 0 => println!("Err: bad paren structure!"),
-            c if c > 0 => {
-                prompt(pcount as usize)?;
-                continue;
+        match rl.readline(&prompt) {
+            Ok(line) => {
+                let line = line.trim();
+
+                if input.is_empty() && ":env" == line {
+                    println!("{:#?}", env.borrow());
+                    rl.add_history_entry(line)?;
+                    continue;
+                }
+
+                input += line;
+
+                let pcount = count_paren(&input);
+
+                match pcount {
+                    c if c < 0 => println!("Err: bad paren structure!"),
+                    c if c > 0 => continue,
+                    _ => {
+                        rl.add_history_entry(&input)?;
+                        let val = lpe(&input, env.clone());
+                        println!("{:?}", val);
+                    }
+                }
+
+                input.clear();
             }
-            _ => {
-                let val = lpe(&input, env.clone());
-                println!("{:?}", val);
-            }
+            Err(ReadlineError::Eof) | Err(ReadlineError::Interrupted) => break,
+            Err(e) => return Err(e.into()),
         }
-
-        input.clear();
-        prompt(0)?;
     }
 
     Ok(())
@@ -60,17 +60,13 @@ fn lpe(input: &str, env: Rc<RefCell<Env>>) -> Result<Value> {
     eval(&expr, env)
 }
 
-fn prompt(indent: usize) -> Result<()> {
+fn make_prompt(indent: usize) -> String {
     if indent == 0 {
-        print!("> ");
+        "> ".to_string()
     } else {
         let p = "  ".repeat(indent);
-        print!("* {}", p);
+        format!("* {}", p)
     }
-
-    stdout().flush()?;
-
-    Ok(())
 }
 
 fn count_paren(line: &str) -> i32 {
