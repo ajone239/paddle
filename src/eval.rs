@@ -361,6 +361,27 @@ mod tests {
         Value::Num(n)
     }
 
+    fn eval_err(s: &str) -> anyhow::Error {
+        let env = Env::default();
+        let tokens = lex(s);
+        let (expr, _) = parse_expr(&tokens).unwrap();
+        let expr = lower(&expr);
+        eval(&expr, Rc::new(RefCell::new(env))).unwrap_err()
+    }
+
+    fn eval_env_err(exprs: &[&str]) -> anyhow::Error {
+        let env = Rc::new(RefCell::new(Env::default()));
+        for s in exprs {
+            let tokens = lex(s);
+            let (e, _) = parse_expr(&tokens).unwrap();
+            let e = lower(&e);
+            if let Err(err) = eval(&e, env.clone()) {
+                return err;
+            }
+        }
+        panic!("expected an error but all expressions succeeded");
+    }
+
     mod atoms {
         use super::*;
 
@@ -552,9 +573,12 @@ mod tests {
         }
 
         #[test]
-        #[should_panic]
         fn undefined_symbol() {
-            assert_eq!(eval_str("x"), Value::Symbol("x".to_owned()));
+            let err = eval_err("x");
+            assert_eq!(
+                err.downcast_ref::<EvalError>(),
+                Some(&EvalError::SymbolUndefined("x".into()))
+            );
         }
     }
     mod env {
@@ -569,11 +593,11 @@ mod tests {
         }
 
         #[test]
-        #[should_panic]
         fn define_func_scope() {
+            let err = eval_env_err(&["(def (double x) (* x 2))", "(double 3)", "x"]);
             assert_eq!(
-                eval_str_env(&["(def (double x) (* x 2))", "(double 3)", "x"]),
-                num(6.0)
+                err.downcast_ref::<EvalError>(),
+                Some(&EvalError::SymbolUndefined("x".into()))
             );
         }
 
@@ -654,9 +678,12 @@ mod tests {
         }
 
         #[test]
-        #[should_panic]
         fn define_func_wrong_arity() {
-            eval_str_env(&["(def (f x) (+ x 1))", "(f 1 2)"]);
+            let err = eval_env_err(&["(def (f x) (+ x 1))", "(f 1 2)"]);
+            assert_eq!(
+                err.downcast_ref::<EvalError>(),
+                Some(&EvalError::BadFunctionArgCount(2, 1))
+            );
         }
     }
 
@@ -710,19 +737,20 @@ mod tests {
         }
 
         #[test]
-        #[should_panic]
         fn if_no_else_true() {
-            assert_eq!(eval_str("(if #t 42)"), num(42.0));
+            let err = eval_err("(if #t 42)");
+            assert_eq!(err.downcast_ref::<EvalError>(), Some(&EvalError::BadIfArgs));
         }
 
         #[test]
-        #[should_panic]
         fn if_no_else_false() {
-            assert_eq!(eval_str("(if #f 42)"), Value::Nil);
+            let err = eval_err("(if #f 42)");
+            assert_eq!(err.downcast_ref::<EvalError>(), Some(&EvalError::BadIfArgs));
         }
     }
     mod cons {
         use super::*;
+        use crate::env::BuiltinError;
 
         #[test]
         fn cons_two_atoms() {
@@ -750,19 +778,26 @@ mod tests {
         }
 
         #[test]
-        #[should_panic]
         fn cons_wrong_arity_one() {
-            eval_str("(cons 1)");
+            let err = eval_err("(cons 1)");
+            assert_eq!(
+                err.downcast_ref::<BuiltinError>(),
+                Some(&BuiltinError::WrongConsArgCount(1))
+            );
         }
 
         #[test]
-        #[should_panic]
         fn cons_wrong_arity_three() {
-            eval_str("(cons 1 2 3)");
+            let err = eval_err("(cons 1 2 3)");
+            assert_eq!(
+                err.downcast_ref::<BuiltinError>(),
+                Some(&BuiltinError::WrongConsArgCount(3))
+            );
         }
     }
     mod car {
         use super::*;
+        use crate::env::BuiltinError;
 
         #[test]
         fn car_of_cons() {
@@ -780,25 +815,35 @@ mod tests {
         }
 
         #[test]
-        #[should_panic]
         fn car_of_nil() {
-            eval_str("(car nil)");
+            let err = eval_err("(car nil)");
+            assert_eq!(
+                err.downcast_ref::<BuiltinError>(),
+                Some(&BuiltinError::WrongCarArgType)
+            );
         }
 
         #[test]
-        #[should_panic]
         fn car_of_atom() {
-            eval_str("(car 1)");
+            let err = eval_err("(car 1)");
+            assert_eq!(
+                err.downcast_ref::<BuiltinError>(),
+                Some(&BuiltinError::WrongCarArgType)
+            );
         }
 
         #[test]
-        #[should_panic]
         fn car_wrong_arity() {
-            eval_str("(car '(1) '(2))");
+            let err = eval_err("(car '(1) '(2))");
+            assert_eq!(
+                err.downcast_ref::<BuiltinError>(),
+                Some(&BuiltinError::WrongCarArgCount(2))
+            );
         }
     }
     mod cdr {
         use super::*;
+        use crate::env::BuiltinError;
 
         #[test]
         fn cdr_of_cons() {
@@ -821,21 +866,30 @@ mod tests {
         }
 
         #[test]
-        #[should_panic]
         fn cdr_of_nil() {
-            eval_str("(cdr nil)");
+            let err = eval_err("(cdr nil)");
+            assert_eq!(
+                err.downcast_ref::<BuiltinError>(),
+                Some(&BuiltinError::WrongCdrArgType)
+            );
         }
 
         #[test]
-        #[should_panic]
         fn cdr_of_atom() {
-            eval_str("(cdr 1)");
+            let err = eval_err("(cdr 1)");
+            assert_eq!(
+                err.downcast_ref::<BuiltinError>(),
+                Some(&BuiltinError::WrongCdrArgType)
+            );
         }
 
         #[test]
-        #[should_panic]
         fn cdr_wrong_arity() {
-            eval_str("(cdr '(1) '(2))");
+            let err = eval_err("(cdr '(1) '(2))");
+            assert_eq!(
+                err.downcast_ref::<BuiltinError>(),
+                Some(&BuiltinError::WrongCdrArgCount(2))
+            );
         }
     }
 
@@ -914,14 +968,121 @@ mod tests {
         }
 
         #[test]
-        #[should_panic]
         fn wrong_arity() {
-            eval_str("((lambda (x) x) 1 2)");
+            let err = eval_err("((lambda (x) x) 1 2)");
+            assert_eq!(
+                err.downcast_ref::<EvalError>(),
+                Some(&EvalError::BadFunctionArgCount(2, 1))
+            );
         }
 
         #[test]
         fn alternate_syntax_backslash() {
             assert_eq!(eval_str("((.\\  (x) (+ x 1)) 9)"), num(10.0));
+        }
+    }
+
+    mod builtin_errors {
+        use super::*;
+        use crate::env::BuiltinError;
+
+        #[test]
+        fn car_empty_list() {
+            // (car nil) hits WrongCarArgType; need a real empty list
+            let err = eval_err("(car '())");
+            assert_eq!(err.downcast_ref::<BuiltinError>(), Some(&BuiltinError::CarOnEmptyList));
+        }
+
+        #[test]
+        fn cdr_empty_list() {
+            let err = eval_err("(cdr '())");
+            assert_eq!(err.downcast_ref::<BuiltinError>(), Some(&BuiltinError::CdrOnEmptyList));
+        }
+
+        #[test]
+        fn expected_num_arg() {
+            let err = eval_err(r#"(+ "foo" 1)"#);
+            assert_eq!(err.downcast_ref::<BuiltinError>(), Some(&BuiltinError::ExpectedNumArg));
+        }
+
+        #[test]
+        fn minus_no_args() {
+            let err = eval_err("(-)");
+            assert_eq!(err.downcast_ref::<BuiltinError>(), Some(&BuiltinError::NoInitforMinus));
+        }
+
+        #[test]
+        fn div_no_args() {
+            let err = eval_err("(/)");
+            assert_eq!(err.downcast_ref::<BuiltinError>(), Some(&BuiltinError::NoInitforDiv));
+        }
+
+        #[test]
+        fn lt_too_few_args() {
+            let err = eval_err("(< 1)");
+            assert_eq!(
+                err.downcast_ref::<BuiltinError>(),
+                Some(&BuiltinError::BadLtArgCount(1))
+            );
+        }
+
+        #[test]
+        fn lt_bad_arg_types() {
+            let err = eval_err(r#"(< "a" "b")"#);
+            assert_eq!(err.downcast_ref::<BuiltinError>(), Some(&BuiltinError::BadLtArgTypes));
+        }
+    }
+
+    mod eval_errors {
+        use super::*;
+
+        #[test]
+        fn bad_define_args() {
+            // (def x) — missing value
+            let err = eval_err("(def x)");
+            assert_eq!(err.downcast_ref::<EvalError>(), Some(&EvalError::BadDefineArgs));
+        }
+
+        #[test]
+        fn bad_lambda_args() {
+            // (lambda (x)) — missing body
+            let err = eval_err("(lambda (x))");
+            assert_eq!(err.downcast_ref::<EvalError>(), Some(&EvalError::BadLambdaArgs));
+        }
+
+        #[test]
+        fn bad_lambda_args_list() {
+            // args must be a list, not a symbol
+            let err = eval_err("(lambda x x)");
+            assert_eq!(err.downcast_ref::<EvalError>(), Some(&EvalError::BadLambdaArgsList));
+        }
+
+        #[test]
+        fn bad_lambda_args_list_type() {
+            // args list may only contain symbols
+            let err = eval_err("(lambda (1) x)");
+            assert_eq!(err.downcast_ref::<EvalError>(), Some(&EvalError::BadLambdaArgsListType));
+        }
+
+        #[test]
+        fn bad_define_head() {
+            // head must be a symbol or list, not a number
+            let err = eval_err("(def 5 x)");
+            assert_eq!(err.downcast_ref::<EvalError>(), Some(&EvalError::BadDefineHead));
+        }
+
+        #[test]
+        fn bad_define_function_head() {
+            // function def with empty head list has no name
+            let err = eval_err("(def () x)");
+            assert_eq!(err.downcast_ref::<EvalError>(), Some(&EvalError::BadDefineFunctionHead));
+        }
+
+        #[test]
+        fn bad_define_function_head_types() {
+            // function head list may only contain symbols
+            let err = eval_err("(def (1 x) x)");
+            assert_eq!(err.downcast_ref::<EvalError>(), Some(&EvalError::BadDefineFunctionHeadTypes));
         }
     }
 
