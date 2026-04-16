@@ -49,6 +49,7 @@ impl Default for Env {
             ("cons", cons),
             ("car", car),
             ("cdr", cdr),
+            ("list", list),
         ];
 
         for (name, f) in bins {
@@ -207,4 +208,8 @@ pub fn cdr(args: &[Value]) -> Result<Value> {
     }
 
     Ok(Value::List(pair[1..].to_vec()))
+}
+
+pub fn list(args: &[Value]) -> Result<Value> {
+    Ok(Value::List(args.to_vec()))
 }
