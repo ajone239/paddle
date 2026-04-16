@@ -46,10 +46,7 @@ pub fn lower(ast: &Expr) -> Value {
 fn quote_eval(ast: &Expr) -> Value {
     match ast {
         Expr::Atom(atom, _) => classify(atom),
-        Expr::List(list, _) => {
-            let list = list.iter().map(quote_eval).collect();
-            Value::List(list)
-        }
+        Expr::List(list, _) => Value::List(list.iter().map(quote_eval).collect()),
     }
 }
 
@@ -81,100 +78,103 @@ pub fn eval(ast: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
     match ast {
         Value::Symbol(atom) => resolve(atom, env),
         Value::List(list) if list.is_empty() => Ok(Value::Nil),
-        Value::List(list) => {
-            let head = &list[0];
-
-            match head {
-                Value::Form(Form::Quote) => {
-                    return Ok(list[1].clone());
-                }
-                Value::Form(Form::Define) => {
-                    if list.len() < 3 {
-                        return Err(EvalError::BadDefineArgs.into());
-                    }
-
-                    define(&list[1], &list[2..], env)?;
-
-                    return Ok(Value::Nil);
-                }
-                Value::Form(Form::If) => {
-                    if list.len() < 4 {
-                        return Err(EvalError::BadIfArgs.into());
-                    }
-
-                    let cond = &list[1];
-                    let t_branch = &list[2];
-                    let f_branch = &list[3];
-
-                    let cond = eval(cond, env.clone())?;
-
-                    return if cond.truthy() {
-                        eval(t_branch, env)
-                    } else {
-                        eval(f_branch, env)
-                    };
-                }
-                Value::Form(Form::Lambda) => {
-                    if list.len() < 3 {
-                        return Err(EvalError::BadLambdaArgs.into());
-                    }
-
-                    let Value::List(args) = &list[1] else {
-                        return Err(EvalError::BadLambdaArgsList.into());
-                    };
-
-                    let args = args
-                        .iter()
-                        .map(|e| match e {
-                            Value::Symbol(a) => Ok((*a).to_owned()),
-                            _ => Err(EvalError::BadLambdaArgsListType),
-                        })
-                        .collect::<Result<Vec<String>, EvalError>>()?;
-
-                    let tail = &list[2..];
-
-                    let body = if tail.len() == 1 {
-                        Rc::new(tail[0].clone())
-                    } else {
-                        Rc::new(Value::Progn(tail.to_vec()))
-                    };
-                    return Ok(Value::Lambda {
-                        args,
-                        body,
-                        env: env.clone(),
-                    });
-                }
-                _ => {}
-            }
-
-            let list = list
-                .iter()
-                .map(|v| eval(v, env.clone()))
-                .collect::<Result<Vec<_>, _>>()?;
-            apply(&list, env)
-        }
+        Value::List(list) => match &list[0] {
+            Value::Form(f) => eval_form(*f, list, env),
+            _ => apply(&list, env),
+        },
         _ => Ok(ast.clone()),
     }
 }
 
-fn resolve(atom: &str, env: Rc<RefCell<Env>>) -> Result<Value> {
-    match env.borrow().resolve(atom) {
-        Some(val) => Ok(val),
-        _ => Err(EvalError::SymbolUndefined(atom.to_string()).into()),
+fn eval_form(form: Form, list: &[Value], env: Rc<RefCell<Env>>) -> Result<Value> {
+    match form {
+        Form::Quote => Ok(list[1].clone()),
+        Form::Define => {
+            if list.len() < 3 {
+                return Err(EvalError::BadDefineArgs.into());
+            }
+
+            println!("{:?}", list);
+
+            define(&list[1], &list[2..], env)?;
+
+            Ok(Value::Nil)
+        }
+        Form::If => {
+            if list.len() < 4 {
+                return Err(EvalError::BadIfArgs.into());
+            }
+
+            let cond = &list[1];
+            let t_branch = &list[2];
+            let f_branch = &list[3];
+
+            let cond = eval(cond, env.clone())?;
+
+            if cond.truthy() {
+                eval(t_branch, env)
+            } else {
+                eval(f_branch, env)
+            }
+        }
+        Form::Lambda => {
+            if list.len() < 3 {
+                return Err(EvalError::BadLambdaArgs.into());
+            }
+
+            let Value::List(args) = &list[1] else {
+                return Err(EvalError::BadLambdaArgsList.into());
+            };
+
+            let args = args
+                .iter()
+                .map(|e| match e {
+                    Value::Symbol(a) => Ok((*a).to_owned()),
+                    _ => Err(EvalError::BadLambdaArgsListType),
+                })
+                .collect::<Result<Vec<String>, EvalError>>()?;
+
+            let tail = &list[2..];
+
+            let body = if tail.len() == 1 {
+                Rc::new(tail[0].clone())
+            } else {
+                Rc::new(Value::Progn(tail.to_vec()))
+            };
+
+            let lambda = Value::Lambda {
+                args,
+                body,
+                env: env.clone(),
+            };
+
+            Ok(lambda)
+        }
     }
 }
 
+fn resolve(atom: &str, env: Rc<RefCell<Env>>) -> Result<Value> {
+    env.borrow()
+        .resolve(atom)
+        .ok_or(EvalError::SymbolUndefined(atom.to_string()).into())
+}
+
 fn apply(list: &[Value], env: Rc<RefCell<Env>>) -> Result<Value> {
+    let list = list
+        .iter()
+        .map(|v| eval(v, env.clone()))
+        .collect::<Result<Vec<_>, _>>()?;
+
     let args = &list[1..];
 
     let (fargs, body, new_env) = match &list[0] {
         Value::Lambda {
             args: fargs,
             body,
-            env: lenv,
+            env,
         } => {
-            let lenv = Rc::new(RefCell::new(Env::new_child(lenv.clone())));
-            (fargs, body, lenv)
+            let env = Rc::new(RefCell::new(Env::new_child(env.clone())));
+            (fargs, body, env)
         }
         Value::Func {
             name: _,
@@ -189,7 +189,7 @@ fn apply(list: &[Value], env: Rc<RefCell<Env>>) -> Result<Value> {
     };
 
     if fargs.len() != args.len() {
-        return Err(EvalError::BadFunctionArgCount(args.len(), fargs.len()).into());
+        return Err(EvalError::BadFunctionArgCount(fargs.len(), args.len()).into());
     }
 
     for (arg, val) in fargs.iter().zip(args) {

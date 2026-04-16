@@ -30,6 +30,9 @@ pub enum Value {
     },
 }
 
+#[derive(Clone, PartialEq)]
+pub struct Lambda {}
+
 impl Value {
     pub fn truthy(&self) -> bool {
         match self {
@@ -62,7 +65,7 @@ impl Display for Value {
                     .map(|v| v.to_string())
                     .collect::<Vec<String>>()
                     .join(" ");
-                write!(f, "({})", nice_list)
+                write!(f, "'({})", nice_list)
             }
             Value::Progn(_) => todo!(),
             Value::Builtin(_, name) => write!(f, "built-in: {} (...) {{...}}", name),
@@ -98,7 +101,7 @@ impl Debug for Value {
                 .field("args", args)
                 .field("body", body)
                 .finish(),
-            Self::Lambda { args, body, env: _ } => f
+            Value::Lambda { args, body, env: _ } => f
                 .debug_struct("Lambda")
                 .field("args", args)
                 .field("body", body)

@@ -351,7 +351,7 @@ mod env {
         let err = eval_env_err(&["(def (f x) (+ x 1))", "(f 1 2)"]);
         assert_eq!(
             err.downcast_ref::<EvalError>(),
-            Some(&EvalError::BadFunctionArgCount(2, 1))
+            Some(&EvalError::BadFunctionArgCount(1, 2))
         );
     }
 }
@@ -641,7 +641,7 @@ mod lambda {
         let err = eval_err("((lambda (x) x) 1 2)");
         assert_eq!(
             err.downcast_ref::<EvalError>(),
-            Some(&EvalError::BadFunctionArgCount(2, 1))
+            Some(&EvalError::BadFunctionArgCount(1, 2))
         );
     }
 
@@ -859,10 +859,7 @@ mod list {
     fn list_with_quoted_list_arg() {
         assert_eq!(
             eval_str("(list '(1 2) 3)"),
-            Value::List(vec![
-                Value::List(vec![num(1.0), num(2.0)]),
-                num(3.0)
-            ])
+            Value::List(vec![Value::List(vec![num(1.0), num(2.0)]), num(3.0)])
         );
     }
 
@@ -881,11 +878,7 @@ mod list {
     fn quote_of_list_call_suppresses_eval() {
         assert_eq!(
             eval_str("'(list 1 2)"),
-            Value::List(vec![
-                Value::Symbol("list".to_owned()),
-                num(1.0),
-                num(2.0)
-            ])
+            Value::List(vec![Value::Symbol("list".to_owned()), num(1.0), num(2.0)])
         );
     }
 }

@@ -24,8 +24,8 @@ A Lisp interpreter written in Rust, built as a learning project for exploring pr
     + [x] function lookup
 - [x] Environment — scope
 - [x] Lambdas and closures
-- [ ] Tail call optimization
 - [ ] Macros — `define-macro`, quasiquote/unquote
+- [ ] Tail call optimization
 - [ ] kill clone being everywhere
 
 ### Runtime
