@@ -1,4 +1,8 @@
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use super::*;
+use crate::eval::value::Value;
 use crate::lexer::lex;
 use crate::parser::parse_expr;
 

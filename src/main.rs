@@ -4,7 +4,7 @@ use anyhow::Result;
 use rustyline::{DefaultEditor, error::ReadlineError};
 
 use jethe::{
-    eval::{env::Env, eval, lower, value::Value},
+    eval::{Env, eval, lower, value::Value},
     lexer, parser,
 };
 
