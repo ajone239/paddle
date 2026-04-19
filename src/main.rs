@@ -9,13 +9,15 @@ use jethe::{
 };
 
 fn main() -> Result<()> {
+    run_repl()?;
+    Ok(())
+}
+
+fn run_repl() -> Result<()> {
     let mut rl = DefaultEditor::new()?;
-
     let mut input = String::new();
-
     let env = Rc::new(RefCell::new(Env::default()));
-
-    loop {
+    Ok(loop {
         let pcount = count_paren(&input);
         let prompt = make_prompt(pcount as usize);
 
@@ -51,9 +53,7 @@ fn main() -> Result<()> {
             Err(ReadlineError::Eof) | Err(ReadlineError::Interrupted) => break,
             Err(e) => return Err(e.into()),
         }
-    }
-
-    Ok(())
+    })
 }
 
 fn lpe(input: &str, env: Rc<RefCell<Env>>) -> Result<Value> {

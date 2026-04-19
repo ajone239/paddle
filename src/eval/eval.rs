@@ -27,8 +27,6 @@ fn eval_form(form: Form, list: &[Value], env: Rc<RefCell<Env>>) -> Result<Value>
                 return Err(EvalError::BadDefineArgs.into());
             }
 
-            println!("{:?}", list);
-
             define(&list[1], &list[2..], env)?;
 
             Ok(Value::Nil)
