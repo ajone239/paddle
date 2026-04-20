@@ -1,0 +1,49 @@
+(def (map f xs)
+     (if (not xs)
+       '()
+       (cons (f (car xs))
+             (map f (cdr xs)))))
+
+(def (filter p xs)
+     (if (not xs)
+       '()
+       (if (p (car xs))
+           (cons (car xs) (filter p (cdr xs))
+           (filter p (cdr xs)))))
+
+(def (range n)
+     (def (range-up i)
+          (if (not (< i n))
+            '()
+            (cons i (range-up (+ i 1)))))
+     (range-up 0))
+
+(def (foldr f init xs)
+     (def (fold xs)
+          (def xxs (cdr xs))
+          (if (not (xxs))
+            (car xs)
+            (f (car xs) (fold xxs))))
+     (f init (fold xs)))
+
+(def (sum xs) (foldr + 0 xs))
+
+(def (length xs)
+     (if (not xs)
+       0
+       (+ 1 (length (cdr xs)))))
+
+(def len length)
+
+(def (> x y) (< y x))
+(def (<= x y) (not (< y x)))
+(def (>= x y) (not (< x y)))
+
+(def (^ x y)
+     (if (< y 1)
+       1
+       (* x (^ x (- y 1)))))
+
+(def (cadr x) (car (cdr x)))
+(def (caddr x) (car (cdr (cdr x))))
+(def (cadddr x) (car (cdr (cdr (cdr x)))))

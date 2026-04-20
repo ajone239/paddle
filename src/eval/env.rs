@@ -33,6 +33,12 @@ impl Env {
             Some(penv) => penv.borrow().resolve(name),
         }
     }
+
+    pub fn dump(&self) {
+        for (k, v) in &self.env {
+            println!("{}: {}", k, v)
+        }
+    }
 }
 
 impl Default for Env {
@@ -44,7 +50,9 @@ impl Default for Env {
             ("*", mul),
             ("-", min),
             ("/", div),
+            ("=", eq),
             ("<", lt),
+            ("%", modulo),
             ("not", not),
             ("cons", cons),
             ("car", car),
@@ -82,12 +90,20 @@ pub enum BuiltinError {
     NoInitforMinus,
     #[error("LessThan: Expected Numbers")]
     BadLtArgTypes,
-    #[error("LessThan: Expected 1 argument got {0}")]
+    #[error("LessThan: Expected 2 arguments got {0}")]
     BadLtArgCount(usize),
     #[error("Div: initial argument required.")]
     NoInitforDiv,
     #[error("Car: Cannot be applied to an empty list.")]
     CarOnEmptyList,
+    #[error("Modulo: Expected numbers")]
+    BadModArgTypes,
+    #[error("Modulo: Expected 2 arguments got {0}")]
+    BadModArgCount(usize),
+    #[error("Eq: Expected comparable types")]
+    BadEqArgTypes,
+    #[error("Eq: Expected 2 arguments got {0}")]
+    BadEqArgCount(usize),
 }
 
 fn tobi(f: Builtin, name: &str) -> Value {
@@ -152,6 +168,32 @@ pub fn lt(args: &[Value]) -> Result<Value> {
     match (&args[args.len() - 1], &args[args.len() - 2]) {
         (Value::Num(last), Value::Num(penu)) => Ok(Value::Bool(penu < last)),
         _ => Err(BuiltinError::BadLtArgTypes.into()),
+    }
+}
+
+pub fn eq(args: &[Value]) -> Result<Value> {
+    if args.len() != 2 {
+        return Err(BuiltinError::BadEqArgCount(args.len()).into());
+    }
+
+    match (&args[args.len() - 1], &args[args.len() - 2]) {
+        (Value::Num(last), Value::Num(penu)) => Ok(Value::Bool(penu == last)),
+        (Value::Str(last), Value::Str(penu))
+        | (Value::Symbol(last), Value::Str(penu))
+        | (Value::Str(last), Value::Symbol(penu))
+        | (Value::Symbol(last), Value::Symbol(penu)) => Ok(Value::Bool(penu == last)),
+        _ => Err(BuiltinError::BadEqArgTypes.into()),
+    }
+}
+
+pub fn modulo(args: &[Value]) -> Result<Value> {
+    if args.len() != 2 {
+        return Err(BuiltinError::BadModArgCount(args.len()).into());
+    }
+
+    match (&args[args.len() - 1], &args[args.len() - 2]) {
+        (Value::Num(last), Value::Num(penu)) => Ok(Value::Num(penu % last)),
+        _ => Err(BuiltinError::BadModArgTypes.into()),
     }
 }
 

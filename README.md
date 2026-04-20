@@ -31,10 +31,11 @@ A Lisp interpreter written in Rust, built as a learning project for exploring pr
 ### Runtime
 - [x] Standard library — arithmetic
 - [x] Standard library — `car`, `cdr`, `cons`.
+- [x] Standard library — `fold`, `map`, etc.
 - [x] REPL
 - [x] Line editing
 - [x] Runtime errors with source location instead of panics
 - [x] better printing
-- [ ] File loader — cursor-based multi-expression evaluation
-- [ ] Standard library — `fold`, `map`, etc.
-
+- [x] File runner — cursor-based multi-expression evaluation
+- [x] :require
+- [ ] (require xxx)
