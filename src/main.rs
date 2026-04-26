@@ -16,7 +16,7 @@ struct Cli {
     file: Option<PathBuf>,
 }
 
-static STD_LIB: &'static str = include_str!("../examples/base.jt");
+static STD_LIB: &'static str = include_str!("../examples/base.pd");
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
