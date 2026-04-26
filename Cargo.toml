@@ -1,5 +1,5 @@
 [package]
-name = "jethe"
+name = "paddle"
 description = "A simple LISP interpreter"
 version = "0.1.0"
 edition = "2024"

@@ -4,7 +4,7 @@ use anyhow::Result;
 use clap::{Parser, command};
 use rustyline::{DefaultEditor, error::ReadlineError};
 
-use jethe::{
+use paddle::{
     eval::{Env, eval, lower, value::Value},
     lexer, parser,
 };

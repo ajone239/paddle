@@ -1,6 +1,7 @@
-# jethe
+# Paddle
 
-A Lisp interpreter written in Rust, built as a learning project for exploring programming language implementation.
+A Lisp interpreter written in Rust whose name is a pun that is built on my mistaking racket for racquet.
+This is built as a learning project for exploring programming language implementation.
 
 ## Roadmap
 
