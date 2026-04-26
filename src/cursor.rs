@@ -32,6 +32,13 @@ pub fn process(contents: &str, env: Rc<RefCell<Env>>) -> Result<Vec<Value>> {
         rv.push(value);
     }
 
+    if from != contents.trim().len() {
+        bail!(
+            "expected parens to close, got {} good expressions",
+            rv.len()
+        );
+    }
+
     Ok(rv)
 }
 
@@ -50,7 +57,7 @@ pub fn is_ready_to_process(contents: &str) -> Result<bool> {
     let p = count_paren(contents);
 
     match p {
-        c if c < 0 => bail!("frick"),
+        c if c < 0 => bail!("More closing than opening parens."),
         c if c > 0 => Ok(false),
         _ => Ok(true),
     }

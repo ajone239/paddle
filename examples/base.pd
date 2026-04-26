@@ -18,6 +18,11 @@
             (cons i (range-up (+ i 1)))))
      (range-up 0))
 
+(def (foldl f init xs)
+     (if (not (xs))
+         init
+         (foldl f (f (car xs) init) (cdr xs))))
+
 (def (foldr f init xs)
      (def (fold xs)
           (def xxs (cdr xs))

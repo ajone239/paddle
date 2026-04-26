@@ -1,6 +1,6 @@
 use std::{cell::RefCell, path::PathBuf, rc::Rc};
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::{Parser, command};
 
 use paddle::{
@@ -22,7 +22,7 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
     let env = Rc::new(RefCell::new(Env::default()));
 
-    process(STD_LIB, env.clone())?;
+    process(STD_LIB, env.clone()).context("failed to parse the std lib")?;
 
     match cli.file {
         Some(file_path) => {
