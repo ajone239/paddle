@@ -14,6 +14,10 @@ use paddle::{
 struct Cli {
     /// Specify the file to run
     file: Option<PathBuf>,
+
+    /// Skips std-lib
+    #[arg(short, long)]
+    no_std: bool,
 }
 
 static STD_LIB: &'static str = include_str!("../examples/base.pd");
@@ -22,7 +26,9 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
     let env = Rc::new(RefCell::new(Env::default()));
 
-    process(STD_LIB, env.clone()).context("failed to parse the std lib")?;
+    if !cli.no_std {
+        process(STD_LIB, env.clone()).context("failed to parse the std lib")?;
+    }
 
     match cli.file {
         Some(file_path) => {

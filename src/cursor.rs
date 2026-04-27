@@ -16,25 +16,44 @@ pub fn process(contents: &str, env: Rc<RefCell<Env>>) -> Result<Vec<Value>> {
     let mut from = 0;
     let mut rv = vec![];
 
-    for i in 0..contents.len() {
-        let chunk = &contents[from..i + 1];
+    let mut p = 0;
 
-        let p = count_paren(&chunk);
+    for (i, c) in contents.char_indices() {
+        let has_no_p = p == 0;
+        let is_ws = c.is_whitespace();
+        let eof = i == contents.len() - 1;
 
-        if p != 0 || i == from || chunk.trim().len() == 0 {
+        p += match c {
+            '(' => 1,
+            ')' => -1,
+            _ => 0,
+        };
+
+        let naked_atom = has_no_p && (is_ws || c == '(' || eof);
+        let good_expr = p == 0 && !has_no_p;
+
+        let (chunk, new_from) = if naked_atom && (!eof || c == '(') {
+            (&contents[from..i], i)
+        } else {
+            (&contents[from..i + 1], i + 1)
+        };
+
+        if chunk.trim().is_empty() || (!naked_atom && !good_expr) {
             continue;
         }
 
-        from = i + 1;
+        from = new_from;
 
         let value = lpe(chunk, env.clone())?;
 
         rv.push(value);
     }
 
-    if from != contents.trim().len() {
+    if from < contents.len() - 1 {
         bail!(
-            "expected parens to close, got {} good expressions",
+            "Full content was not parsed ({}/{}): got {} expressions",
+            from,
+            contents.len(),
             rv.len()
         );
     }
