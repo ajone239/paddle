@@ -21,6 +21,10 @@ fn lpe(input: &str, env: Rc<RefCell<Env>>) -> Result<Value> {
 }
 
 pub fn process(contents: &str, env: Rc<RefCell<Env>>) -> Result<Vec<Value>> {
+    if contents.trim().is_empty() {
+        return Ok(vec![]);
+    }
+
     let mut from = 0;
     let mut rv = vec![];
 
@@ -54,10 +58,11 @@ pub fn process(contents: &str, env: Rc<RefCell<Env>>) -> Result<Vec<Value>> {
 
         let value = lpe(chunk, env.clone())?;
 
+        // TODO(ajone239): this only evals valid files
         rv.push(value);
     }
 
-    if from < contents.len() - 1 {
+    if from < contents.trim().len() - 1 {
         bail!(
             "Full content was not parsed ({}/{}): got {} expressions",
             from,

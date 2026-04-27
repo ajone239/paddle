@@ -26,6 +26,10 @@ This is built as a learning project for exploring programming language implement
 - [x] Environment — scope
 - [x] Lambdas and closures
 - [ ] Macros — `define-macro`, quasiquote/unquote
+    + [ ] when
+    + [ ] unless
+    + [ ] loop
+    + [ ] cond
 - [ ] Tail call optimization
 - [ ] kill clone being everywhere
 

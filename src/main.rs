@@ -15,6 +15,10 @@ struct Cli {
     /// Specify the file to run
     file: Option<PathBuf>,
 
+    /// runs the repl
+    #[arg(short, long)]
+    repl: bool,
+
     /// Skips std-lib
     #[arg(short, long)]
     no_std: bool,
@@ -30,12 +34,13 @@ fn main() -> Result<()> {
         process(STD_LIB, env.clone()).context("failed to parse the std lib")?;
     }
 
-    match cli.file {
-        Some(file_path) => {
-            let res = process_file(file_path, env);
-            display_results(res);
-        }
-        None => run_repl(env)?,
+    if let Some(file_path) = cli.file.clone() {
+        let res = process_file(file_path, env.clone());
+        display_results(res);
+    }
+
+    if cli.repl || cli.file.is_none() {
+        run_repl(env)?
     }
 
     Ok(())

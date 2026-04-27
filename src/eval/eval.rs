@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::{ops::Deref, rc::Rc};
 
-use anyhow::Result;
+use anyhow::{Ok, Result};
 
 use crate::eval::EvalError;
 use crate::eval::env::Env;
@@ -22,6 +22,10 @@ pub fn eval(ast: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
 fn eval_form(form: Form, list: &[Value], env: Rc<RefCell<Env>>) -> Result<Value> {
     match form {
         Form::Quote => Ok(list[1].clone()),
+        Form::Eval => {
+            let val = eval(&list[1], env.clone())?;
+            eval(&val, env.clone())
+        }
         Form::Define => {
             if list.len() < 3 {
                 return Err(EvalError::BadDefineArgs.into());
@@ -61,9 +65,9 @@ fn eval_form(form: Form, list: &[Value], env: Rc<RefCell<Env>>) -> Result<Value>
                 .iter()
                 .map(|e| match e {
                     Value::Symbol(a) => Ok((*a).to_owned()),
-                    _ => Err(EvalError::BadLambdaArgsListType),
+                    _ => Err(EvalError::BadLambdaArgsListType.into()),
                 })
-                .collect::<Result<Vec<String>, EvalError>>()?;
+                .collect::<Result<Vec<String>, _>>()?;
 
             let tail = &list[2..];
 
@@ -157,9 +161,9 @@ fn define(head: &Value, tail: &[Value], env: Rc<RefCell<Env>>) -> Result<()> {
                 .iter()
                 .map(|e| match e {
                     Value::Symbol(a) => Ok((*a).to_owned()),
-                    _ => Err(EvalError::BadDefineFunctionHeadTypes),
+                    _ => Err(EvalError::BadDefineFunctionHeadTypes.into()),
                 })
-                .collect::<Result<Vec<String>, EvalError>>()?;
+                .collect::<Result<Vec<String>, _>>()?;
 
             if args_list.is_empty() {
                 return Err(EvalError::BadDefineFunctionHead.into());

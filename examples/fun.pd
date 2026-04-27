@@ -1,0 +1,11 @@
+(def fun (lambda (args body)
+          (define fname (car args))
+          (define fargs (cadr args))
+          (list 'def (list fname fargs) body)))
+
+(def (unless cond body)
+          (list 'if (list 'not cond)
+            body
+            '()))
+
+(eval (fun '(test x) '(+ x 1)))

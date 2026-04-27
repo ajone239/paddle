@@ -125,6 +125,7 @@ impl PartialEq for BuiltinFn {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Form {
     If,
+    Eval,
     Quote,
     Define,
     Lambda,
@@ -132,8 +133,10 @@ pub enum Form {
 
 impl Form {
     pub fn from_str(s: &str) -> Option<Self> {
+        // TODO(ajone239): make weird symbols for all these
         match s {
             "if" => Some(Self::If),
+            "eval" => Some(Self::Eval),
             "quote" | "'" => Some(Self::Quote),
             "define" | "def" => Some(Self::Define),
             "lambda" | "lamda" | ".\\" => Some(Self::Lambda),
