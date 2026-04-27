@@ -12,6 +12,14 @@ pub fn process_file(file_path: PathBuf, env: Rc<RefCell<Env>>) -> Result<Vec<Val
     process(&contents, env)
 }
 
+fn lpe(input: &str, env: Rc<RefCell<Env>>) -> Result<Value> {
+    let tokens = lexer::lex(input);
+    // TODO(ajone239): use the rest from the parser to do the processing
+    let (ast, _) = parser::parse_expr(&tokens)?;
+    let expr = lower(&ast);
+    eval(&expr, env)
+}
+
 pub fn process(contents: &str, env: Rc<RefCell<Env>>) -> Result<Vec<Value>> {
     let mut from = 0;
     let mut rv = vec![];
@@ -32,7 +40,7 @@ pub fn process(contents: &str, env: Rc<RefCell<Env>>) -> Result<Vec<Value>> {
         let naked_atom = has_no_p && (is_ws || c == '(' || eof);
         let good_expr = p == 0 && !has_no_p;
 
-        let (chunk, new_from) = if naked_atom && (!eof || c == '(') {
+        let (chunk, new_from) = if naked_atom && c == '(' {
             (&contents[from..i], i)
         } else {
             (&contents[from..i + 1], i + 1)
@@ -90,11 +98,4 @@ pub fn count_paren(line: &str) -> i32 {
             _ => 0,
         })
         .sum()
-}
-
-fn lpe(input: &str, env: Rc<RefCell<Env>>) -> Result<Value> {
-    let tokens = lexer::lex(input);
-    let (ast, _) = parser::parse_expr(&tokens)?;
-    let expr = lower(&ast);
-    eval(&expr, env)
 }
