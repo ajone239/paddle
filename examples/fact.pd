@@ -1,6 +1,10 @@
+; factorial!
 (def (fact n)
      (if (not n)
           1
           (* n (fact (- n 1)))))
+
+; ans!
 (def ans (fact 10))
+
 ans

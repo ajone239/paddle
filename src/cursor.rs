@@ -12,63 +12,29 @@ pub fn process_file(file_path: PathBuf, env: Rc<RefCell<Env>>) -> Result<Vec<Val
     process(&contents, env)
 }
 
-fn lpe(input: &str, env: Rc<RefCell<Env>>) -> Result<Value> {
-    let tokens = lexer::lex(input);
-    // TODO(ajone239): use the rest from the parser to do the processing
-    let (ast, _) = parser::parse_expr(&tokens)?;
-    let expr = lower(&ast);
-    eval(&expr, env)
-}
-
 pub fn process(contents: &str, env: Rc<RefCell<Env>>) -> Result<Vec<Value>> {
     if contents.trim().is_empty() {
         return Ok(vec![]);
     }
 
-    let mut from = 0;
+    let tokens = lexer::lex(contents);
+
+    let mut working = &tokens[..];
+
     let mut rv = vec![];
 
-    let mut p = 0;
+    loop {
+        let (ast, rest) = parser::parse_expr(&working)?;
+        let expr = lower(&ast);
+        let val = eval(&expr, env.clone())?;
 
-    for (i, c) in contents.char_indices() {
-        let has_no_p = p == 0;
-        let is_ws = c.is_whitespace();
-        let eof = i == contents.len() - 1;
+        rv.push(val);
 
-        p += match c {
-            '(' => 1,
-            ')' => -1,
-            _ => 0,
-        };
-
-        let naked_atom = has_no_p && (is_ws || c == '(' || eof);
-        let good_expr = p == 0 && !has_no_p;
-
-        let (chunk, new_from) = if naked_atom && c == '(' {
-            (&contents[from..i], i)
-        } else {
-            (&contents[from..i + 1], i + 1)
-        };
-
-        if chunk.trim().is_empty() || (!naked_atom && !good_expr) {
-            continue;
+        if rest.is_empty() {
+            break;
         }
 
-        from = new_from;
-
-        let value = lpe(chunk, env.clone())?;
-
-        // TODO(ajone239): this only evals valid files
-        rv.push(value);
-    }
-
-    if from < contents.trim().len() - 1 {
-        bail!(
-            "Full content was not parsed ({}/{}): got {} expressions",
-            from,
-            contents.len(),
-            rv.len()
-        );
+        working = rest;
     }
 
     Ok(rv)

@@ -33,6 +33,7 @@ pub fn lex<'a>(code: &'a str) -> Vec<Token<'a>> {
     let mut last = 0;
     let mut building_string = false;
     let mut escape = false;
+    let mut comment = false;
 
     for (offset, c) in code.char_indices() {
         column += 1;
@@ -56,12 +57,18 @@ pub fn lex<'a>(code: &'a str) -> Vec<Token<'a>> {
                 continue;
             }
             _ if building_string => continue,
-            '(' => (offset, Some(TokenKind::LeftParen)),
-            ')' => (offset, Some(TokenKind::RightParen)),
-            '\'' => (offset, Some(TokenKind::Quote)),
             '\n' => {
                 line += 1;
                 column = 0;
+                comment = false;
+                (offset, None)
+            }
+            _ if comment => (offset, None),
+            '(' => (offset, Some(TokenKind::LeftParen)),
+            ')' => (offset, Some(TokenKind::RightParen)),
+            '\'' => (offset, Some(TokenKind::Quote)),
+            ';' => {
+                comment = true;
                 (offset, None)
             }
             c if c.is_whitespace() => (offset, None),
