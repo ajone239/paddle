@@ -13,6 +13,10 @@ use thiserror::Error;
 
 #[derive(Debug, PartialEq, Error)]
 pub enum EvalError {
+    #[error("Require takes 2 arguments got {0}")]
+    BadRequireArgCount(usize),
+    #[error("Require takes strings or symbols as args")]
+    BadRequireArgs,
     #[error("Too few arguments were provided to the define statement")]
     BadDefineArgs,
     #[error("Too few arguments were provided to the if statement")]

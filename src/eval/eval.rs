@@ -3,6 +3,7 @@ use std::{ops::Deref, rc::Rc};
 
 use anyhow::{Ok, Result};
 
+use crate::cursor::process_file;
 use crate::eval::EvalError;
 use crate::eval::env::Env;
 use crate::eval::value::{Form, Value};
@@ -22,6 +23,22 @@ pub fn eval(ast: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
 fn eval_form(form: Form, list: &[Value], env: Rc<RefCell<Env>>) -> Result<Value> {
     match form {
         Form::Quote => Ok(list[1].clone()),
+        Form::Require => {
+            if list.len() != 2 {
+                return Err(EvalError::BadRequireArgCount(list.len()).into());
+            }
+
+            let file_name = match &list[1] {
+                Value::Str(atom) | Value::Symbol(atom) => atom,
+                _ => {
+                    return Err(EvalError::BadRequireArgs.into());
+                }
+            };
+
+            process_file(file_name.into(), env.clone())?;
+
+            Ok(Value::Nil)
+        }
         Form::Eval => {
             let val = eval(&list[1], env.clone())?;
             eval(&val, env.clone())

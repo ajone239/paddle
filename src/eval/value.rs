@@ -126,6 +126,7 @@ impl PartialEq for BuiltinFn {
 pub enum Form {
     If,
     Eval,
+    Require,
     Quote,
     Define,
     Lambda,
@@ -136,6 +137,7 @@ impl Form {
         // TODO(ajone239): make weird symbols for all these
         match s {
             "if" => Some(Self::If),
+            "require" => Some(Self::Require),
             "eval" => Some(Self::Eval),
             "quote" | "'" => Some(Self::Quote),
             "define" | "def" => Some(Self::Define),

@@ -43,4 +43,4 @@ This is built as a learning project for exploring programming language implement
 - [x] better printing
 - [x] File runner — cursor-based multi-expression evaluation
 - [x] :require
-- [ ] (require xxx)
+- [x] (require xxx)
