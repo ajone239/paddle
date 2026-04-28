@@ -3,10 +3,14 @@
           (define fargs (cdr args))
           (list 'def args body)))
 
-    (eval (fun '(test x y) '(+ x 1)))
+(eval (fun '(test x y) '(+ x 1)))
 
 (def (unless cond body)
  (list 'if (list 'not cond) body '()))
+
+(def (safe-div x y)
+    (eval
+    (unless '(= y 0) '(/ x y))))
 
 (define (cond pairs)
  (if (<= (len pairs) 2)
@@ -14,6 +18,12 @@
   (list 'if (car (car pairs))
    (cdr (car pairs))
    (cond (cdr pairs)))))
+
+(def (f x)
+ (eval (cond
+  '(((= x 1) (* x 3))
+      ((= x 2) (+ x 4))
+      (#t 33)))))
 
 (def (f x)
  (eval (cond
