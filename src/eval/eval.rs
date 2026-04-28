@@ -20,6 +20,12 @@ pub fn eval(ast: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
     }
 }
 
+fn resolve(atom: &str, env: Rc<RefCell<Env>>) -> Result<Value> {
+    env.borrow()
+        .resolve(atom)
+        .ok_or(EvalError::SymbolUndefined(atom.to_string()).into())
+}
+
 fn eval_form(form: Form, list: &[Value], env: Rc<RefCell<Env>>) -> Result<Value> {
     match form {
         Form::Quote => Ok(list[1].clone()),
@@ -103,12 +109,6 @@ fn eval_form(form: Form, list: &[Value], env: Rc<RefCell<Env>>) -> Result<Value>
             Ok(lambda)
         }
     }
-}
-
-fn resolve(atom: &str, env: Rc<RefCell<Env>>) -> Result<Value> {
-    env.borrow()
-        .resolve(atom)
-        .ok_or(EvalError::SymbolUndefined(atom.to_string()).into())
 }
 
 fn apply(list: &[Value], env: Rc<RefCell<Env>>) -> Result<Value> {
