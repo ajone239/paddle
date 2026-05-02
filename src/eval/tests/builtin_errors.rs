@@ -1,31 +1,66 @@
 use super::*;
+use crate::eval::env::BuiltinError;
 
 #[test]
-fn integer_literal() {
-    assert_eq!(eval_str("42"), num(42.0));
+fn car_empty_list() {
+    // (car nil) hits WrongCarArgType; need a real empty list
+    let err = eval_err("(car '())");
+    assert_eq!(
+        err.downcast_ref::<BuiltinError>(),
+        Some(&BuiltinError::CarOnEmptyList)
+    );
 }
 
 #[test]
-fn float_literal() {
-    assert_eq!(eval_str("3.14"), num(3.14));
+fn cdr_empty_list() {
+    let err = eval_err("(cdr '())");
+    assert_eq!(
+        err.downcast_ref::<BuiltinError>(),
+        Some(&BuiltinError::CdrOnEmptyList)
+    );
 }
 
 #[test]
-fn negative_literal() {
-    assert_eq!(eval_str("-7"), num(-7.0));
+fn expected_num_arg() {
+    let err = eval_err(r#"(+ "foo" 1)"#);
+    assert_eq!(
+        err.downcast_ref::<BuiltinError>(),
+        Some(&BuiltinError::ExpectedNumArg)
+    );
 }
 
 #[test]
-fn nil_literal() {
-    assert_eq!(eval_str("nil"), Value::Nil);
+fn minus_no_args() {
+    let err = eval_err("(-)");
+    assert_eq!(
+        err.downcast_ref::<BuiltinError>(),
+        Some(&BuiltinError::NoInitforMinus)
+    );
 }
 
 #[test]
-fn true_literal() {
-    assert_eq!(eval_str("#t"), Value::Bool(true));
+fn div_no_args() {
+    let err = eval_err("(/)");
+    assert_eq!(
+        err.downcast_ref::<BuiltinError>(),
+        Some(&BuiltinError::NoInitforDiv)
+    );
 }
 
 #[test]
-fn false_literal() {
-    assert_eq!(eval_str("#f"), Value::Bool(false));
+fn lt_too_few_args() {
+    let err = eval_err("(< 1)");
+    assert_eq!(
+        err.downcast_ref::<BuiltinError>(),
+        Some(&BuiltinError::BadLtArgCount(1))
+    );
+}
+
+#[test]
+fn lt_bad_arg_types() {
+    let err = eval_err(r#"(< "a" "b")"#);
+    assert_eq!(
+        err.downcast_ref::<BuiltinError>(),
+        Some(&BuiltinError::BadLtArgTypes)
+    );
 }
