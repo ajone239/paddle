@@ -49,12 +49,12 @@ fn eval_form(form: Form, list: &[Value], env: Rc<RefCell<Env>>) -> Result<Value>
             let val = eval(&list[1], env.clone())?;
             eval(&val, env.clone())
         }
-        Form::Define => {
+        Form::DefineMacro | Form::Define => {
             if list.len() < 3 {
                 return Err(EvalError::BadDefineArgs.into());
             }
 
-            define(&list[1], &list[2..], env)?;
+            define(&form, &list[1], &list[2..], env)?;
 
             Ok(Value::Nil)
         }
@@ -112,14 +112,11 @@ fn eval_form(form: Form, list: &[Value], env: Rc<RefCell<Env>>) -> Result<Value>
 }
 
 fn apply(list: &[Value], env: Rc<RefCell<Env>>) -> Result<Value> {
-    let list = list
-        .iter()
-        .map(|v| eval(v, env.clone()))
-        .collect::<Result<Vec<_>, _>>()?;
+    let mut liter = list.iter().map(|v| eval(v, env.clone()));
 
-    let args = &list[1..];
+    let head = liter.next().expect("can't call this on empty list")?;
 
-    let (fargs, body, new_env) = match &list[0] {
+    let (fargs, body, new_env) = match &head {
         Value::Lambda {
             args: fargs,
             body,
@@ -128,29 +125,67 @@ fn apply(list: &[Value], env: Rc<RefCell<Env>>) -> Result<Value> {
             let env = Rc::new(RefCell::new(Env::new_child(env.clone())));
             (fargs, body, env)
         }
-        Value::Func {
+        Value::Macro {
+            name: _,
+            args: fargs,
+            body,
+        }
+        | Value::Func {
             name: _,
             args: fargs,
             body,
         } => {
-            let env = Rc::new(RefCell::new(Env::new_child(env)));
+            let env = Rc::new(RefCell::new(Env::new_child(env.clone())));
             (fargs, body, env)
         }
-        Value::Builtin(f, _) => return f.0(args),
+        Value::Builtin(f, _) => {
+            let args = liter.collect::<Result<Vec<_>, _>>()?;
+            return f.0(&args);
+        }
         v => return Ok(v.clone()),
     };
 
-    if fargs.len() != args.len() {
-        return Err(EvalError::BadFunctionArgCount(fargs.len(), args.len()).into());
-    }
+    let is_macro = matches!(head, Value::Macro { .. });
 
-    for (arg, val) in fargs.iter().zip(args) {
-        new_env.borrow_mut().define(arg, val.clone());
+    let args = if is_macro {
+        &list[1..]
+    } else {
+        &liter.collect::<Result<Vec<_>, _>>()?
+    };
+
+    let variadic = fargs.last().unwrap_or(&"".to_string()).ends_with("...");
+
+    if variadic {
+        let non_var_arg_count = fargs.len() - 1;
+
+        if args.len() < non_var_arg_count {
+            return Err(EvalError::BadFunctionArgCount(fargs.len(), args.len()).into());
+        }
+
+        for i in 0..non_var_arg_count {
+            let arg = &fargs[i];
+            let val = &args[i];
+            new_env.borrow_mut().define(arg, val.clone());
+        }
+
+        let lfarg = &fargs[non_var_arg_count];
+        let largs = &args[non_var_arg_count..];
+        let largs = Value::List(largs.to_vec());
+
+        new_env.borrow_mut().define(lfarg, largs);
+    } else {
+        if fargs.len() != args.len() {
+            return Err(EvalError::BadFunctionArgCount(fargs.len(), args.len()).into());
+        }
+
+        for (arg, val) in fargs.iter().zip(args) {
+            new_env.borrow_mut().define(arg, val.clone());
+        }
     }
 
     // eval the body with the new env
     // return the value
-    match body.deref() {
+    let rv = match body.deref() {
         Value::Progn(body) => {
             if body.is_empty() {
                 return Err(EvalError::EmptyPrognBody.into());
@@ -163,11 +198,20 @@ fn apply(list: &[Value], env: Rc<RefCell<Env>>) -> Result<Value> {
                 new_env.clone(),
             )
         }
-        _ => eval(body, new_env.clone()),
+        _ => eval(&body, new_env.clone()),
+    };
+
+    if is_macro {
+        let rv = rv?;
+        println!("{}", rv);
+        // should this be the og env?
+        eval(&rv, env.clone())
+    } else {
+        rv
     }
 }
 
-fn define(head: &Value, tail: &[Value], env: Rc<RefCell<Env>>) -> Result<()> {
+fn define(form: &Form, head: &Value, tail: &[Value], env: Rc<RefCell<Env>>) -> Result<()> {
     match head {
         Value::Symbol(atom) => {
             let value = eval(&tail[0], env.clone())?;
@@ -199,13 +243,21 @@ fn define(head: &Value, tail: &[Value], env: Rc<RefCell<Env>>) -> Result<()> {
                 Rc::new(Value::Progn(tail.to_vec()))
             };
 
-            let func = Value::Func {
-                name: name.clone(),
-                args,
-                body,
+            let proc = match form {
+                Form::Define => Value::Func {
+                    name: name.clone(),
+                    args,
+                    body,
+                },
+                Form::DefineMacro => Value::Macro {
+                    name: name.clone(),
+                    args,
+                    body,
+                },
+                _ => unreachable!("{:?} should only be able to be define or definemacro", form),
             };
 
-            env.borrow_mut().define(name, func);
+            env.borrow_mut().define(name, proc);
         }
         _ => return Err(EvalError::BadDefineHead.into()),
     };

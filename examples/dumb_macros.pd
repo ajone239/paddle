@@ -1,9 +1,6 @@
-(def fun (lambda (args body)
-          (define fname (car args))
-          (define fargs (cdr args))
-          (list 'def args body)))
+(defm (fun args body) (list 'def args body))
 
-(eval (fun '(test x y) '(+ x 1)))
+(fun (test x y) (+ x 1))
 
 (def (unless cond body)
  (list 'if (list 'not cond) body '()))

@@ -18,6 +18,11 @@ pub enum Value {
     List(Vec<Value>),
     Progn(Vec<Value>),
     Builtin(BuiltinFn, String),
+    Macro {
+        name: String,
+        args: Vec<String>,
+        body: Rc<Value>,
+    },
     Func {
         name: String,
         args: Vec<String>,
@@ -45,6 +50,7 @@ impl Value {
             | Value::Form(_)
             | Value::Builtin(_, _)
             | Value::Func { .. }
+            | Value::Macro { .. }
             | Value::Lambda { .. } => true,
         }
     }
@@ -74,6 +80,11 @@ impl Display for Value {
                 args,
                 body: _,
             } => write!(f, "func: {} ({}) {{...}}", name, args.join(" ")),
+            Value::Macro {
+                name,
+                args,
+                body: _,
+            } => write!(f, "macro: {} ({}) {{...}}", name, args.join(" ")),
             Value::Lambda {
                 args,
                 body: _,
@@ -95,6 +106,12 @@ impl Debug for Value {
             Self::List(arg0) => f.debug_tuple("List").field(arg0).finish(),
             Self::Progn(arg0) => f.debug_tuple("Progn").field(arg0).finish(),
             Self::Builtin(arg0, arg1) => f.debug_tuple("Builtin").field(arg0).field(arg1).finish(),
+            Self::Macro { name, args, body } => f
+                .debug_struct("Macro")
+                .field("name", name)
+                .field("args", args)
+                .field("body", body)
+                .finish(),
             Self::Func { name, args, body } => f
                 .debug_struct("Func")
                 .field("name", name)
@@ -129,6 +146,7 @@ pub enum Form {
     Require,
     Quote,
     Define,
+    DefineMacro,
     Lambda,
 }
 
@@ -141,6 +159,7 @@ impl Form {
             "eval" => Some(Self::Eval),
             "quote" | "'" => Some(Self::Quote),
             "define" | "def" => Some(Self::Define),
+            "define-macro" | "defm" => Some(Self::DefineMacro),
             "lambda" | "lamda" | ".\\" => Some(Self::Lambda),
             _ => None,
         }

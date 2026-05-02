@@ -1,0 +1,32 @@
+(defm (fun args body)
+ (list 'def args body))
+
+(fun (test x y) (+ x 1))
+
+(defm (unless cond body)
+ (list 'if (list 'not cond) body '()))
+
+(defm (when cond body)
+ (list 'if cond body '()))
+
+(def (safe-div x y)
+    (unless (= y 0) (/ x y)))
+
+; rec macros have to be defined like this so their args get processed
+(define-macro (cond pairs)
+    (define (cond2 pairs)
+      (if (<= (len pairs) 2)
+       (list 'if (car pairs) (cdr pairs) '())
+       (list 'if (car (car pairs))
+        (cdr (car pairs))
+        (cond2 (cdr pairs)))))
+    (cond2 pairs))
+
+(def (count-even-odd xs)
+    (if (not xs)
+        0
+        (+ (count-even-odd (cdr xs))
+           (cond (
+                ((= 0 (car xs)) 0)
+                ((= 0 (% (car xs) 2)) 1)
+                (#t -1))))))

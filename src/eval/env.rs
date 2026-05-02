@@ -35,9 +35,56 @@ impl Env {
     }
 
     pub fn dump(&self) {
-        for (k, v) in &self.env {
+        let venv: Vec<_> = self.env.iter().collect();
+
+        let b = venv.iter().filter(|(_, v)| matches!(v, Value::Builtin(..)));
+
+        println!("Built-Ins:");
+        for (k, v) in b {
             println!("{}: {}", k, v)
         }
+
+        let l = venv
+            .iter()
+            .filter(|(_, v)| matches!(v, Value::Lambda { .. }));
+
+        println!();
+        println!("Lambdas:");
+        for (k, v) in l {
+            println!("{}: {}", k, v)
+        }
+
+        let f = venv.iter().filter(|(_, v)| matches!(v, Value::Func { .. }));
+
+        println!();
+        println!("Functions:");
+        for (k, v) in f {
+            println!("{}: {}", k, v)
+        }
+
+        let m = venv
+            .iter()
+            .filter(|(_, v)| matches!(v, Value::Macro { .. }));
+
+        println!();
+        println!("Macros:");
+        for (k, v) in m {
+            println!("{}: {}", k, v)
+        }
+
+        let r = venv.iter().filter(|(_, v)| {
+            !(matches!(v, Value::Builtin(..))
+                || matches!(v, Value::Lambda { .. })
+                || matches!(v, Value::Func { .. })
+                || matches!(v, Value::Macro { .. }))
+        });
+
+        println!();
+        println!("Values:");
+        for (k, v) in r {
+            println!("{}: {}", k, v)
+        }
+        println!();
     }
 }
 

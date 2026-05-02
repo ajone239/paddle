@@ -25,13 +25,26 @@ This is built as a learning project for exploring programming language implement
     + [x] function lookup
 - [x] Environment — scope
 - [x] Lambdas and closures
-- [ ] Macros — `define-macro`, quasiquote/unquote
-    + [ ] when
-    + [ ] unless
+- [-] dumb Macros
+    + [x] when
+    + [x] unless
+    + [x] cond
     + [ ] loop
-    + [ ] cond
+    + [ ] write about them
+- [-] Macros —
+    + [x] `define-macro`
+        * [x] hook into define
+        * [x] reggie functions
+        * [x] make eval not eval args
+    + [ ] quasiquote
+    + [ ] unquote
+    + [-] when
+    + [-] unless
+    + [-] cond
+    + [ ] loop
 - [ ] Tail call optimization
 - [ ] kill clone being everywhere
+- [ ] nested vectors being handled bad
 
 ### Runtime
 - [x] Standard library — arithmetic
