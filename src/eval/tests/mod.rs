@@ -1,11 +1,10 @@
-mod addition;
+mod arithmetic;
 mod atoms;
 mod builtin_errors;
 mod cadr;
 mod car;
 mod cdr;
 mod cons;
-mod division;
 mod empty;
 mod env;
 mod eval_errors;
@@ -14,10 +13,7 @@ mod evalif;
 mod lambda;
 mod list;
 mod macros;
-mod multiplication;
-mod nesting;
 mod quote;
-mod subtraction;
 mod variadic;
 
 use std::cell::RefCell;
