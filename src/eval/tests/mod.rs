@@ -8,8 +8,6 @@ mod cons;
 mod empty;
 mod env;
 mod eval_errors;
-mod evalenv;
-mod evalif;
 mod lambda;
 mod list;
 mod macros;

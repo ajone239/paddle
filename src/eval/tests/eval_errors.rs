@@ -1,6 +1,15 @@
 use super::*;
 
 #[test]
+fn undefined_symbol() {
+    let err = eval_err("x");
+    assert_eq!(
+        err.downcast_ref::<EvalError>(),
+        Some(&EvalError::SymbolUndefined("x".into()))
+    );
+}
+
+#[test]
 fn bad_define_args() {
     let err = eval_err("(def x)");
     assert_eq!(
@@ -61,4 +70,16 @@ fn bad_define_function_head_types() {
         err.downcast_ref::<EvalError>(),
         Some(&EvalError::BadDefineFunctionHeadTypes)
     );
+}
+
+#[test]
+fn if_no_else_true() {
+    let err = eval_err("(if #t 42)");
+    assert_eq!(err.downcast_ref::<EvalError>(), Some(&EvalError::BadIfArgs));
+}
+
+#[test]
+fn if_no_else_false() {
+    let err = eval_err("(if #f 42)");
+    assert_eq!(err.downcast_ref::<EvalError>(), Some(&EvalError::BadIfArgs));
 }
