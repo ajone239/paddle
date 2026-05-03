@@ -73,7 +73,14 @@ impl Display for Value {
                     .join(" ");
                 write!(f, "'({})", nice_list)
             }
-            Value::Progn(_) => todo!(),
+            Value::Progn(values) => {
+                let nice_list = values
+                    .iter()
+                    .map(|v| v.to_string())
+                    .collect::<Vec<String>>()
+                    .join(" ");
+                write!(f, "'(progn {})", nice_list)
+            }
             Value::Builtin(_, name) => write!(f, "built-in: {} (...) {{...}}", name),
             Value::Func {
                 name,
@@ -150,6 +157,7 @@ pub enum Form {
     Define,
     DefineMacro,
     Lambda,
+    Progn,
 }
 
 impl Form {
@@ -159,6 +167,7 @@ impl Form {
             "if" => Some(Self::If),
             "require" => Some(Self::Require),
             "eval" => Some(Self::Eval),
+            "progn" => Some(Self::Progn),
             "quote" | "'" => Some(Self::Quote),
             "quasiquote" | "`" => Some(Self::QuasiQuote),
             "unquote" | "," => Some(Self::UnQuote),

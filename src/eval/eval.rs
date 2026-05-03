@@ -63,6 +63,17 @@ fn eval_form(form: Form, list: &[Value], env: Rc<RefCell<Env>>) -> Result<Value>
 
             Ok(Value::Nil)
         }
+        Form::Progn => {
+            let body = &list[1..];
+
+            if body.is_empty() {
+                return Err(EvalError::EmptyPrognBody.into());
+            }
+            for b in &body[..body.len() - 1] {
+                eval(b, env.clone())?;
+            }
+            eval(body.last().expect("progn body can't be empty"), env.clone())
+        }
         Form::Eval => {
             let val = eval(&list[1], env.clone())?;
             eval(&val, env.clone())

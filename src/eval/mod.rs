@@ -37,7 +37,7 @@ pub enum EvalError {
     BadDefineFunctionHead,
     #[error("Function definition head may only contain symbols.")]
     BadDefineFunctionHeadTypes,
-    #[error("PrognBodyMustHaveEntries")]
+    #[error("Progn body must have entries")]
     EmptyPrognBody,
     #[error("Unquoute called outside of a quasiquote context")]
     UnquoteOutsideQuasi,
