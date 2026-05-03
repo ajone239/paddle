@@ -36,8 +36,15 @@ This is built as a learning project for exploring programming language implement
         * [x] hook into define
         * [x] reggie functions
         * [x] make eval not eval args
-    + [ ] quasiquote
-    + [ ] unquote
+    + [x] quasiquote
+        * [x] hook into quote
+        * [x] reggie quote
+        * [x] hook into unquote
+    + [x] unquote
+        * [x] hook into quote
+        * [x] reggie quote
+        * [x] do the thing
+    + [ ] clean up
     + [-] when
     + [-] unless
     + [-] cond

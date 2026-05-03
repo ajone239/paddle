@@ -1,10 +1,18 @@
+; old syntax
 (defm (fun args body)
  (list 'def args body))
+
+; new syntax
+(defm (fun args body)
+ `(def ,args ,body))
 
 (fun (test x y) (+ x 1))
 
 (defm (unless cond body)
  (list 'if (list 'not cond) body '()))
+
+(defm (unless cond body)
+ `(if (not ,cond) ,body '()))
 
 (defm (when cond body)
  (list 'if cond body '()))

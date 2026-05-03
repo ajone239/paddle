@@ -39,4 +39,6 @@ pub enum EvalError {
     BadDefineFunctionHeadTypes,
     #[error("PrognBodyMustHaveEntries")]
     EmptyPrognBody,
+    #[error("Unquoute called outside of a quasiquote context")]
+    UnquoteOutsideQuasi,
 }

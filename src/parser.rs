@@ -34,10 +34,18 @@ pub fn parse_expr<'a>(tokens: &'a [Token<'a>]) -> ParseResult<'a> {
             let rest = &tokens[1..];
             Ok((Expr::Atom(s, span), rest))
         }
-        TokenKind::Quote if tokens.len() < 2 => Err(ParseError::UnexpectedEof { span: first.span }),
-        TokenKind::Quote => {
+        TokenKind::UnQuote | TokenKind::QuasiQuote | TokenKind::Quote if tokens.len() < 2 => {
+            Err(ParseError::UnexpectedEof { span: first.span })
+        }
+        TokenKind::UnQuote | TokenKind::QuasiQuote | TokenKind::Quote => {
+            let atom = match first.kind {
+                TokenKind::UnQuote => "unquote",
+                TokenKind::QuasiQuote => "quasiquote",
+                TokenKind::Quote => "quote",
+                _ => unreachable!("can't see another form"),
+            };
             let (expr, rest) = parse_expr(&tokens[1..])?;
-            let quote = Expr::Atom("quote", first.span);
+            let quote = Expr::Atom(atom, first.span);
             Ok((Expr::List(vec![quote, expr], first.span), rest))
         }
         TokenKind::LeftParen => parse_list(&tokens[1..]),

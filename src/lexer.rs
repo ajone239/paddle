@@ -21,6 +21,8 @@ pub enum TokenKind<'a> {
     LeftParen,
     RightParen,
     Quote,
+    QuasiQuote,
+    UnQuote,
     Symbol(&'a str),
 }
 
@@ -67,6 +69,8 @@ pub fn lex<'a>(code: &'a str) -> Vec<Token<'a>> {
             '(' => (offset, Some(TokenKind::LeftParen)),
             ')' => (offset, Some(TokenKind::RightParen)),
             '\'' => (offset, Some(TokenKind::Quote)),
+            '`' => (offset, Some(TokenKind::QuasiQuote)),
+            ',' => (offset, Some(TokenKind::UnQuote)),
             ';' => {
                 comment = true;
                 (offset, None)
