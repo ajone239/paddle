@@ -1,7 +1,7 @@
 (defm (fun args body)
  `(def ,args ,body))
 
-(fun (test x y) (+ x 1))
+;(fun (test x y) (+ x 1))
 
 (defm (unless cond body)
  `(if (not ,cond) ,body '()))
@@ -30,3 +30,25 @@
                 ((= 0 (car xs)) 0)
                 ((= 0 (% (car xs) 2)) 1)
                 (#t -1))))))
+
+(defm (for pair body)
+      (define bind (car pair))
+      (define iter (eval (cdr pair)))
+      (define (for2 xs)
+        (if (not xs)
+            'nil
+            `((lambda (,bind)
+                ,(body)
+                ,(for2 (cdr xs)))
+              ,(car xs))))
+      (for2 iter))
+
+(defm (for/list pair body)
+      (define bind (car pair))
+      (define iter (eval (cdr pair)))
+      (define (for2 xs)
+        (if (not xs)
+            '()
+            `(cons ((lambda (,bind)
+                ,(body)) ,(car xs)) ,(for2 (cdr xs)))))
+      (for2 iter))

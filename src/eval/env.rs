@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, env::args, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use anyhow::Result;
 use thiserror::Error;
@@ -152,8 +152,6 @@ pub enum BuiltinError {
     BadEqArgTypes,
     #[error("Eq: Expected 2 arguments got {0}")]
     BadEqArgCount(usize),
-    #[error("Print: Expected atleast 1 argument got {0}")]
-    WrongPrintArgCount(usize),
 }
 
 fn tobi(f: Builtin, name: &str) -> Value {
@@ -307,8 +305,9 @@ fn list(args: &[Value]) -> Result<Value> {
 }
 
 fn print(args: &[Value]) -> Result<Value> {
-    if args.len() <= 1 {
-        return Err(BuiltinError::WrongPrintArgCount(args.len()).into());
+    if args.len() < 1 {
+        println!();
+        return Ok(Value::Nil);
     }
 
     let out = args

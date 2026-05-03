@@ -29,9 +29,8 @@ This is built as a learning project for exploring programming language implement
     + [x] when
     + [x] unless
     + [x] cond
-    + [ ] loop
     + [ ] write about them
-- [-] Macros —
+- [x] Macros —
     + [x] `define-macro`
         * [x] hook into define
         * [x] reggie functions
@@ -48,7 +47,7 @@ This is built as a learning project for exploring programming language implement
     + [x] when
     + [x] unless
     + [x] cond
-    + [ ] loop
+    + [x] loop
 - [ ] Tail call optimization
 - [ ] kill clone being everywhere
 - [ ] nested vectors being handled bad
