@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, env::args, rc::Rc};
 
 use anyhow::Result;
 use thiserror::Error;
@@ -105,6 +105,7 @@ impl Default for Env {
             ("car", car),
             ("cdr", cdr),
             ("list", list),
+            ("print", print),
         ];
 
         for (name, f) in bins {
@@ -151,6 +152,8 @@ pub enum BuiltinError {
     BadEqArgTypes,
     #[error("Eq: Expected 2 arguments got {0}")]
     BadEqArgCount(usize),
+    #[error("Print: Expected atleast 1 argument got {0}")]
+    WrongPrintArgCount(usize),
 }
 
 fn tobi(f: Builtin, name: &str) -> Value {
@@ -164,7 +167,7 @@ fn args_to_num(args: &[Value]) -> impl Iterator<Item = Result<&f64>> {
     })
 }
 
-pub fn add(args: &[Value]) -> Result<Value> {
+fn add(args: &[Value]) -> Result<Value> {
     let args = args_to_num(args)
         .collect::<Result<Vec<_>, _>>()?
         .into_iter();
@@ -173,7 +176,7 @@ pub fn add(args: &[Value]) -> Result<Value> {
     Ok(Value::Num(num))
 }
 
-pub fn min(args: &[Value]) -> Result<Value> {
+fn min(args: &[Value]) -> Result<Value> {
     let mut args = args_to_num(args)
         .collect::<Result<Vec<_>, _>>()?
         .into_iter();
@@ -186,7 +189,7 @@ pub fn min(args: &[Value]) -> Result<Value> {
     Ok(Value::Num(num))
 }
 
-pub fn mul(args: &[Value]) -> Result<Value> {
+fn mul(args: &[Value]) -> Result<Value> {
     let args = args_to_num(args)
         .collect::<Result<Vec<_>, _>>()?
         .into_iter();
@@ -194,7 +197,7 @@ pub fn mul(args: &[Value]) -> Result<Value> {
     Ok(Value::Num(num))
 }
 
-pub fn div(args: &[Value]) -> Result<Value> {
+fn div(args: &[Value]) -> Result<Value> {
     let mut args = args_to_num(args)
         .collect::<Result<Vec<_>, _>>()?
         .into_iter();
@@ -207,7 +210,7 @@ pub fn div(args: &[Value]) -> Result<Value> {
     Ok(Value::Num(num))
 }
 
-pub fn lt(args: &[Value]) -> Result<Value> {
+fn lt(args: &[Value]) -> Result<Value> {
     if args.len() < 2 {
         return Err(BuiltinError::BadLtArgCount(args.len()).into());
     }
@@ -218,7 +221,7 @@ pub fn lt(args: &[Value]) -> Result<Value> {
     }
 }
 
-pub fn eq(args: &[Value]) -> Result<Value> {
+fn eq(args: &[Value]) -> Result<Value> {
     if args.len() != 2 {
         return Err(BuiltinError::BadEqArgCount(args.len()).into());
     }
@@ -233,7 +236,7 @@ pub fn eq(args: &[Value]) -> Result<Value> {
     }
 }
 
-pub fn modulo(args: &[Value]) -> Result<Value> {
+fn modulo(args: &[Value]) -> Result<Value> {
     if args.len() != 2 {
         return Err(BuiltinError::BadModArgCount(args.len()).into());
     }
@@ -244,7 +247,7 @@ pub fn modulo(args: &[Value]) -> Result<Value> {
     }
 }
 
-pub fn not(args: &[Value]) -> Result<Value> {
+fn not(args: &[Value]) -> Result<Value> {
     if args.len() != 1 {
         return Err(BuiltinError::WrongNotArgCount(args.len()).into());
     }
@@ -252,7 +255,7 @@ pub fn not(args: &[Value]) -> Result<Value> {
     Ok(Value::Bool(!val.truthy()))
 }
 
-pub fn cons(args: &[Value]) -> Result<Value> {
+fn cons(args: &[Value]) -> Result<Value> {
     if args.len() != 2 {
         return Err(BuiltinError::WrongConsArgCount(args.len()).into());
     }
@@ -263,7 +266,7 @@ pub fn cons(args: &[Value]) -> Result<Value> {
     Ok(Value::List(vec![head, tail]))
 }
 
-pub fn car(args: &[Value]) -> Result<Value> {
+fn car(args: &[Value]) -> Result<Value> {
     if args.len() != 1 {
         return Err(BuiltinError::WrongCarArgCount(args.len()).into());
     }
@@ -279,7 +282,7 @@ pub fn car(args: &[Value]) -> Result<Value> {
     Ok(pair.first().expect("car expected items in list").clone())
 }
 
-pub fn cdr(args: &[Value]) -> Result<Value> {
+fn cdr(args: &[Value]) -> Result<Value> {
     if args.len() != 1 {
         return Err(BuiltinError::WrongCdrArgCount(args.len()).into());
     }
@@ -299,6 +302,22 @@ pub fn cdr(args: &[Value]) -> Result<Value> {
     Ok(Value::List(pair[1..].to_vec()))
 }
 
-pub fn list(args: &[Value]) -> Result<Value> {
+fn list(args: &[Value]) -> Result<Value> {
     Ok(Value::List(args.to_vec()))
+}
+
+fn print(args: &[Value]) -> Result<Value> {
+    if args.len() <= 1 {
+        return Err(BuiltinError::WrongPrintArgCount(args.len()).into());
+    }
+
+    let out = args
+        .iter()
+        .map(|a| a.to_string())
+        .collect::<Vec<_>>()
+        .join(" ");
+
+    println!("{}", out);
+
+    Ok(Value::Nil)
 }
