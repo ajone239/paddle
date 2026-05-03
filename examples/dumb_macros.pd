@@ -1,6 +1,6 @@
-(defm (fun args body) (list 'def args body))
+(def (fun args body) (list 'def args body))
 
-(fun (test x y) (+ x 1))
+(eval (fun (test x y) (+ x 1)))
 
 (def (unless cond body)
  (list 'if (list 'not cond) body '()))

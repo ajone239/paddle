@@ -44,10 +44,10 @@ This is built as a learning project for exploring programming language implement
         * [x] hook into quote
         * [x] reggie quote
         * [x] do the thing
-    + [ ] clean up
-    + [-] when
-    + [-] unless
-    + [-] cond
+    + [x] clean up
+    + [x] when
+    + [x] unless
+    + [x] cond
     + [ ] loop
 - [ ] Tail call optimization
 - [ ] kill clone being everywhere

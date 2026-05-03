@@ -1,25 +1,25 @@
 (defm (fun args body)
- `(def ,args ,body))
+ (list 'def args body))
 
 (fun (test x y) (+ x 1))
 
 (defm (unless cond body)
- `(if (not ,cond) ,body '()))
+ (list 'if (list 'not cond) body '()))
+
+(defm (when cond body)
+ (list 'if cond body '()))
 
 (def (safe-div x y)
     (unless (= y 0) (/ x y)))
-
-(defm (when cond body)
- `(if ,cond ,body '()))
 
 ; rec macros have to be defined like this so their args get processed
 (defmacro (cond pairs)
     (define (cond2 pairs)
       (if (<= (len pairs) 2)
-       `(if ,(car pairs) ,(cdr pairs) '())
-       `(if ,(car (car pairs))
-            ,(cdr (car pairs))
-            ,(cond2 (cdr pairs)))))
+       (list 'if (car pairs) (cdr pairs) '())
+       (list 'if (car (car pairs))
+        (cdr (car pairs))
+        (cond2 (cdr pairs)))))
     (cond2 pairs))
 
 (def (count-even-odd xs)

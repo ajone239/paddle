@@ -163,7 +163,7 @@ impl Form {
             "quasiquote" | "`" => Some(Self::QuasiQuote),
             "unquote" | "," => Some(Self::UnQuote),
             "define" | "def" => Some(Self::Define),
-            "define-macro" | "defm" => Some(Self::DefineMacro),
+            "defmacro" | "defm" => Some(Self::DefineMacro),
             "lambda" | "lamda" | ".\\" => Some(Self::Lambda),
             _ => None,
         }

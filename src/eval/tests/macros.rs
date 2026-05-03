@@ -66,7 +66,7 @@ fn defm_unless_true_returns_nil() {
 #[test]
 fn define_macro_keyword() {
     assert_eq!(
-        eval_str_env(&vec!["(define-macro (inc x) (list '+ x 1))", "(inc 41)",]),
+        eval_str_env(&vec!["(defmacro (inc x) (list '+ x 1))", "(inc 41)",]),
         num(42.0)
     );
 }

@@ -26,28 +26,26 @@ fn resolve(atom: &str, env: Rc<RefCell<Env>>) -> Result<Value> {
         .ok_or(EvalError::SymbolUndefined(atom.to_string()).into())
 }
 
-// TODO(ajone239): make this a result
-fn quasi_quote_eval(ast: &Value, env: Rc<RefCell<Env>>) -> Value {
+fn quasi_quote_eval(ast: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
     match ast {
-        Value::List(values) if values.is_empty() => ast.clone(),
+        Value::List(values) if values.is_empty() => Ok(ast.clone()),
         Value::List(values) if matches!(values[0], Value::Form(Form::UnQuote)) => {
-            // TODO(ajone239): kill unwrap
-            eval(&values[1], env).unwrap()
+            eval(&values[1], env)
         }
-        Value::List(values) => Value::List(
+        Value::List(values) => Ok(Value::List(
             values
                 .iter()
                 .map(|v| quasi_quote_eval(v, env.clone()))
-                .collect(),
-        ),
-        _ => ast.clone(),
+                .collect::<Result<Vec<_>, _>>()?,
+        )),
+        _ => Ok(ast.clone()),
     }
 }
 
 fn eval_form(form: Form, list: &[Value], env: Rc<RefCell<Env>>) -> Result<Value> {
     match form {
         Form::Quote => Ok(list[1].clone()),
-        Form::QuasiQuote => Ok(quasi_quote_eval(&list[1], env)),
+        Form::QuasiQuote => quasi_quote_eval(&list[1], env),
         Form::UnQuote => Err(EvalError::UnquoteOutsideQuasi.into()),
         Form::Require => {
             if list.len() != 2 {
@@ -222,10 +220,7 @@ fn apply(list: &[Value], env: Rc<RefCell<Env>>) -> Result<Value> {
     };
 
     if is_macro {
-        let rv = rv?;
-        println!("{}", rv);
-        // should this be the og env?
-        eval(&rv, env.clone())
+        eval(&rv?, env.clone())
     } else {
         rv
     }
