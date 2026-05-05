@@ -21,6 +21,7 @@ model.
 - [ ] M2 — make the language runnable
     + [ ] tail-call optimization
     + [ ] variadic arguments (fix macros after this)
+    + [ ] `set!`
     + [ ] `let` / `let*`
     + [ ] error/condition system usable from Paddle
     + [ ] string builtins
@@ -35,7 +36,7 @@ model.
     + [ ] `read-line` in Paddle
 - [ ] M3 — goalpost programs
     + [ ] `paddle.pd` — meta-circular evaluator
-    + [ ] `bf.pd` — Forth interpreter in Paddle
+    + [ ] `forth.pd` — Forth interpreter in Paddle
     + [ ] AoC days in Paddle
 
 Out of scope: bytecode VM, lexer iterator, AST arena.
