@@ -3,9 +3,49 @@
 A Lisp interpreter written in Rust whose name is a pun that is built on my mistaking racket for racquet.
 This is built as a learning project for exploring programming language implementation.
 
+## Goal
+
+Make a Lisp capable of running non-trivial programs, as a vehicle for learning
+programming-language implementation and getting comfortable with Rust's memory
+model.
+
 ## Roadmap
 
-### Frontend
+### Milestones
+
+- [ ] M0 — writeups
+    + writeup of the `dumb_macros.pd` experiment
+    + full data flow from bytes to eval in the readme
+- [ ] M1 — memory representation rework
+    + [ ] cons cells (Rc-cells vs arena: deferred)
+    + [ ] kill pervasive clones in `eval`/`apply`
+    + [ ] fix nested-vector handling
+- [ ] M2 — make the language runnable
+    + [ ] tail-call optimization
+    + [ ] variadic arguments (fix macros after this)
+    + [ ] `set!`
+    + [ ] `let` / `let*`
+    + [ ] error/condition system usable from Paddle
+    + [ ] string builtins
+        * [ ] `string-length`
+        * [ ] `string-ref`
+        * [ ] `substring`
+        * [ ] `string-append`
+        * [ ] `string->list`
+        * [ ] `list->string`
+        * [ ] `string=?`
+    + [ ] `getchar` builtin
+    + [ ] `read-line` in Paddle
+- [ ] M3 — goalpost programs
+    + [ ] `paddle.pd` — meta-circular evaluator
+    + [ ] `forth.pd` — Forth interpreter in Paddle
+    + [ ] AoC days in Paddle
+
+Out of scope: bytecode VM, lexer iterator, AST arena.
+
+### Foundation (work so far)
+
+#### Frontend
 - [x] Lexer — tokenizes source into `LeftParen`, `RightParen`, `Quote`, `Symbol`
 - [x] Source spans — line/column attached to every token
 - [x] String literals — space-safe quoted strings
@@ -13,46 +53,15 @@ This is built as a learning project for exploring programming language implement
 - [x] Parser — recursive descent, produces `Expr::Atom` / `Expr::List`
 - [x] Quote expansion — `'x` → `(quote x)` at parse time
 - [x] Parse errors with source location
-- [ ] Lexer iterator
-- [ ] Arena allocation ast
 
-### Evaluator
+#### Evaluator
 - [x] Value type design
-- [x] Basic eval — literals, arithmetic
-- [x] `quote`
+- [x] Basic eval — literals, arithmetic, `quote`
 - [x] Environment — `define`
-    + [x] variable lookup
-    + [x] function lookup
-- [x] Environment — scope
 - [x] Lambdas and closures
-- [-] dumb Macros
-    + [x] when
-    + [x] unless
-    + [x] cond
-    + [ ] write about them
-- [x] Macros —
-    + [x] `define-macro`
-        * [x] hook into define
-        * [x] reggie functions
-        * [x] make eval not eval args
-    + [x] quasiquote
-        * [x] hook into quote
-        * [x] reggie quote
-        * [x] hook into unquote
-    + [x] unquote
-        * [x] hook into quote
-        * [x] reggie quote
-        * [x] do the thing
-    + [x] clean up
-    + [x] when
-    + [x] unless
-    + [x] cond
-    + [x] loop
-- [ ] Tail call optimization
-- [ ] kill clone being everywhere
-- [ ] nested vectors being handled bad
+- [x] Macros — `define-macro`, quasiquote, unquote
 
-### Runtime
+#### Runtime
 - [x] Standard library — arithmetic
 - [x] Standard library — `car`, `cdr`, `cons`.
 - [x] Standard library — `fold`, `map`, etc.
