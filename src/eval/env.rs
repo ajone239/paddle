@@ -100,6 +100,8 @@ impl Default for Env {
             ("=", eq),
             ("<", lt),
             ("%", modulo),
+            ("&&", and),
+            ("||", val_or),
             ("not", not),
             ("cons", cons),
             ("car", car),
@@ -152,6 +154,10 @@ pub enum BuiltinError {
     BadEqArgTypes,
     #[error("Eq: Expected 2 arguments got {0}")]
     BadEqArgCount(usize),
+    #[error("And: Expected 2 arguments got {0}")]
+    BadAndArgCount(usize),
+    #[error("Or: Expected 2 arguments got {0}")]
+    BadOrArgCount(usize),
 }
 
 fn tobi(f: Builtin, name: &str) -> Value {
@@ -161,7 +167,10 @@ fn tobi(f: Builtin, name: &str) -> Value {
 fn args_to_num(args: &[Value]) -> impl Iterator<Item = Result<&f64>> {
     args.iter().map(move |v| match v {
         Value::Num(n) => Ok(n),
-        _ => Err(BuiltinError::ExpectedNumArg.into()),
+        _ => {
+            println!("{:?}", args);
+            Err(BuiltinError::ExpectedNumArg.into())
+        }
     })
 }
 
@@ -217,6 +226,28 @@ fn lt(args: &[Value]) -> Result<Value> {
         (Value::Num(last), Value::Num(penu)) => Ok(Value::Bool(penu < last)),
         _ => Err(BuiltinError::BadLtArgTypes.into()),
     }
+}
+
+fn and(args: &[Value]) -> Result<Value> {
+    if args.len() != 2 {
+        return Err(BuiltinError::BadAndArgCount(args.len()).into());
+    }
+
+    let t1 = &args[args.len() - 2].truthy();
+    let t2 = &args[args.len() - 1].truthy();
+
+    Ok(Value::Bool(*t1 && *t2))
+}
+
+fn val_or(args: &[Value]) -> Result<Value> {
+    if args.len() != 2 {
+        return Err(BuiltinError::BadOrArgCount(args.len()).into());
+    }
+
+    let t1 = &args[args.len() - 2].truthy();
+    let t2 = &args[args.len() - 1].truthy();
+
+    Ok(Value::Bool(*t1 || *t2))
 }
 
 fn eq(args: &[Value]) -> Result<Value> {

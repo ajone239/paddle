@@ -1,0 +1,144 @@
+(require examples/macros.pd)
+
+(define (add1 x) (+ 1 x))
+
+(define (take xs n)
+  (if (= 0 n)
+      '()
+      (cons (car xs) (take (cdr xs) (- n 1)))))
+
+(define (skip xs n)
+  (if (<= n 0)
+      xs
+      (skip (cdr xs) (- n 1))))
+
+(define (dezer l)
+  (filter (lambda (c) (not (= 0 c))) l))
+
+(define (dedup l)
+  (when l
+      (progn
+        (define xs (cdr l))
+        (define x (car l))
+        (cons x (filter (lambda (v) (not (= v x))) (dedup xs))))))
+
+(define (get-n l i)
+  (if (= i 0)
+      (car l)
+      (get-n (cdr l) (- i 1))))
+
+(define (seq n)
+  (if (< n 0)
+      '()
+      (cons n (seq (- n 1)))))
+
+(define (foo xs ys)
+  (when xs
+    (when ys
+     (progn
+      (define x (car xs))
+      (define xss (cdr xs))
+      (bat (bar x ys) (foo xss ys)) ))))
+
+(define (bar x ys)
+  (when ys
+     (progn
+      (define y (car ys))
+      (define yss (cdr ys))
+      (cons (cons x y) (bar x yss)) )))
+
+(define (bat xs ys)
+  (if (not xs)
+      ys
+      (cons (car xs) (bat (cdr xs) ys))))
+
+(define (get-rows b)
+  (define is (seq 8))
+  (define rs (map (lambda (i) (* 9 i)) is))
+  (map (lambda (i) (take (skip b i) 9)) rs))
+
+(define (reverse xs)
+  (foldl cons '() xs))
+
+(define (print-board b)
+  (map print (reverse (get-rows b)))
+  '())
+
+(define (check-set row)
+  (define r (dezer row))
+  (define dr (dedup r))
+  (= (length r) (length dr)))
+
+(define (check-rows b)
+  (map check-set (get-rows b)))
+
+(define (get-col b i)
+  (map (lambda (r) (get-n r i)) (get-rows b)))
+
+(define (check-cols b)
+  (map (lambda (i) (check-set (get-col b i))) (seq 8)))
+
+(define (check-squares b)
+  (define base (seq 2))
+  (define squares (foo base base))
+  (map (lambda (s) (check-square b (car s) (cadr s))) squares))
+
+(define (check-square b i j)
+  (check-set (get-square b i j)))
+
+(define (get-square b i j)
+  (define base (seq 2))
+  (define js (map (lambda (x) (+ x (* 3 j))) base))
+  (define is (map (lambda (x) (+ x (* 3 i))) base))
+  (define squares (foo is js))
+  (map (lambda (s) (get-n (get-n (get-rows b) (car s)) (cadr s)))
+       squares))
+
+(define (any-not l)
+  (not (foldl && #t l)))
+
+(define (check-board b)
+  (def (all-good l) (foldl && #t l))
+  (def rg (all-good (check-rows b)))
+  (def cg (all-good (check-cols b)))
+  (def sg (all-good (check-squares b)))
+  (&& rg (&& cg sg)))
+
+
+(define (lens l i v)
+  (when l
+    (if (= i 0)
+        (cons v (cdr l))
+        (cons (car l) (lens (cdr l) (- i 1) v)))))
+
+(define (solve-board b i)
+  (print '>> i)
+  (print-board b)
+  (print)
+  (if (>= i (* 9 9))
+      b
+      (if (not (= 0 (get-n b i)))
+          (solve-board b (+ 1 i))
+          (progn
+             (define vals (map add1 (seq 8)) )
+             (define tests (map (lambda (v) (lens b i v)) vals) )
+             (define valids (filter (lambda (tr) (check-board tr)) tests) )
+             (define solves (map (lambda (v) (solve-board v (+ 1 i))) valids))
+             (filter (.\ (l) l) solves)))))
+
+
+(define board '(0 6 0 1 0 4 0 5 0
+                0 0 8 3 0 5 6 0 0
+                2 0 0 0 0 0 0 0 1
+                8 0 0 4 0 7 0 0 6
+                0 0 6 0 0 0 3 0 0
+                7 0 0 9 0 1 0 0 4
+                5 0 0 0 0 0 0 0 2
+                0 0 7 2 0 6 9 0 0
+                0 4 0 5 0 8 0 7 0))
+
+(print-board board)
+
+(print)
+
+(print-board (solve-board board 0))
