@@ -19,8 +19,11 @@ model.
 - [ ] M1 — memory representation rework
     + [ ] cons cells (Rc-cells)
         * [x] make value
-        * [ ] lower -> test
-        * [ ] next
+        * [x] lower -> test
+        * [ ] lower -> unit test
+        * [ ] move eval over
+        * [ ] move quasiquote over
+        * [ ] move unit tests
     + [ ] kill pervasive clones in `eval`/`apply`
     + [ ] fix nested-vector handling
 - [ ] M2 — make the language runnable
