@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::eval::value::{Form, Value};
 use crate::parser::Expr;
 
@@ -8,7 +10,18 @@ pub fn lower(ast: &Expr) -> Value {
 fn quote_eval(ast: &Expr) -> Value {
     match ast {
         Expr::Atom(atom, _) => classify(atom),
-        Expr::List(list, _) => Value::List(list.iter().map(quote_eval).collect()),
+        Expr::List(list, _) => {
+            let mut vals = list.iter().map(quote_eval).rev();
+
+            let first = vals.next().unwrap_or(Value::Nil);
+            let mut rv = Rc::new((first, Value::Nil));
+
+            while let Some(val) = vals.next() {
+                rv = Rc::new((val, Value::Cons(rv)));
+            }
+
+            Value::Cons(rv)
+        }
     }
 }
 

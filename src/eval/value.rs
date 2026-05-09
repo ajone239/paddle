@@ -14,6 +14,7 @@ pub enum Value {
     Symbol(String),
     Form(Form),
     Str(String),
+    Cons(Rc<(Value, Value)>),
     // TODO(ajone239): move this to a ref when copies get expensive
     List(Vec<Value>),
     Progn(Vec<Value>),
@@ -46,7 +47,8 @@ impl Value {
             Value::Num(num) => num.ne(&0.0),
             Value::Str(s) => !s.is_empty(),
             Value::List(v) | Value::Progn(v) => !v.is_empty(),
-            Value::Symbol(_)
+            Value::Cons(_) // TODO(austin.jones): is cons truthy?
+            | Value::Symbol(_)
             | Value::Form(_)
             | Value::Builtin(_, _)
             | Value::Func { .. }
@@ -71,6 +73,26 @@ impl Display for Value {
                     .map(|v| v.to_string())
                     .collect::<Vec<String>>()
                     .join(" ");
+                write!(f, "'({})", nice_list)
+            }
+
+            Value::Cons(pair) => {
+                let first = &pair.0;
+                let mut second = &pair.1;
+
+                if matches!(second, Value::Nil) {
+                    return write!(f, "'({})", first);
+                }
+
+                let mut vals = vec![first.to_string()];
+
+                while let Value::Cons(next_pair) = second {
+                    let first = &next_pair.0;
+                    vals.push(first.to_string());
+                    second = &next_pair.1;
+                }
+
+                let nice_list = vals.join(" ");
                 write!(f, "'({})", nice_list)
             }
             Value::Progn(values) => {
@@ -104,22 +126,23 @@ impl Display for Value {
 impl Debug for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Nil => write!(f, "Nil"),
-            Self::Bool(arg0) => f.debug_tuple("Bool").field(arg0).finish(),
-            Self::Num(arg0) => f.debug_tuple("Num").field(arg0).finish(),
-            Self::Symbol(arg0) => f.debug_tuple("Symbol").field(arg0).finish(),
-            Self::Form(arg0) => f.debug_tuple("Form").field(arg0).finish(),
-            Self::Str(arg0) => f.debug_tuple("Str").field(arg0).finish(),
-            Self::List(arg0) => f.debug_tuple("List").field(arg0).finish(),
-            Self::Progn(arg0) => f.debug_tuple("Progn").field(arg0).finish(),
-            Self::Builtin(arg0, arg1) => f.debug_tuple("Builtin").field(arg0).field(arg1).finish(),
-            Self::Macro { name, args, body } => f
+            Value::Nil => write!(f, "Nil"),
+            Value::Bool(arg0) => f.debug_tuple("Bool").field(arg0).finish(),
+            Value::Num(arg0) => f.debug_tuple("Num").field(arg0).finish(),
+            Value::Symbol(arg0) => f.debug_tuple("Symbol").field(arg0).finish(),
+            Value::Form(arg0) => f.debug_tuple("Form").field(arg0).finish(),
+            Value::Str(arg0) => f.debug_tuple("Str").field(arg0).finish(),
+            Value::List(arg0) => f.debug_tuple("List").field(arg0).finish(),
+            Value::Cons(arg0) => f.debug_tuple("Cons").field(arg0).finish(),
+            Value::Progn(arg0) => f.debug_tuple("Progn").field(arg0).finish(),
+            Value::Builtin(arg0, arg1) => f.debug_tuple("Builtin").field(arg0).field(arg1).finish(),
+            Value::Macro { name, args, body } => f
                 .debug_struct("Macro")
                 .field("name", name)
                 .field("args", args)
                 .field("body", body)
                 .finish(),
-            Self::Func { name, args, body } => f
+            Value::Func { name, args, body } => f
                 .debug_struct("Func")
                 .field("name", name)
                 .field("args", args)
