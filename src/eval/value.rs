@@ -52,40 +52,16 @@ impl Value {
         }
     }
 
-    pub fn to_vec(&self) -> Vec<Value> {
-        match self {
-            Self::Cons(pair) => {
-                let first = &pair.0;
-                let mut second = &pair.1;
-
-                // TODO(ajone239): kill this clone!
-                let mut vals = vec![first.clone()];
-
-                while let Value::Cons(next_pair) = second {
-                    let first = &next_pair.0;
-                    // TODO(ajone239): kill this clone!
-                    vals.push(first.clone());
-                    second = &next_pair.1;
-                }
-
-                vals
-            }
-            Self::Nil => vec![],
-            _ => vec![self.clone()],
-        }
-    }
-
     pub fn to_cons_list(list: Vec<Self>) -> Self {
         let mut vals = list.into_iter().rev();
 
-        let first = vals.next().unwrap_or(Value::Nil);
-        let mut rv = Rc::new((first, Value::Nil));
+        let mut rv = Value::Nil;
 
         while let Some(val) = vals.next() {
-            rv = Rc::new((val, Value::Cons(rv)));
+            rv = Value::Cons(Rc::new((val, rv)));
         }
 
-        Value::Cons(rv)
+        rv
     }
 
     pub fn to_cons_iter(&self) -> ConsIter<'_> {
@@ -103,7 +79,6 @@ impl Display for Value {
             Value::Form(form) => write!(f, "{:?}", form),
             Value::Str(s) => write!(f, "{}", s),
             Value::Cons(pair) => {
-                // TODO(ajone239): use to_vec here
                 let first = &pair.0;
                 let mut second = &pair.1;
 
@@ -155,7 +130,6 @@ impl Display for Value {
 
 impl FromIterator<Value> for Value {
     fn from_iter<T: IntoIterator<Item = Value>>(iter: T) -> Self {
-        // TODO(ajone239): this is an allocation that would be so nice to avoid
         Value::to_cons_list(iter.into_iter().collect())
     }
 }

@@ -159,7 +159,7 @@ fn tobi(f: Builtin, name: &str) -> Value {
 }
 
 fn add(args: &Value) -> Result<Value> {
-    if !matches!(args, Value::Cons(_)) {
+    if !matches!(args, Value::Cons(_) | Value::Nil) {
         bail!("should give me a list");
     }
 
@@ -213,7 +213,7 @@ fn min(args: &Value) -> Result<Value> {
 }
 
 fn mul(args: &Value) -> Result<Value> {
-    if !matches!(args, Value::Cons(_)) {
+    if !matches!(args, Value::Cons(_) | Value::Nil) {
         return Err(BuiltinError::NoInitforDiv.into());
     }
 
@@ -237,7 +237,7 @@ fn mul(args: &Value) -> Result<Value> {
 
 fn div(args: &Value) -> Result<Value> {
     let Value::Cons(pair) = args else {
-        bail!("should give me a list");
+        return Err(BuiltinError::NoInitforDiv.into());
     };
 
     let mut num = match pair.0 {
@@ -386,7 +386,6 @@ fn cons(args: &Value) -> Result<Value> {
 
     let tail = &tail_pair.0;
 
-    // TODO(ajone239): make sure this clone is ok
     Ok(Value::Cons(Rc::new((head.clone(), tail.clone()))))
 }
 
@@ -440,8 +439,7 @@ fn list(args: &Value) -> Result<Value> {
 
 fn print(args: &Value) -> Result<Value> {
     let out = args
-        .to_vec()
-        .iter()
+        .to_cons_iter()
         .map(|a| a.to_string())
         .collect::<Vec<_>>()
         .join(" ");

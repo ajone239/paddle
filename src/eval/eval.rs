@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::error::Error;
 use std::{ops::Deref, rc::Rc};
 
 use anyhow::{Ok, Result, bail};
@@ -123,7 +124,6 @@ fn eval_form(form: Form, tail: &Value, env: &Rc<RefCell<Env>>) -> Result<Value> 
 
             let arg_head = list.next().ok_or(EvalError::BadLambdaArgs)?;
 
-            // TODO(ajone239): fix empty list semantics
             if !matches!(arg_head, Value::Cons(_) | Value::Nil) {
                 return Err(EvalError::BadLambdaArgsList.into());
             }
@@ -136,7 +136,6 @@ fn eval_form(form: Form, tail: &Value, env: &Rc<RefCell<Env>>) -> Result<Value> 
                 })
                 .collect::<Result<Vec<String>, _>>()?;
 
-            // TODO(ajone239): kill this clone
             let tail: Vec<_> = list.map(|v| v.clone()).collect();
 
             if tail.is_empty() {
@@ -162,11 +161,6 @@ fn eval_form(form: Form, tail: &Value, env: &Rc<RefCell<Env>>) -> Result<Value> 
 
 fn apply(head: &Value, tail: &Value, env: &Rc<RefCell<Env>>) -> Result<Value> {
     let head = eval(head, env)?;
-    let cons_iter = tail.to_cons_iter();
-    let clen = tail.to_cons_iter().len();
-
-    let liter = tail.to_cons_iter().map(|v| eval(v, env));
-
     let (fargs, body, new_env) = match &head {
         Value::Lambda {
             args: fargs,
@@ -190,26 +184,33 @@ fn apply(head: &Value, tail: &Value, env: &Rc<RefCell<Env>>) -> Result<Value> {
             (fargs, body, env)
         }
         Value::Builtin(f, _) => {
-            return f.0(&liter.collect::<Result<_, _>>()?);
+            return f.0(&tail
+                .to_cons_iter()
+                .map(|v| eval(v, env))
+                .collect::<Result<_, _>>()?);
         }
         v => return Ok(v.clone()),
     };
 
     let is_macro = matches!(head, Value::Macro { .. });
 
-    if clen != fargs.len() {
-        return Err(EvalError::BadFunctionArgCount(fargs.len()).into());
+    let mut citer = tail.to_cons_iter();
+    for arg in fargs.iter() {
+        let val = citer
+            .next()
+            .ok_or(EvalError::BadFunctionArgCount(fargs.iter().len()))?;
+
+        let val = if is_macro {
+            val.clone()
+        } else {
+            eval(val, &env)?
+        };
+
+        new_env.borrow_mut().define(arg, val.clone());
     }
 
-    if is_macro {
-        for (arg, val) in fargs.iter().zip(cons_iter) {
-            // TODO(ajone239): clone arg
-            new_env.borrow_mut().define(arg, val.clone());
-        }
-    } else {
-        for (arg, val) in fargs.iter().zip(liter) {
-            new_env.borrow_mut().define(arg, val?);
-        }
+    if citer.next().is_some() {
+        return Err(EvalError::BadFunctionArgCount(fargs.iter().len()).into());
     }
 
     // eval the body with the new env
