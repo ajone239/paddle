@@ -24,7 +24,7 @@ struct Cli {
     no_std: bool,
 }
 
-static STD_LIB: &'static str = include_str!("../examples/base.pd");
+static STD_LIB: &str = include_str!("../examples/base.pd");
 
 fn main() -> Result<()> {
     let cli = Cli::parse();

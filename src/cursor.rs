@@ -24,7 +24,7 @@ pub fn process(contents: &str, env: &Rc<RefCell<Env>>) -> Result<Vec<Value>> {
     let mut rv = vec![];
 
     loop {
-        let (ast, rest) = parser::parse_expr(&working)?;
+        let (ast, rest) = parser::parse_expr(working)?;
         let expr = lower(&ast);
 
         let val = eval(&expr, env)?;

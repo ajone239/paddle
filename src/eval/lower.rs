@@ -11,14 +11,10 @@ fn quote_eval(ast: &Expr) -> Value {
     match ast {
         Expr::Atom(atom, _) => classify(atom),
         Expr::List(list, _) => {
-            let mut vals = list.iter().map(quote_eval).rev();
-
             let mut rv = Value::Nil;
-
-            while let Some(val) = vals.next() {
+            for val in list.iter().map(quote_eval).rev() {
                 rv = Value::Cons(Rc::new((val, rv)));
             }
-
             rv
         }
     }
@@ -29,7 +25,7 @@ fn classify(atom: &str) -> Value {
         return Value::Num(num);
     }
 
-    if let Some(form) = Form::from_str(atom) {
+    if let Some(form) = Form::try_parse(atom) {
         return Value::Form(form);
     }
 

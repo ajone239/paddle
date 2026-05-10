@@ -24,12 +24,11 @@ pub fn run_repl(env: &Rc<RefCell<Env>>) -> Result<()> {
 
         let line = line.trim();
 
-        if input.is_empty() {
-            if handle_repl_cmd(&env, line) {
+        if input.is_empty()
+            && handle_repl_cmd(env, line) {
                 rl.add_history_entry(line)?;
                 continue;
             }
-        }
 
         input += line;
 

@@ -53,14 +53,10 @@ impl Value {
     }
 
     pub fn to_cons_list(list: Vec<Self>) -> Self {
-        let mut vals = list.into_iter().rev();
-
         let mut rv = Value::Nil;
-
-        while let Some(val) = vals.next() {
+        for val in list.into_iter().rev() {
             rv = Value::Cons(Rc::new((val, rv)));
         }
-
         rv
     }
 
@@ -194,7 +190,7 @@ pub enum Form {
 }
 
 impl Form {
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn try_parse(s: &str) -> Option<Self> {
         // TODO(ajone239): make weird symbols for all these
         match s {
             "if" => Some(Self::If),
@@ -220,12 +216,17 @@ impl<'a> ConsIter<'a> {
     pub fn new(current: &'a Value) -> Self {
         Self { current }
     }
+
     pub fn len(self) -> usize {
         let mut len = 0;
         for _ in self {
             len += 1;
         }
         len
+    }
+
+    pub fn is_empty(self) -> bool {
+        !matches!(self.current, Value::Cons(_))
     }
 }
 

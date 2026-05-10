@@ -1,5 +1,4 @@
 use std::cell::RefCell;
-use std::error::Error;
 use std::{ops::Deref, rc::Rc};
 
 use anyhow::{Ok, Result, bail};
@@ -96,7 +95,7 @@ fn eval_form(form: Form, tail: &Value, env: &Rc<RefCell<Env>>) -> Result<Value> 
             eval(&val, env)
         }
         Form::DefineMacro | Form::Define => {
-            define(&form, &tail, env)?;
+            define(&form, tail, env)?;
 
             Ok(Value::Nil)
         }
@@ -136,7 +135,7 @@ fn eval_form(form: Form, tail: &Value, env: &Rc<RefCell<Env>>) -> Result<Value> 
                 })
                 .collect::<Result<Vec<String>, _>>()?;
 
-            let tail: Vec<_> = list.map(|v| v.clone()).collect();
+            let tail: Vec<_> = list.cloned().collect();
 
             if tail.is_empty() {
                 return Err(EvalError::BadLambdaArgs.into());
@@ -203,7 +202,7 @@ fn apply(head: &Value, tail: &Value, env: &Rc<RefCell<Env>>) -> Result<Value> {
         let val = if is_macro {
             val.clone()
         } else {
-            eval(val, &env)?
+            eval(val, env)?
         };
 
         new_env.borrow_mut().define(arg, val.clone());
@@ -225,7 +224,7 @@ fn apply(head: &Value, tail: &Value, env: &Rc<RefCell<Env>>) -> Result<Value> {
             }
             eval(body.last().expect("progn body can't be empty"), &new_env)
         }
-        _ => eval(&body, &new_env),
+        _ => eval(body, &new_env),
     };
 
     if is_macro { eval(&rv?, env) } else { rv }
@@ -242,7 +241,7 @@ fn define(form: &Form, body: &Value, env: &Rc<RefCell<Env>>) -> Result<()> {
             if list.next().is_some() {
                 return Err(EvalError::BadDefineArgs.into());
             }
-            let value = eval(&tail, env)?;
+            let value = eval(tail, env)?;
             env.borrow_mut().define(atom, value);
         }
         Value::Cons(_) => {
