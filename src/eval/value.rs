@@ -15,8 +15,6 @@ pub enum Value {
     Form(Form),
     Str(String),
     Cons(Rc<(Value, Value)>),
-    // TODO(ajone239): move this to a ref when copies get expensive
-    List(Vec<Value>),
     Progn(Vec<Value>),
     Builtin(BuiltinFn, String),
     Macro {
@@ -43,7 +41,7 @@ impl Value {
             Value::Bool(val) => *val,
             Value::Num(num) => num.ne(&0.0),
             Value::Str(s) => !s.is_empty(),
-            Value::List(v) | Value::Progn(v) => !v.is_empty(),
+            Value::Progn(v) => !v.is_empty(),
             Value::Cons(pair) => !matches!(pair.0, Self::Nil),
             Value::Symbol(_)
             | Value::Form(_)
@@ -93,6 +91,10 @@ impl Value {
 
         Value::Cons(rv)
     }
+
+    pub fn to_cons_iter(&self) -> ConsIter<'_> {
+        ConsIter::new(self)
+    }
 }
 
 impl Display for Value {
@@ -104,15 +106,6 @@ impl Display for Value {
             Value::Symbol(s) => write!(f, ":{}", s),
             Value::Form(form) => write!(f, "{:?}", form),
             Value::Str(s) => write!(f, "{}", s),
-            Value::List(values) => {
-                let nice_list = values
-                    .iter()
-                    .map(|v| v.to_string())
-                    .collect::<Vec<String>>()
-                    .join(" ");
-                write!(f, "'({})", nice_list)
-            }
-
             Value::Cons(pair) => {
                 // TODO(ajone239): use to_vec here
                 let first = &pair.0;
@@ -161,6 +154,13 @@ impl Display for Value {
     }
 }
 
+impl FromIterator<Value> for Value {
+    fn from_iter<T: IntoIterator<Item = Value>>(iter: T) -> Self {
+        // TODO(ajone239): this is an allocation that would be so nice to avoid
+        Value::to_cons_list(iter.into_iter().collect())
+    }
+}
+
 impl Debug for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -170,7 +170,6 @@ impl Debug for Value {
             Value::Symbol(arg0) => f.debug_tuple("Symbol").field(arg0).finish(),
             Value::Form(arg0) => f.debug_tuple("Form").field(arg0).finish(),
             Value::Str(arg0) => f.debug_tuple("Str").field(arg0).finish(),
-            Value::List(arg0) => f.debug_tuple("List").field(arg0).finish(),
             Value::Cons(arg0) => f.debug_tuple("Cons").field(arg0).finish(),
             Value::Progn(arg0) => f.debug_tuple("Progn").field(arg0).finish(),
             Value::Builtin(arg0, arg1) => f.debug_tuple("Builtin").field(arg0).field(arg1).finish(),
@@ -237,5 +236,33 @@ impl Form {
             "lambda" | "lamda" | ".\\" => Some(Self::Lambda),
             _ => None,
         }
+    }
+}
+
+pub struct ConsIter<'a> {
+    current: &'a Value,
+}
+
+impl<'a> ConsIter<'a> {
+    fn new(current: &'a Value) -> Self {
+        Self { current }
+    }
+}
+
+impl<'a> Iterator for ConsIter<'a> {
+    type Item = &'a Value;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let Value::Cons(pair) = self.current else {
+            return None;
+        };
+
+        if matches!(pair.0, Value::Nil) && matches!(pair.1, Value::Nil) {
+            return None;
+        }
+
+        self.current = &pair.1;
+
+        Some(&pair.0)
     }
 }

@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::{ops::Deref, rc::Rc};
 
-use anyhow::{Ok, Result};
+use anyhow::{Ok, Result, bail};
 
 use crate::cursor::process_file;
 use crate::eval::EvalError;
@@ -13,7 +13,7 @@ pub fn eval(ast: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
         Value::Symbol(atom) => resolve(atom, env),
         Value::Cons(pair) => match pair.0 {
             Value::Nil => Ok(Value::Nil),
-            Value::Form(f) => eval_form(f, &pair.0, &pair.1, env),
+            Value::Form(f) => eval_form(f, &pair.1, env),
             _ => apply(&pair.0, &pair.1, env),
         },
         _ => Ok(ast.clone()),
@@ -42,7 +42,7 @@ fn quasi_quote_eval(ast: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
     }
 }
 
-fn eval_form(form: Form, head: &Value, tail: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
+fn eval_form(form: Form, tail: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
     match form {
         Form::Quote => {
             let Value::Cons(tailtail) = tail else {
@@ -58,32 +58,37 @@ fn eval_form(form: Form, head: &Value, tail: &Value, env: Rc<RefCell<Env>>) -> R
         }
         Form::UnQuote => Err(EvalError::UnquoteOutsideQuasi.into()),
         Form::Require => {
-            let list = tail.to_vec();
-            if list.len() != 1 {
-                return Err(EvalError::BadRequireArgCount(list.len()).into());
-            }
+            let mut list = tail.to_cons_iter();
 
-            let file_name = match &list[0] {
+            let file_name = list.next().ok_or(EvalError::BadRequireArgCount(0))?;
+
+            let file_name = match file_name {
                 Value::Str(atom) | Value::Symbol(atom) => atom,
                 _ => {
                     return Err(EvalError::BadRequireArgs.into());
                 }
             };
 
+            if list.next().is_some() {
+                return Err(EvalError::BadRequireArgCount(2).into());
+            }
+
             process_file(file_name.into(), env.clone())?;
 
             Ok(Value::Nil)
         }
         Form::Progn => {
-            let body = tail.to_vec();
+            let mut body = tail.to_cons_iter().peekable();
 
-            if body.is_empty() {
-                return Err(EvalError::EmptyPrognBody.into());
+            while let Some(b) = body.next() {
+                let val = eval(b, env.clone())?;
+
+                if body.peek().is_none() {
+                    return Ok(val);
+                }
             }
-            for b in &body[..body.len() - 1] {
-                eval(b, env.clone())?;
-            }
-            eval(body.last().expect("progn body can't be empty"), env.clone())
+
+            bail!("progn body can't be empty")
         }
         Form::Eval => {
             let val = eval(tail, env.clone())?;
@@ -100,15 +105,15 @@ fn eval_form(form: Form, head: &Value, tail: &Value, env: Rc<RefCell<Env>>) -> R
             Ok(Value::Nil)
         }
         Form::If => {
-            let list = tail.to_vec();
-            println!("{}", tail);
-            if list.len() < 3 {
+            let mut list = tail.to_cons_iter();
+
+            let cond = list.next().ok_or(EvalError::BadIfArgs)?;
+            let t_branch = list.next().ok_or(EvalError::BadIfArgs)?;
+            let f_branch = list.next().ok_or(EvalError::BadIfArgs)?;
+
+            if list.next().is_some() {
                 return Err(EvalError::BadIfArgs.into());
             }
-
-            let cond = &list[0];
-            let t_branch = &list[1];
-            let f_branch = &list[2];
 
             let cond = eval(cond, env.clone())?;
 
@@ -119,30 +124,29 @@ fn eval_form(form: Form, head: &Value, tail: &Value, env: Rc<RefCell<Env>>) -> R
             }
         }
         Form::Lambda => {
-            let list = tail.to_vec();
-            if list.len() < 2 {
-                return Err(EvalError::BadLambdaArgs.into());
-            }
+            let mut list = tail.to_cons_iter();
 
-            if !matches!(&list[0], Value::Cons(_)) {
+            let arg_head = list.next().ok_or(EvalError::BadLambdaArgs)?;
+
+            if !matches!(arg_head, Value::Cons(_)) {
                 return Err(EvalError::BadLambdaArgsList.into());
             }
 
-            let args = list[0]
-                .to_vec()
-                .iter()
+            let args = arg_head
+                .to_cons_iter()
                 .map(|e| match e {
                     Value::Symbol(a) => Ok((*a).to_owned()),
                     _ => Err(EvalError::BadLambdaArgsListType.into()),
                 })
                 .collect::<Result<Vec<String>, _>>()?;
 
-            let tail = &list[1..];
+            // TODO(ajone239): kill this clone
+            let tail: Vec<_> = list.map(|v| v.clone()).collect();
 
             let body = if tail.len() == 1 {
                 Rc::new(tail[0].clone())
             } else {
-                Rc::new(Value::Progn(tail.to_vec()))
+                Rc::new(Value::Progn(tail))
             };
 
             let lambda = Value::Lambda {
@@ -158,9 +162,9 @@ fn eval_form(form: Form, head: &Value, tail: &Value, env: Rc<RefCell<Env>>) -> R
 
 fn apply(head: &Value, tail: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
     let head = eval(head, env.clone())?;
-    let list = tail.to_vec();
+    let cons_iter = tail.to_cons_iter();
 
-    let liter = list.iter().map(|v| eval(v, env.clone()));
+    let liter = tail.to_cons_iter().map(|v| eval(v, env.clone()));
 
     let (fargs, body, new_env) = match &head {
         Value::Lambda {
@@ -185,26 +189,22 @@ fn apply(head: &Value, tail: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
             (fargs, body, env)
         }
         Value::Builtin(f, _) => {
-            let args = liter.collect::<Result<Vec<_>, _>>()?;
-            return f.0(&Value::to_cons_list(args));
+            return f.0(&liter.collect::<Result<_, _>>()?);
         }
         v => return Ok(v.clone()),
     };
 
     let is_macro = matches!(head, Value::Macro { .. });
 
-    let args = if is_macro {
-        list
+    if is_macro {
+        for (arg, val) in fargs.iter().zip(cons_iter) {
+            // TODO(ajone239): clone arg
+            new_env.borrow_mut().define(arg, val.clone());
+        }
     } else {
-        liter.collect::<Result<Vec<_>, _>>()?
-    };
-
-    if fargs.len() != args.len() {
-        return Err(EvalError::BadFunctionArgCount(fargs.len(), args.len()).into());
-    }
-
-    for (arg, val) in fargs.iter().zip(args) {
-        new_env.borrow_mut().define(arg, val.clone());
+        for (arg, val) in fargs.iter().zip(liter) {
+            new_env.borrow_mut().define(arg, val?);
+        }
     }
 
     // eval the body with the new env
