@@ -2,48 +2,38 @@ use super::*;
 use crate::eval::env::BuiltinError;
 
 #[test]
-fn cdr_of_cons() {
-    // cdr of (cons 1 2) is List([2]), not the atom 2
-    assert_eq!(eval_str("(cdr (cons 1 2))"), Value::List(vec![num(2.0)]));
+fn cons_two_atoms() {
+    assert_eq!(eval_str("(cons 1 2)"), cons(num(1.0), num(2.0)));
 }
 
 #[test]
-fn cdr_of_quoted_list() {
+fn cons_with_nil_tail() {
+    assert_eq!(eval_str("(cons 1 nil)"), cons(num(1.0), Value::Nil));
+}
+
+#[test]
+fn cons_with_list_tail() {
+    // cons does not flatten — tail stays as a nested list
     assert_eq!(
-        eval_str("(cdr '(1 2 3))"),
-        Value::List(vec![num(2.0), num(3.0)])
+        eval_str("(cons 1 '(2 3))"),
+        cons(num(1.0), cons(num(2.0), cons(num(3.0), Value::Nil)))
     );
 }
 
 #[test]
-fn cdr_of_single_element_list_is_empty_list() {
-    // cdr drops the head, leaving an empty Vec — not Nil
-    assert_eq!(eval_str("(cdr '(1))"), Value::List(vec![]));
-}
-
-#[test]
-fn cdr_of_nil() {
-    let err = eval_err("(cdr nil)");
+fn cons_wrong_arity_one() {
+    let err = eval_err("(cons 1)");
     assert_eq!(
         err.downcast_ref::<BuiltinError>(),
-        Some(&BuiltinError::WrongCdrArgType)
+        Some(&BuiltinError::WrongConsArgCount)
     );
 }
 
 #[test]
-fn cdr_of_atom() {
-    let err = eval_err("(cdr 1)");
+fn cons_wrong_arity_three() {
+    let err = eval_err("(cons 1 2 3)");
     assert_eq!(
         err.downcast_ref::<BuiltinError>(),
-        Some(&BuiltinError::WrongCdrArgType)
-    );
-}
-
-#[test]
-fn cdr_wrong_arity() {
-    let err = eval_err("(cdr '(1) '(2))");
-    assert_eq!(
-        err.downcast_ref::<BuiltinError>(),
-        Some(&BuiltinError::WrongCdrArgCount(2))
+        Some(&BuiltinError::WrongConsArgCount)
     );
 }

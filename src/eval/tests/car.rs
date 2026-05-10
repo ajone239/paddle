@@ -21,7 +21,7 @@ fn car_of_nil() {
     let err = eval_err("(car nil)");
     assert_eq!(
         err.downcast_ref::<BuiltinError>(),
-        Some(&BuiltinError::WrongCarArgType)
+        Some(&BuiltinError::CarOnEmptyList)
     );
 }
 
@@ -39,6 +39,6 @@ fn car_wrong_arity() {
     let err = eval_err("(car '(1) '(2))");
     assert_eq!(
         err.downcast_ref::<BuiltinError>(),
-        Some(&BuiltinError::WrongCarArgCount(2))
+        Some(&BuiltinError::WrongCarArgCount)
     );
 }

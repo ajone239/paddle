@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use anyhow::Result;
+use anyhow::{Ok, Result, bail};
 use thiserror::Error;
 
 use crate::eval::value::{Builtin, BuiltinFn, Value};
@@ -120,16 +120,16 @@ impl Default for Env {
 
 #[derive(Debug, PartialEq, Error)]
 pub enum BuiltinError {
-    #[error("Not: Expected 1 argument got {0}.")]
-    WrongNotArgCount(usize),
-    #[error("Cons: Expected 2 arguments got {0}.")]
-    WrongConsArgCount(usize),
-    #[error("Car: Expected 1 argument got {0}.")]
-    WrongCarArgCount(usize),
+    #[error("Not: Expected 1 argument.")]
+    WrongNotArgCount,
+    #[error("Cons: Expected 1 argument.")]
+    WrongConsArgCount,
+    #[error("Car: Expected 1 argument.")]
+    WrongCarArgCount,
     #[error("Car: Must be applied to a list.")]
     WrongCarArgType,
-    #[error("Cdr: Expected 1 argument got {0}.")]
-    WrongCdrArgCount(usize),
+    #[error("Cdr: Expected 1 argument.")]
+    WrongCdrArgCount,
     #[error("Cdr: Must be applied to a list.")]
     WrongCdrArgType,
     #[error("Cdr: Cannot be applied to an empty list.")]
@@ -140,122 +140,195 @@ pub enum BuiltinError {
     NoInitforMinus,
     #[error("LessThan: Expected Numbers")]
     BadLtArgTypes,
-    #[error("LessThan: Expected 2 arguments got {0}")]
-    BadLtArgCount(usize),
     #[error("Div: initial argument required.")]
     NoInitforDiv,
     #[error("Car: Cannot be applied to an empty list.")]
     CarOnEmptyList,
     #[error("Modulo: Expected numbers")]
     BadModArgTypes,
-    #[error("Modulo: Expected 2 arguments got {0}")]
-    BadModArgCount(usize),
+    #[error("Modulo: Expected 2 arguments")]
+    BadModArgCount,
     #[error("Eq: Expected comparable types")]
     BadEqArgTypes,
-    #[error("Eq: Expected 2 arguments got {0}")]
-    BadEqArgCount(usize),
-    #[error("And: Expected 2 arguments got {0}")]
-    BadAndArgCount(usize),
-    #[error("Or: Expected 2 arguments got {0}")]
-    BadOrArgCount(usize),
+    #[error("Eq: Expected 2 arguments")]
+    BadEqArgCount,
 }
 
 fn tobi(f: Builtin, name: &str) -> Value {
     Value::Builtin(BuiltinFn(f), name.to_owned())
 }
 
-fn args_to_num(args: &[Value]) -> impl Iterator<Item = Result<&f64>> {
-    args.iter().map(move |v| match v {
-        Value::Num(n) => Ok(n),
-        _ => {
-            println!("{:?}", args);
-            Err(BuiltinError::ExpectedNumArg.into())
+fn add(args: &Value) -> Result<Value> {
+    if !matches!(args, Value::Cons(_)) {
+        bail!("should give me a list");
+    }
+
+    let mut num = 0.0;
+
+    let mut hold = args;
+
+    while let Value::Cons(pair) = hold {
+        match pair.0 {
+            Value::Num(val) => {
+                num += val;
+            }
+            Value::Nil => break,
+            _ => return Err(BuiltinError::ExpectedNumArg.into()),
         }
-    })
-}
+        hold = &pair.1;
+    }
 
-fn add(args: &[Value]) -> Result<Value> {
-    let args = args_to_num(args)
-        .collect::<Result<Vec<_>, _>>()?
-        .into_iter();
-
-    let num = args.fold(0.0, |acc, x| acc + x);
     Ok(Value::Num(num))
 }
 
-fn min(args: &[Value]) -> Result<Value> {
-    let mut args = args_to_num(args)
-        .collect::<Result<Vec<_>, _>>()?
-        .into_iter();
-
-    let Some(init) = args.next() else {
+fn min(args: &Value) -> Result<Value> {
+    let Value::Cons(pair) = args else {
         return Err(BuiltinError::NoInitforMinus.into());
     };
 
-    let num = args.fold(*init, |acc, x| acc - x);
-    Ok(Value::Num(num))
-}
-
-fn mul(args: &[Value]) -> Result<Value> {
-    let args = args_to_num(args)
-        .collect::<Result<Vec<_>, _>>()?
-        .into_iter();
-    let num = args.fold(1.0, |acc, x| acc * x);
-    Ok(Value::Num(num))
-}
-
-fn div(args: &[Value]) -> Result<Value> {
-    let mut args = args_to_num(args)
-        .collect::<Result<Vec<_>, _>>()?
-        .into_iter();
-
-    let Some(init) = args.next() else {
-        return Err(BuiltinError::NoInitforDiv.into());
+    let mut num = match pair.0 {
+        Value::Num(num) => num,
+        Value::Nil => {
+            return Err(BuiltinError::NoInitforMinus.into());
+        }
+        _ => {
+            return Err(BuiltinError::ExpectedNumArg.into());
+        }
     };
 
-    let num = args.fold(*init, |acc, x| acc / x);
+    let mut hold = &pair.1;
+
+    while let Value::Cons(pair) = hold {
+        match pair.0 {
+            Value::Num(val) => {
+                num -= val;
+            }
+            Value::Nil => break,
+            _ => return Err(BuiltinError::ExpectedNumArg.into()),
+        }
+        hold = &pair.1;
+    }
+
     Ok(Value::Num(num))
 }
 
-fn lt(args: &[Value]) -> Result<Value> {
-    if args.len() < 2 {
-        return Err(BuiltinError::BadLtArgCount(args.len()).into());
+fn mul(args: &Value) -> Result<Value> {
+    if !matches!(args, Value::Cons(_)) {
+        return Err(BuiltinError::NoInitforDiv.into());
     }
 
-    match (&args[args.len() - 1], &args[args.len() - 2]) {
-        (Value::Num(last), Value::Num(penu)) => Ok(Value::Bool(penu < last)),
-        _ => Err(BuiltinError::BadLtArgTypes.into()),
+    let mut num = 1.0;
+
+    let mut hold = args;
+
+    while let Value::Cons(pair) = hold {
+        match pair.0 {
+            Value::Num(val) => {
+                num *= val;
+            }
+            Value::Nil => break,
+            _ => return Err(BuiltinError::ExpectedNumArg.into()),
+        }
+        hold = &pair.1;
     }
+
+    Ok(Value::Num(num))
 }
 
-fn and(args: &[Value]) -> Result<Value> {
-    if args.len() != 2 {
-        return Err(BuiltinError::BadAndArgCount(args.len()).into());
+fn div(args: &Value) -> Result<Value> {
+    let Value::Cons(pair) = args else {
+        bail!("should give me a list");
+    };
+
+    let mut num = match pair.0 {
+        Value::Num(num) => num,
+        Value::Nil => {
+            return Err(BuiltinError::NoInitforDiv.into());
+        }
+        _ => {
+            return Err(BuiltinError::ExpectedNumArg.into());
+        }
+    };
+    let mut hold = &pair.1;
+
+    while let Value::Cons(pair) = hold {
+        match pair.0 {
+            Value::Num(val) => {
+                num /= val;
+            }
+            Value::Nil => break,
+            _ => return Err(BuiltinError::ExpectedNumArg.into()),
+        }
+        hold = &pair.1;
     }
 
-    let t1 = &args[args.len() - 2].truthy();
-    let t2 = &args[args.len() - 1].truthy();
-
-    Ok(Value::Bool(*t1 && *t2))
+    Ok(Value::Num(num))
 }
 
-fn val_or(args: &[Value]) -> Result<Value> {
-    if args.len() != 2 {
-        return Err(BuiltinError::BadOrArgCount(args.len()).into());
+fn lt(args: &Value) -> Result<Value> {
+    let Value::Cons(pair) = args else {
+        return Err(BuiltinError::BadLtArgTypes.into());
+    };
+
+    let Value::Num(mut num) = pair.0 else {
+        return Err(BuiltinError::ExpectedNumArg.into());
+    };
+    let mut hold = &pair.1;
+    let mut pass = true;
+
+    while let Value::Cons(pair) = hold {
+        match pair.0 {
+            Value::Num(val) => {
+                pass &= num < val;
+                num = val
+            }
+            Value::Nil => break,
+            _ => return Err(BuiltinError::ExpectedNumArg.into()),
+        }
+        hold = &pair.1;
     }
 
-    let t1 = &args[args.len() - 2].truthy();
-    let t2 = &args[args.len() - 1].truthy();
-
-    Ok(Value::Bool(*t1 || *t2))
+    Ok(Value::Bool(pass))
 }
 
-fn eq(args: &[Value]) -> Result<Value> {
-    if args.len() != 2 {
-        return Err(BuiltinError::BadEqArgCount(args.len()).into());
+fn and(args: &Value) -> Result<Value> {
+    let mut hold = args;
+    let mut pass = true;
+
+    while let Value::Cons(pair) = hold {
+        pass &= pair.0.truthy();
+        hold = &pair.1;
     }
 
-    match (&args[args.len() - 1], &args[args.len() - 2]) {
+    Ok(Value::Bool(pass))
+}
+
+fn val_or(args: &Value) -> Result<Value> {
+    let mut hold = args;
+    let mut pass = true;
+
+    while let Value::Cons(pair) = hold {
+        pass |= pair.0.truthy();
+        hold = &pair.1;
+    }
+
+    Ok(Value::Bool(pass))
+}
+
+fn eq(args: &Value) -> Result<Value> {
+    let Value::Cons(pair) = args else {
+        bail!("should give me a list");
+    };
+
+    let Value::Cons(pair2) = &pair.1 else {
+        bail!("should give me a list");
+    };
+
+    if let Value::Cons(_) = pair2.1 {
+        return Err(BuiltinError::BadEqArgCount.into());
+    }
+
+    match (&pair.0, &pair2.0) {
         (Value::Num(last), Value::Num(penu)) => Ok(Value::Bool(penu == last)),
         (Value::Str(last), Value::Str(penu))
         | (Value::Symbol(last), Value::Str(penu))
@@ -265,83 +338,109 @@ fn eq(args: &[Value]) -> Result<Value> {
     }
 }
 
-fn modulo(args: &[Value]) -> Result<Value> {
-    if args.len() != 2 {
-        return Err(BuiltinError::BadModArgCount(args.len()).into());
+fn modulo(args: &Value) -> Result<Value> {
+    let Value::Cons(pair) = args else {
+        bail!("should give me a list");
+    };
+
+    let Value::Cons(pair2) = &pair.1 else {
+        bail!("should give me a list");
+    };
+
+    if let Value::Cons(_) = pair2.1 {
+        return Err(BuiltinError::BadModArgCount.into());
     }
 
-    match (&args[args.len() - 1], &args[args.len() - 2]) {
+    match (&pair.0, &pair2.0) {
         (Value::Num(last), Value::Num(penu)) => Ok(Value::Num(penu % last)),
         _ => Err(BuiltinError::BadModArgTypes.into()),
     }
 }
 
-fn not(args: &[Value]) -> Result<Value> {
-    if args.len() != 1 {
-        return Err(BuiltinError::WrongNotArgCount(args.len()).into());
-    }
-    let val = &args[0];
-    Ok(Value::Bool(!val.truthy()))
-}
-
-fn cons(args: &[Value]) -> Result<Value> {
-    if args.len() != 2 {
-        return Err(BuiltinError::WrongConsArgCount(args.len()).into());
-    }
-
-    let head = args[0].clone();
-    let tail = args[1].clone();
-
-    Ok(Value::List(vec![head, tail]))
-}
-
-fn car(args: &[Value]) -> Result<Value> {
-    if args.len() != 1 {
-        return Err(BuiltinError::WrongCarArgCount(args.len()).into());
-    }
-
-    let Value::List(pair) = &args[0] else {
-        return Err(BuiltinError::WrongCarArgType.into());
+fn not(args: &Value) -> Result<Value> {
+    let Value::Cons(pair) = args else {
+        bail!("should give me a list");
     };
 
-    if pair.is_empty() {
+    if let Value::Cons(_) = pair.1 {
+        return Err(BuiltinError::WrongNotArgCount.into());
+    }
+
+    Ok(Value::Bool(!pair.0.truthy()))
+}
+
+fn cons(args: &Value) -> Result<Value> {
+    let Value::Cons(args) = args else {
+        return Err(BuiltinError::WrongConsArgCount.into());
+    };
+
+    let head = &args.0;
+
+    let Value::Cons(tail_pair) = &args.1 else {
+        return Err(BuiltinError::WrongConsArgCount.into());
+    };
+
+    if let Value::Cons(_) = tail_pair.1 {
+        return Err(BuiltinError::WrongConsArgCount.into());
+    }
+
+    let tail = &tail_pair.0;
+
+    // TODO(ajone239): make sure this clone is ok
+    return Ok(Value::Cons(Rc::new((head.clone(), tail.clone()))));
+}
+
+fn car(args: &Value) -> Result<Value> {
+    let Value::Cons(args) = args else {
+        bail!("should give me a list");
+    };
+
+    if let Value::Cons(_) = &args.1 {
+        return Err(BuiltinError::WrongCarArgCount.into());
+    };
+
+    let pair = match &args.0 {
+        Value::Nil => return Err(BuiltinError::CarOnEmptyList.into()),
+        Value::Cons(pair) => pair,
+        _ => return Err(BuiltinError::WrongCarArgType.into()),
+    };
+
+    if matches!(pair.0, Value::Nil) {
         return Err(BuiltinError::CarOnEmptyList.into());
     }
 
-    Ok(pair.first().expect("car expected items in list").clone())
+    Ok(pair.0.clone())
 }
 
-fn cdr(args: &[Value]) -> Result<Value> {
-    if args.len() != 1 {
-        return Err(BuiltinError::WrongCdrArgCount(args.len()).into());
-    }
-
-    let Value::List(pair) = &args[0] else {
-        return Err(BuiltinError::WrongCdrArgType.into());
+fn cdr(args: &Value) -> Result<Value> {
+    let Value::Cons(args) = args else {
+        bail!("should give me a list");
     };
 
-    if pair.is_empty() {
+    if let Value::Cons(_) = &args.1 {
+        return Err(BuiltinError::WrongCdrArgCount.into());
+    };
+
+    let pair = match &args.0 {
+        Value::Nil => return Err(BuiltinError::CdrOnEmptyList.into()),
+        Value::Cons(pair) => pair,
+        _ => return Err(BuiltinError::WrongCdrArgType.into()),
+    };
+
+    if matches!(pair.0, Value::Nil) {
         return Err(BuiltinError::CdrOnEmptyList.into());
     }
 
-    if pair.len() == 2 && matches!(&pair[1], Value::List(_)) {
-        return Ok(pair[1].clone());
-    }
-
-    Ok(Value::List(pair[1..].to_vec()))
+    Ok(pair.1.clone())
 }
 
-fn list(args: &[Value]) -> Result<Value> {
-    Ok(Value::List(args.to_vec()))
+fn list(args: &Value) -> Result<Value> {
+    Ok(args.clone())
 }
 
-fn print(args: &[Value]) -> Result<Value> {
-    if args.len() < 1 {
-        println!();
-        return Ok(Value::Nil);
-    }
-
+fn print(args: &Value) -> Result<Value> {
     let out = args
+        .to_vec()
         .iter()
         .map(|a| a.to_string())
         .collect::<Vec<_>>()

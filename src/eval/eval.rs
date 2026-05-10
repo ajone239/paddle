@@ -11,10 +11,10 @@ use crate::eval::value::{Form, Value};
 pub fn eval(ast: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
     match ast {
         Value::Symbol(atom) => resolve(atom, env),
-        Value::List(list) if list.is_empty() => Ok(Value::Nil),
-        Value::List(list) => match &list[0] {
-            Value::Form(f) => eval_form(*f, list, env),
-            _ => apply(&list, env),
+        Value::Cons(pair) => match pair.0 {
+            Value::Nil => Ok(Value::Nil),
+            Value::Form(f) => eval_form(f, &pair.0, &pair.1, env),
+            _ => apply(&pair.0, &pair.1, env),
         },
         _ => Ok(ast.clone()),
     }
@@ -28,31 +28,42 @@ fn resolve(atom: &str, env: Rc<RefCell<Env>>) -> Result<Value> {
 
 fn quasi_quote_eval(ast: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
     match ast {
-        Value::List(values) if values.is_empty() => Ok(ast.clone()),
-        Value::List(values) if matches!(values[0], Value::Form(Form::UnQuote)) => {
-            eval(&values[1], env)
-        }
-        Value::List(values) => Ok(Value::List(
-            values
-                .iter()
-                .map(|v| quasi_quote_eval(v, env.clone()))
-                .collect::<Result<Vec<_>, _>>()?,
-        )),
+        Value::Cons(pair) => match pair.0 {
+            Value::Nil => Ok(ast.clone()),
+            Value::Form(Form::UnQuote) => eval(&pair.1, env),
+            _ => {
+                let new_head = quasi_quote_eval(&pair.0, env.clone())?;
+                let new_tail = quasi_quote_eval(&pair.1, env.clone())?;
+
+                Ok(Value::Cons(Rc::new((new_head, new_tail))))
+            }
+        },
         _ => Ok(ast.clone()),
     }
 }
 
-fn eval_form(form: Form, list: &[Value], env: Rc<RefCell<Env>>) -> Result<Value> {
+fn eval_form(form: Form, head: &Value, tail: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
     match form {
-        Form::Quote => Ok(list[1].clone()),
-        Form::QuasiQuote => quasi_quote_eval(&list[1], env),
+        Form::Quote => {
+            let Value::Cons(tailtail) = tail else {
+                unreachable!("this is how quote is formed")
+            };
+            Ok(tailtail.0.clone())
+        }
+        Form::QuasiQuote => {
+            let Value::Cons(tailtail) = tail else {
+                unreachable!("this is how quasiquote is formed")
+            };
+            quasi_quote_eval(&tailtail.0, env)
+        }
         Form::UnQuote => Err(EvalError::UnquoteOutsideQuasi.into()),
         Form::Require => {
-            if list.len() != 2 {
+            let list = tail.to_vec();
+            if list.len() != 1 {
                 return Err(EvalError::BadRequireArgCount(list.len()).into());
             }
 
-            let file_name = match &list[1] {
+            let file_name = match &list[0] {
                 Value::Str(atom) | Value::Symbol(atom) => atom,
                 _ => {
                     return Err(EvalError::BadRequireArgs.into());
@@ -64,7 +75,7 @@ fn eval_form(form: Form, list: &[Value], env: Rc<RefCell<Env>>) -> Result<Value>
             Ok(Value::Nil)
         }
         Form::Progn => {
-            let body = &list[1..];
+            let body = tail.to_vec();
 
             if body.is_empty() {
                 return Err(EvalError::EmptyPrognBody.into());
@@ -75,26 +86,29 @@ fn eval_form(form: Form, list: &[Value], env: Rc<RefCell<Env>>) -> Result<Value>
             eval(body.last().expect("progn body can't be empty"), env.clone())
         }
         Form::Eval => {
-            let val = eval(&list[1], env.clone())?;
+            let val = eval(tail, env.clone())?;
             eval(&val, env.clone())
         }
         Form::DefineMacro | Form::Define => {
-            if list.len() < 3 {
+            let list = tail.to_vec();
+            if list.len() < 2 {
                 return Err(EvalError::BadDefineArgs.into());
             }
 
-            define(&form, &list[1], &list[2..], env)?;
+            define(&form, &list[0], &list[1..], env)?;
 
             Ok(Value::Nil)
         }
         Form::If => {
-            if list.len() < 4 {
+            let list = tail.to_vec();
+            println!("{}", tail);
+            if list.len() < 3 {
                 return Err(EvalError::BadIfArgs.into());
             }
 
-            let cond = &list[1];
-            let t_branch = &list[2];
-            let f_branch = &list[3];
+            let cond = &list[0];
+            let t_branch = &list[1];
+            let f_branch = &list[2];
 
             let cond = eval(cond, env.clone())?;
 
@@ -105,15 +119,17 @@ fn eval_form(form: Form, list: &[Value], env: Rc<RefCell<Env>>) -> Result<Value>
             }
         }
         Form::Lambda => {
-            if list.len() < 3 {
+            let list = tail.to_vec();
+            if list.len() < 2 {
                 return Err(EvalError::BadLambdaArgs.into());
             }
 
-            let Value::List(args) = &list[1] else {
+            if !matches!(&list[0], Value::Cons(_)) {
                 return Err(EvalError::BadLambdaArgsList.into());
-            };
+            }
 
-            let args = args
+            let args = list[0]
+                .to_vec()
                 .iter()
                 .map(|e| match e {
                     Value::Symbol(a) => Ok((*a).to_owned()),
@@ -121,7 +137,7 @@ fn eval_form(form: Form, list: &[Value], env: Rc<RefCell<Env>>) -> Result<Value>
                 })
                 .collect::<Result<Vec<String>, _>>()?;
 
-            let tail = &list[2..];
+            let tail = &list[1..];
 
             let body = if tail.len() == 1 {
                 Rc::new(tail[0].clone())
@@ -140,10 +156,11 @@ fn eval_form(form: Form, list: &[Value], env: Rc<RefCell<Env>>) -> Result<Value>
     }
 }
 
-fn apply(list: &[Value], env: Rc<RefCell<Env>>) -> Result<Value> {
-    let mut liter = list.iter().map(|v| eval(v, env.clone()));
+fn apply(head: &Value, tail: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
+    let head = eval(head, env.clone())?;
+    let list = tail.to_vec();
 
-    let head = liter.next().expect("can't call this on empty list")?;
+    let liter = list.iter().map(|v| eval(v, env.clone()));
 
     let (fargs, body, new_env) = match &head {
         Value::Lambda {
@@ -169,7 +186,7 @@ fn apply(list: &[Value], env: Rc<RefCell<Env>>) -> Result<Value> {
         }
         Value::Builtin(f, _) => {
             let args = liter.collect::<Result<Vec<_>, _>>()?;
-            return f.0(&args);
+            return f.0(&Value::to_cons_list(args));
         }
         v => return Ok(v.clone()),
     };
@@ -177,39 +194,17 @@ fn apply(list: &[Value], env: Rc<RefCell<Env>>) -> Result<Value> {
     let is_macro = matches!(head, Value::Macro { .. });
 
     let args = if is_macro {
-        &list[1..]
+        list
     } else {
-        &liter.collect::<Result<Vec<_>, _>>()?
+        liter.collect::<Result<Vec<_>, _>>()?
     };
 
-    let variadic = fargs.last().unwrap_or(&"".to_string()).ends_with("...");
+    if fargs.len() != args.len() {
+        return Err(EvalError::BadFunctionArgCount(fargs.len(), args.len()).into());
+    }
 
-    if variadic {
-        let non_var_arg_count = fargs.len() - 1;
-
-        if args.len() < non_var_arg_count {
-            return Err(EvalError::BadFunctionArgCount(fargs.len(), args.len()).into());
-        }
-
-        for i in 0..non_var_arg_count {
-            let arg = &fargs[i];
-            let val = &args[i];
-            new_env.borrow_mut().define(arg, val.clone());
-        }
-
-        let lfarg = &fargs[non_var_arg_count];
-        let largs = &args[non_var_arg_count..];
-        let largs = Value::List(largs.to_vec());
-
-        new_env.borrow_mut().define(lfarg, largs);
-    } else {
-        if fargs.len() != args.len() {
-            return Err(EvalError::BadFunctionArgCount(fargs.len(), args.len()).into());
-        }
-
-        for (arg, val) in fargs.iter().zip(args) {
-            new_env.borrow_mut().define(arg, val.clone());
-        }
+    for (arg, val) in fargs.iter().zip(args) {
+        new_env.borrow_mut().define(arg, val.clone());
     }
 
     // eval the body with the new env
@@ -243,8 +238,9 @@ fn define(form: &Form, head: &Value, tail: &[Value], env: Rc<RefCell<Env>>) -> R
             let value = eval(&tail[0], env.clone())?;
             env.borrow_mut().define(atom, value);
         }
-        Value::List(exprs) => {
-            let args_list = exprs
+        Value::Cons(_) => {
+            let args_list = head
+                .to_vec()
                 .iter()
                 .map(|e| match e {
                     Value::Symbol(a) => Ok((*a).to_owned()),

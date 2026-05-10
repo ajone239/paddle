@@ -27,14 +27,6 @@ pub fn process(contents: &str, env: Rc<RefCell<Env>>) -> Result<Vec<Value>> {
         let (ast, rest) = parser::parse_expr(&working)?;
         let expr = lower(&ast);
 
-        println!("{}", expr);
-
-        if rest.is_empty() {
-            break;
-        }
-
-        break;
-        /*
         let val = eval(&expr, env.clone())?;
 
         rv.push(val);
@@ -44,7 +36,6 @@ pub fn process(contents: &str, env: Rc<RefCell<Env>>) -> Result<Vec<Value>> {
         }
 
         working = rest;
-        */
     }
 
     Ok(rv)

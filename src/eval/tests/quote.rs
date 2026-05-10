@@ -20,7 +20,7 @@ fn quote_nil() {
 fn quote_list() {
     assert_eq!(
         eval_str("(quote (1 2 3))"),
-        Value::List(vec![num(1.0), num(2.0), num(3.0)])
+        Value::to_cons_list(vec![num(1.0), num(2.0), num(3.0)])
     );
 }
 
@@ -28,7 +28,7 @@ fn quote_list() {
 fn quote_suppresses_eval() {
     assert_eq!(
         eval_str("(quote (+ 1 2))"),
-        Value::List(vec![Value::Symbol("+".to_owned()), num(1.0), num(2.0),])
+        Value::to_cons_list(vec![Value::Symbol("+".to_owned()), num(1.0), num(2.0),])
     );
 }
 
@@ -36,7 +36,7 @@ fn quote_suppresses_eval() {
 fn quasi_quote() {
     assert_eq!(
         eval_str("`(1 2 ,(+ 1 2) 4))"),
-        Value::List(vec![num(1.0), num(2.0), num(3.0), num(4.0),])
+        Value::to_cons_list(vec![num(1.0), num(2.0), num(3.0), num(4.0),])
     );
 }
 
@@ -48,6 +48,6 @@ fn quasi_nest_quote() {
     ]);
     assert_eq!(
         val,
-        Value::List(vec![num(1.0), num(2.0), num(3.0), num(4.0),])
+        Value::to_cons_list(vec![num(1.0), num(2.0), num(3.0), num(4.0),])
     );
 }

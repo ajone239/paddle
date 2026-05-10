@@ -206,7 +206,10 @@ mod map {
 
     #[test]
     fn map_on_empty_list_returns_empty() {
-        assert_eq!(run("(map (lambda (x) (* x 2)) '())"), Value::List(vec![]));
+        assert_eq!(
+            run("(map (lambda (x) (* x 2)) '())"),
+            Value::to_cons_list(vec![])
+        );
     }
 
     #[test]
@@ -249,7 +252,10 @@ mod filter {
 
     #[test]
     fn filter_on_empty_list_returns_empty() {
-        assert_eq!(run("(filter (lambda (x) #t) '())"), Value::List(vec![]));
+        assert_eq!(
+            run("(filter (lambda (x) #t) '())"),
+            Value::to_cons_list(vec![])
+        );
     }
 
     #[test]

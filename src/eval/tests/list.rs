@@ -2,19 +2,19 @@ use super::*;
 
 #[test]
 fn list_empty() {
-    assert_eq!(eval_str("(list)"), Value::List(vec![]));
+    assert_eq!(eval_str("(list)"), Value::to_cons_list(vec![]));
 }
 
 #[test]
 fn list_single() {
-    assert_eq!(eval_str("(list 1)"), Value::List(vec![num(1.0)]));
+    assert_eq!(eval_str("(list 1)"), Value::to_cons_list(vec![num(1.0)]));
 }
 
 #[test]
 fn list_multiple() {
     assert_eq!(
         eval_str("(list 1 2 3)"),
-        Value::List(vec![num(1.0), num(2.0), num(3.0)])
+        Value::to_cons_list(vec![num(1.0), num(2.0), num(3.0)])
     );
 }
 
@@ -22,7 +22,7 @@ fn list_multiple() {
 fn list_evaluates_args() {
     assert_eq!(
         eval_str("(list (+ 1 1) (* 2 3))"),
-        Value::List(vec![num(2.0), num(6.0)])
+        Value::to_cons_list(vec![num(2.0), num(6.0)])
     );
 }
 
@@ -30,7 +30,7 @@ fn list_evaluates_args() {
 fn list_mixed_types() {
     assert_eq!(
         eval_str("(list 1 #t nil)"),
-        Value::List(vec![num(1.0), Value::Bool(true), Value::Nil])
+        Value::to_cons_list(vec![num(1.0), Value::Bool(true), Value::Nil])
     );
 }
 
@@ -43,7 +43,7 @@ fn car_of_list() {
 fn cdr_of_list() {
     assert_eq!(
         eval_str("(cdr (list 1 2 3))"),
-        Value::List(vec![num(2.0), num(3.0)])
+        Value::to_cons_list(vec![num(2.0), num(3.0)])
     );
 }
 
@@ -51,7 +51,7 @@ fn cdr_of_list() {
 fn list_with_quoted_symbol() {
     assert_eq!(
         eval_str("(list 'a 'b)"),
-        Value::List(vec![
+        Value::to_cons_list(vec![
             Value::Symbol("a".to_owned()),
             Value::Symbol("b".to_owned())
         ])
@@ -62,7 +62,10 @@ fn list_with_quoted_symbol() {
 fn list_with_quoted_list_arg() {
     assert_eq!(
         eval_str("(list '(1 2) 3)"),
-        Value::List(vec![Value::List(vec![num(1.0), num(2.0)]), num(3.0)])
+        Value::to_cons_list(vec![
+            Value::to_cons_list(vec![num(1.0), num(2.0)]),
+            num(3.0)
+        ])
     );
 }
 
@@ -70,9 +73,9 @@ fn list_with_quoted_list_arg() {
 fn list_of_lists() {
     assert_eq!(
         eval_str("(list (list 1 2) (list 3 4))"),
-        Value::List(vec![
-            Value::List(vec![num(1.0), num(2.0)]),
-            Value::List(vec![num(3.0), num(4.0)]),
+        Value::to_cons_list(vec![
+            Value::to_cons_list(vec![num(1.0), num(2.0)]),
+            Value::to_cons_list(vec![num(3.0), num(4.0)]),
         ])
     );
 }
@@ -81,6 +84,6 @@ fn list_of_lists() {
 fn quote_of_list_call_suppresses_eval() {
     assert_eq!(
         eval_str("'(list 1 2)"),
-        Value::List(vec![Value::Symbol("list".to_owned()), num(1.0), num(2.0)])
+        Value::to_cons_list(vec![Value::Symbol("list".to_owned()), num(1.0), num(2.0)])
     );
 }

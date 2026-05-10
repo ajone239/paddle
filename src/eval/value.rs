@@ -36,9 +36,6 @@ pub enum Value {
     },
 }
 
-#[derive(Clone, PartialEq)]
-pub struct Lambda {}
-
 impl Value {
     pub fn truthy(&self) -> bool {
         match self {
@@ -47,14 +44,54 @@ impl Value {
             Value::Num(num) => num.ne(&0.0),
             Value::Str(s) => !s.is_empty(),
             Value::List(v) | Value::Progn(v) => !v.is_empty(),
-            Value::Cons(_) // TODO(austin.jones): is cons truthy?
-            | Value::Symbol(_)
+            Value::Cons(pair) => !matches!(pair.0, Self::Nil),
+            Value::Symbol(_)
             | Value::Form(_)
             | Value::Builtin(_, _)
             | Value::Func { .. }
             | Value::Macro { .. }
             | Value::Lambda { .. } => true,
         }
+    }
+
+    pub fn to_vec(&self) -> Vec<Value> {
+        match self {
+            Self::Cons(pair) => {
+                let first = &pair.0;
+                let mut second = &pair.1;
+
+                if matches!(first, Self::Nil) && matches!(second, Self::Nil) {
+                    return vec![];
+                }
+
+                // TODO(ajone239): kill this clone!
+                let mut vals = vec![first.clone()];
+
+                while let Value::Cons(next_pair) = second {
+                    let first = &next_pair.0;
+                    // TODO(ajone239): kill this clone!
+                    vals.push(first.clone());
+                    second = &next_pair.1;
+                }
+
+                vals
+            }
+            Self::Nil => vec![],
+            _ => vec![self.clone()],
+        }
+    }
+
+    pub fn to_cons_list(list: Vec<Self>) -> Self {
+        let mut vals = list.into_iter().rev();
+
+        let first = vals.next().unwrap_or(Value::Nil);
+        let mut rv = Rc::new((first, Value::Nil));
+
+        while let Some(val) = vals.next() {
+            rv = Rc::new((val, Value::Cons(rv)));
+        }
+
+        Value::Cons(rv)
     }
 }
 
@@ -77,6 +114,7 @@ impl Display for Value {
             }
 
             Value::Cons(pair) => {
+                // TODO(ajone239): use to_vec here
                 let first = &pair.0;
                 let mut second = &pair.1;
 
@@ -158,7 +196,7 @@ impl Debug for Value {
     }
 }
 
-pub type Builtin = fn(&[Value]) -> Result<Value>;
+pub type Builtin = fn(&Value) -> Result<Value>;
 
 #[derive(Debug, Clone, Copy)]
 pub struct BuiltinFn(pub Builtin);
