@@ -8,7 +8,7 @@ use crate::eval::EvalError;
 use crate::eval::env::Env;
 use crate::eval::value::{Form, Value};
 
-pub fn eval(ast: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
+pub fn eval(ast: &Value, env: &Rc<RefCell<Env>>) -> Result<Value> {
     match ast {
         Value::Symbol(atom) => resolve(atom, env),
         Value::Cons(pair) => match pair.0 {
@@ -20,20 +20,20 @@ pub fn eval(ast: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
     }
 }
 
-fn resolve(atom: &str, env: Rc<RefCell<Env>>) -> Result<Value> {
+fn resolve(atom: &str, env: &Rc<RefCell<Env>>) -> Result<Value> {
     env.borrow()
         .resolve(atom)
         .ok_or(EvalError::SymbolUndefined(atom.to_string()).into())
 }
 
-fn quasi_quote_eval(ast: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
+fn quasi_quote_eval(ast: &Value, env: &Rc<RefCell<Env>>) -> Result<Value> {
     match ast {
         Value::Cons(pair) => match pair.0 {
             Value::Nil => Ok(ast.clone()),
             Value::Form(Form::UnQuote) => eval(&pair.1, env),
             _ => {
-                let new_head = quasi_quote_eval(&pair.0, env.clone())?;
-                let new_tail = quasi_quote_eval(&pair.1, env.clone())?;
+                let new_head = quasi_quote_eval(&pair.0, env)?;
+                let new_tail = quasi_quote_eval(&pair.1, env)?;
 
                 Ok(Value::Cons(Rc::new((new_head, new_tail))))
             }
@@ -42,7 +42,7 @@ fn quasi_quote_eval(ast: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
     }
 }
 
-fn eval_form(form: Form, tail: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
+fn eval_form(form: Form, tail: &Value, env: &Rc<RefCell<Env>>) -> Result<Value> {
     match form {
         Form::Quote => {
             let Value::Cons(tailtail) = tail else {
@@ -73,7 +73,7 @@ fn eval_form(form: Form, tail: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
                 return Err(EvalError::BadRequireArgCount(2).into());
             }
 
-            process_file(file_name.into(), env.clone())?;
+            process_file(file_name.into(), env)?;
 
             Ok(Value::Nil)
         }
@@ -81,7 +81,7 @@ fn eval_form(form: Form, tail: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
             let mut body = tail.to_cons_iter().peekable();
 
             while let Some(b) = body.next() {
-                let val = eval(b, env.clone())?;
+                let val = eval(b, env)?;
 
                 if body.peek().is_none() {
                     return Ok(val);
@@ -91,16 +91,11 @@ fn eval_form(form: Form, tail: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
             bail!("progn body can't be empty")
         }
         Form::Eval => {
-            let val = eval(tail, env.clone())?;
-            eval(&val, env.clone())
+            let val = eval(tail, env)?;
+            eval(&val, env)
         }
         Form::DefineMacro | Form::Define => {
-            let list = tail.to_vec();
-            if list.len() < 2 {
-                return Err(EvalError::BadDefineArgs.into());
-            }
-
-            define(&form, &list[0], &list[1..], env)?;
+            define(&form, &tail, env)?;
 
             Ok(Value::Nil)
         }
@@ -115,7 +110,7 @@ fn eval_form(form: Form, tail: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
                 return Err(EvalError::BadIfArgs.into());
             }
 
-            let cond = eval(cond, env.clone())?;
+            let cond = eval(cond, env)?;
 
             if cond.truthy() {
                 eval(t_branch, env)
@@ -128,7 +123,8 @@ fn eval_form(form: Form, tail: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
 
             let arg_head = list.next().ok_or(EvalError::BadLambdaArgs)?;
 
-            if !matches!(arg_head, Value::Cons(_)) {
+            // TODO(ajone239): fix empty list semantics
+            if !matches!(arg_head, Value::Cons(_) | Value::Nil) {
                 return Err(EvalError::BadLambdaArgsList.into());
             }
 
@@ -142,6 +138,10 @@ fn eval_form(form: Form, tail: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
 
             // TODO(ajone239): kill this clone
             let tail: Vec<_> = list.map(|v| v.clone()).collect();
+
+            if tail.is_empty() {
+                return Err(EvalError::BadLambdaArgs.into());
+            }
 
             let body = if tail.len() == 1 {
                 Rc::new(tail[0].clone())
@@ -160,11 +160,12 @@ fn eval_form(form: Form, tail: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
     }
 }
 
-fn apply(head: &Value, tail: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
-    let head = eval(head, env.clone())?;
+fn apply(head: &Value, tail: &Value, env: &Rc<RefCell<Env>>) -> Result<Value> {
+    let head = eval(head, env)?;
     let cons_iter = tail.to_cons_iter();
+    let clen = tail.to_cons_iter().len();
 
-    let liter = tail.to_cons_iter().map(|v| eval(v, env.clone()));
+    let liter = tail.to_cons_iter().map(|v| eval(v, env));
 
     let (fargs, body, new_env) = match &head {
         Value::Lambda {
@@ -196,6 +197,10 @@ fn apply(head: &Value, tail: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
 
     let is_macro = matches!(head, Value::Macro { .. });
 
+    if clen != fargs.len() {
+        return Err(EvalError::BadFunctionArgCount(fargs.len()).into());
+    }
+
     if is_macro {
         for (arg, val) in fargs.iter().zip(cons_iter) {
             // TODO(ajone239): clone arg
@@ -215,33 +220,33 @@ fn apply(head: &Value, tail: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
                 return Err(EvalError::EmptyPrognBody.into());
             }
             for b in &body[..body.len() - 1] {
-                eval(b, new_env.clone())?;
+                eval(b, &new_env)?;
             }
-            eval(
-                body.last().expect("progn body can't be empty"),
-                new_env.clone(),
-            )
+            eval(body.last().expect("progn body can't be empty"), &new_env)
         }
-        _ => eval(&body, new_env.clone()),
+        _ => eval(&body, &new_env),
     };
 
-    if is_macro {
-        eval(&rv?, env.clone())
-    } else {
-        rv
-    }
+    if is_macro { eval(&rv?, env) } else { rv }
 }
 
-fn define(form: &Form, head: &Value, tail: &[Value], env: Rc<RefCell<Env>>) -> Result<()> {
+fn define(form: &Form, body: &Value, env: &Rc<RefCell<Env>>) -> Result<()> {
+    let mut list = body.to_cons_iter();
+    let head = list.next().ok_or(EvalError::BadDefineArgs)?;
+
     match head {
         Value::Symbol(atom) => {
-            let value = eval(&tail[0], env.clone())?;
+            let tail = list.next().ok_or(EvalError::BadDefineArgs)?;
+
+            if list.next().is_some() {
+                return Err(EvalError::BadDefineArgs.into());
+            }
+            let value = eval(&tail, env)?;
             env.borrow_mut().define(atom, value);
         }
         Value::Cons(_) => {
             let args_list = head
-                .to_vec()
-                .iter()
+                .to_cons_iter()
                 .map(|e| match e {
                     Value::Symbol(a) => Ok((*a).to_owned()),
                     _ => Err(EvalError::BadDefineFunctionHeadTypes.into()),
@@ -259,10 +264,12 @@ fn define(form: &Form, head: &Value, tail: &[Value], env: Rc<RefCell<Env>>) -> R
                 args_list[1..].to_vec()
             };
 
+            let tail: Vec<_> = list.map(|v| v.to_owned()).collect();
+
             let body = if tail.len() == 1 {
                 Rc::new(tail[0].clone())
             } else {
-                Rc::new(Value::Progn(tail.to_vec()))
+                Rc::new(Value::Progn(tail))
             };
 
             let proc = match form {

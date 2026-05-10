@@ -8,7 +8,7 @@ use crate::{
     eval::Env,
 };
 
-pub fn run_repl(env: Rc<RefCell<Env>>) -> Result<()> {
+pub fn run_repl(env: &Rc<RefCell<Env>>) -> Result<()> {
     let mut rl = DefaultEditor::new()?;
     let mut input = String::new();
 
@@ -47,7 +47,7 @@ pub fn run_repl(env: Rc<RefCell<Env>>) -> Result<()> {
         }
 
         rl.add_history_entry(&input)?;
-        let res = process(&input, env.clone());
+        let res = process(&input, env);
         display_results(res);
 
         input.clear();
@@ -67,7 +67,7 @@ fn handle_repl_cmd(env: &Rc<RefCell<Env>>, line: &str) -> bool {
                 .skip(1)
                 .for_each(|f| match read_to_string(f) {
                     Ok(contents) => {
-                        if let Err(err) = process(&contents, env.clone()) {
+                        if let Err(err) = process(&contents, env) {
                             println!("Problem reading {}: {:?}", f, err);
                         }
                     }

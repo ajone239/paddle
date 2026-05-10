@@ -81,7 +81,7 @@
 (define (check-squares b)
   (define base (seq 2))
   (define squares (foo base base))
-  (map (lambda (s) (check-square b (car s) (cadr s))) squares))
+  (map (lambda (s) (check-square b (car s) (cdr s))) squares))
 
 (define (check-square b i j)
   (check-set (get-square b i j)))
@@ -91,7 +91,7 @@
   (define js (map (lambda (x) (+ x (* 3 j))) base))
   (define is (map (lambda (x) (+ x (* 3 i))) base))
   (define squares (foo is js))
-  (map (lambda (s) (get-n (get-n (get-rows b) (car s)) (cadr s)))
+  (map (lambda (s) (get-n (get-n (get-rows b) (car s)) (cdr s)))
        squares))
 
 (define (any-not l)

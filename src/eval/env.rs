@@ -387,7 +387,7 @@ fn cons(args: &Value) -> Result<Value> {
     let tail = &tail_pair.0;
 
     // TODO(ajone239): make sure this clone is ok
-    return Ok(Value::Cons(Rc::new((head.clone(), tail.clone()))));
+    Ok(Value::Cons(Rc::new((head.clone(), tail.clone()))))
 }
 
 fn car(args: &Value) -> Result<Value> {

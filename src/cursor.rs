@@ -7,12 +7,12 @@ use crate::{
     lexer, parser,
 };
 
-pub fn process_file(file_path: PathBuf, env: Rc<RefCell<Env>>) -> Result<Vec<Value>> {
+pub fn process_file(file_path: PathBuf, env: &Rc<RefCell<Env>>) -> Result<Vec<Value>> {
     let contents = read_to_string(file_path)?;
     process(&contents, env)
 }
 
-pub fn process(contents: &str, env: Rc<RefCell<Env>>) -> Result<Vec<Value>> {
+pub fn process(contents: &str, env: &Rc<RefCell<Env>>) -> Result<Vec<Value>> {
     if contents.trim().is_empty() {
         return Ok(vec![]);
     }
@@ -27,7 +27,7 @@ pub fn process(contents: &str, env: Rc<RefCell<Env>>) -> Result<Vec<Value>> {
         let (ast, rest) = parser::parse_expr(&working)?;
         let expr = lower(&ast);
 
-        let val = eval(&expr, env.clone())?;
+        let val = eval(&expr, env)?;
 
         rv.push(val);
 

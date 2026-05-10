@@ -23,23 +23,23 @@ fn num(n: f64) -> Value {
 /// stdlib pre-loaded, matching what the binary does.  Returns the last value.
 fn run(program: &str) -> Value {
     let env = Rc::new(RefCell::new(Env::default()));
-    process(STD_LIB, env.clone()).expect("stdlib failed to load");
-    let mut results = process(program, env).expect("program failed to run");
+    process(STD_LIB, &env).expect("stdlib failed to load");
+    let mut results = process(program, &env).expect("program failed to run");
     results.pop().expect("program produced no values")
 }
 
 /// Run without stdlib (raw builtins only).  Returns the last value.
 fn run_bare(program: &str) -> Value {
     let env = Rc::new(RefCell::new(Env::default()));
-    let mut results = process(program, env).expect("program failed to run");
+    let mut results = process(program, &env).expect("program failed to run");
     results.pop().expect("program produced no values")
 }
 
 /// Run a program and expect it to return an error.
 fn run_err(program: &str) -> anyhow::Error {
     let env = Rc::new(RefCell::new(Env::default()));
-    process(STD_LIB, env.clone()).expect("stdlib failed to load");
-    process(program, env).expect_err("expected program to fail but it succeeded")
+    process(STD_LIB, &env).expect("stdlib failed to load");
+    process(program, &env).expect_err("expected program to fail but it succeeded")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -206,10 +206,7 @@ mod map {
 
     #[test]
     fn map_on_empty_list_returns_empty() {
-        assert_eq!(
-            run("(map (lambda (x) (* x 2)) '())"),
-            Value::to_cons_list(vec![])
-        );
+        assert_eq!(run("(map (lambda (x) (* x 2)) '())"), Value::Nil);
     }
 
     #[test]
@@ -252,10 +249,7 @@ mod filter {
 
     #[test]
     fn filter_on_empty_list_returns_empty() {
-        assert_eq!(
-            run("(filter (lambda (x) #t) '())"),
-            Value::to_cons_list(vec![])
-        );
+        assert_eq!(run("(filter (lambda (x) #t) '())"), Value::Nil);
     }
 
     #[test]
@@ -297,14 +291,14 @@ mod programs {
     #[test]
     fn process_returns_a_value_per_expression() {
         let env = Rc::new(RefCell::new(Env::default()));
-        let results = process("(+ 1 2) (* 3 4) (- 10 5)", env).unwrap();
+        let results = process("(+ 1 2) (* 3 4) (- 10 5)", &env).unwrap();
         assert_eq!(results, vec![num(3.0), num(12.0), num(5.0)]);
     }
 
     #[test]
     fn definition_contributes_nil_to_result_list() {
         let env = Rc::new(RefCell::new(Env::default()));
-        let results = process("(def x 42)", env).unwrap();
+        let results = process("(def x 42)", &env).unwrap();
         assert_eq!(results, vec![Value::Nil]);
     }
 
@@ -316,8 +310,8 @@ mod programs {
     #[test]
     fn env_persists_across_separate_process_calls() {
         let env = Rc::new(RefCell::new(Env::default()));
-        process("(def (inc x) (+ x 1))", env.clone()).expect("first call failed");
-        let mut r = process("(inc 41)", env).expect("second call failed");
+        process("(def (inc x) (+ x 1))", &env).expect("first call failed");
+        let mut r = process("(inc 41)", &env).expect("second call failed");
         assert_eq!(r.pop().unwrap(), num(42.0));
     }
 
@@ -389,14 +383,14 @@ mod examples {
     #[test]
     fn stdlib_loads_without_error() {
         let env = Rc::new(RefCell::new(Env::default()));
-        process(STD_LIB, env).expect("base.pd failed to load");
+        process(STD_LIB, &env).expect("base.pd failed to load");
     }
 
     #[test]
     fn fact_program_produces_ten_factorial() {
         // examples/fact.pd defines `fact` and calls `(fact 10)` → 3628800
         let env = Rc::new(RefCell::new(Env::default()));
-        let mut results = process(FACT_PROGRAM, env).expect("fact.pd failed");
+        let mut results = process(FACT_PROGRAM, &env).expect("fact.pd failed");
         assert_eq!(results.pop().unwrap(), num(3628800.0));
     }
 
@@ -404,7 +398,7 @@ mod examples {
     fn import_program_produces_ten_factorial() {
         // examples/fact.pd defines `fact` and calls `(fact 10)` → 3628800
         let env = Rc::new(RefCell::new(Env::default()));
-        let mut results = process(IMPORT_PROGRAM, env).expect("fact.pd failed");
+        let mut results = process(IMPORT_PROGRAM, &env).expect("fact.pd failed");
         assert_eq!(results.pop().unwrap(), num(3628800.0));
     }
 }
@@ -433,7 +427,7 @@ mod errors {
         let err = run_err("(def (f x) (+ x 1)) (f 1 2)");
         assert_eq!(
             err.downcast_ref::<EvalError>(),
-            Some(&EvalError::BadFunctionArgCount(1, 2))
+            Some(&EvalError::BadFunctionArgCount(1))
         );
     }
 
@@ -450,8 +444,8 @@ mod errors {
     fn error_in_later_expression_stops_program() {
         // First expression succeeds; second expression should fail
         let env = Rc::new(RefCell::new(Env::default()));
-        process(STD_LIB, env.clone()).expect("stdlib failed");
-        let result = process("(+ 1 2) undefined-sym", env);
+        process(STD_LIB, &env).expect("stdlib failed");
+        let result = process("(+ 1 2) undefined-sym", &env);
         assert!(result.is_err());
     }
 }

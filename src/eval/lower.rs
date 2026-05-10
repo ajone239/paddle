@@ -13,14 +13,13 @@ fn quote_eval(ast: &Expr) -> Value {
         Expr::List(list, _) => {
             let mut vals = list.iter().map(quote_eval).rev();
 
-            let first = vals.next().unwrap_or(Value::Nil);
-            let mut rv = Rc::new((first, Value::Nil));
+            let mut rv = Value::Nil;
 
             while let Some(val) = vals.next() {
-                rv = Rc::new((val, Value::Cons(rv)));
+                rv = Value::Cons(Rc::new((val, rv)));
             }
 
-            Value::Cons(rv)
+            rv
         }
     }
 }
@@ -87,7 +86,7 @@ mod tests {
     #[test]
     fn empty_list() {
         // empty list lowers to a single Cons with Nil head and Nil tail
-        assert_eq!(lower_str("()"), cons(Value::Nil, Value::Nil));
+        assert_eq!(lower_str("()"), Value::Nil);
     }
 
     #[test]
@@ -134,7 +133,7 @@ mod tests {
     fn deeply_nested() {
         assert_eq!(
             lower_str("((()))"),
-            cons(cons(cons(Value::Nil, Value::Nil), Value::Nil), Value::Nil)
+            cons(cons(Value::Nil, Value::Nil), Value::Nil)
         );
     }
 }

@@ -31,8 +31,8 @@ pub enum EvalError {
     BadDefineHead,
     #[error("Lambda function args list must only be symbols")]
     BadLambdaArgsListType,
-    #[error("Function expected {0} args but got {1}.")]
-    BadFunctionArgCount(usize, usize),
+    #[error("Function expected {0} args.")]
+    BadFunctionArgCount(usize),
     #[error("Function definition requires atleast a function name.")]
     BadDefineFunctionHead,
     #[error("Function definition head may only contain symbols.")]

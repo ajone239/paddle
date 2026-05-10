@@ -58,10 +58,6 @@ impl Value {
                 let first = &pair.0;
                 let mut second = &pair.1;
 
-                if matches!(first, Self::Nil) && matches!(second, Self::Nil) {
-                    return vec![];
-                }
-
                 // TODO(ajone239): kill this clone!
                 let mut vals = vec![first.clone()];
 
@@ -121,6 +117,9 @@ impl Display for Value {
                     let first = &next_pair.0;
                     vals.push(first.to_string());
                     second = &next_pair.1;
+                }
+                if !matches!(second, Self::Nil) {
+                    vals.push(second.to_string());
                 }
 
                 let nice_list = vals.join(" ");
@@ -244,8 +243,15 @@ pub struct ConsIter<'a> {
 }
 
 impl<'a> ConsIter<'a> {
-    fn new(current: &'a Value) -> Self {
+    pub fn new(current: &'a Value) -> Self {
         Self { current }
+    }
+    pub fn len(self) -> usize {
+        let mut len = 0;
+        for _ in self {
+            len += 1;
+        }
+        len
     }
 }
 
@@ -256,10 +262,6 @@ impl<'a> Iterator for ConsIter<'a> {
         let Value::Cons(pair) = self.current else {
             return None;
         };
-
-        if matches!(pair.0, Value::Nil) && matches!(pair.1, Value::Nil) {
-            return None;
-        }
 
         self.current = &pair.1;
 

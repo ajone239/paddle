@@ -59,7 +59,7 @@ fn bad_define_function_head() {
     let err = eval_err("(def () x)");
     assert_eq!(
         err.downcast_ref::<EvalError>(),
-        Some(&EvalError::BadDefineFunctionHead)
+        Some(&EvalError::BadDefineHead)
     );
 }
 

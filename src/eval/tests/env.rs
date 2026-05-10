@@ -98,7 +98,7 @@ fn define_func_wrong_arity() {
     let err = eval_env_err(&["(def (f x) (+ x 1))", "(f 1 2)"]);
     assert_eq!(
         err.downcast_ref::<EvalError>(),
-        Some(&EvalError::BadFunctionArgCount(1, 2))
+        Some(&EvalError::BadFunctionArgCount(1))
     );
 }
 
