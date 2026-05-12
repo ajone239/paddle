@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en-US">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>very basic runner example</title>
+        <link rel="stylesheet" href="styles.css" />
+    </head>
+
+    <body>
+        <script type="module">
+            import init, { Runner, Tag } from './pkg/wasm.js';
+
+            init().then(() => {
+                const runner = Runner.new();
+                let promptNum = 0;
+
+                const tagToStyle = (tag) => {
+                    switch (tag) {
+                        case Tag.Print:
+                            return 'print';
+                        case Tag.Ok:
+                            return 'ok';
+                        case Tag.Source:
+                            return 'src';
+                        default:
+                            return 'err';
+                    }
+                };
+
+                const insertContent = (tag, content) => {
+                    let output = document.getElementById('output');
+                    const entry = document.createElement('li');
+                    entry.className = tagToStyle(tag);
+                    entry.dataset.prompt = promptNum;
+                    entry.appendChild(document.createTextNode(content));
+
+                    output.appendChild(entry);
+                    let outputArea = document.getElementById('output-area');
+                    outputArea.scrollTop = outputArea.scrollHeight;
+
+                    return entry;
+                };
+
+                const runit = () => {
+                    let input_el = document.getElementById('input');
+                    let input = input_el.value;
+
+                    if (!input) {
+                        return;
+                    }
+
+                    promptNum++;
+
+                    let src_entry = insertContent(Tag.Source, input);
+                    src_entry.tabIndex = 0;
+                    src_entry.setAttribute('role', 'button');
+                    src_entry.setAttribute('aria-label', 'Restore this input');
+
+                    const restore = () => {
+                        input_el.value = input;
+                        input_el.focus();
+                    };
+                    src_entry.addEventListener('click', restore);
+                    src_entry.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            restore();
+                        }
+                    });
+
+                    input_el.value = '';
+
+                    runner.run_code(input, insertContent);
+                };
+
+                document.getElementById('input').addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        runit();
+                    }
+                });
+                document.getElementById('clear').addEventListener('click', () => {
+                    let output = document.getElementById('output');
+                    while (output.firstChild) {
+                        output.removeChild(output.lastChild);
+                    }
+                });
+                document.getElementById('run').addEventListener('click', runit);
+            });
+        </script>
+
+        <div id="wrapper">
+            <pre id="paddle-deco">
+    ____            __    ____
+   / __ \____ _____/ /___/ / /__
+  / /_/ / __ `/ __  / __  / / _ \
+ / ____/ /_/ / /_/ / /_/ / /  __/
+/_/    \__,_/\__,_/\__,_/_/\___/</pre>
+            <div id="output-area" role="log" aria-live="polite">
+                <ol id="output"></ol>
+            </div>
+
+            <div id="input-area">
+                <textarea autofocus id="input" placeholder="Input Paddle source..."></textarea>
+                <div id="button-area">
+                    <button id="run">run</button>
+                    <button id="clear">clear</button>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
