@@ -1,0 +1,212 @@
+:root {
+    --bg: #0d1117;
+    --bg-elevated: #151b23;
+    --border: #2a323c;
+    --accent: #7aa2f7;
+    --ok: #d7dce1;
+    --print: #6b7683;
+    --err: #ff5f6d;
+    --text: #c9d1d9;
+}
+
+html,
+body {
+    height: 100%;
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Fira Code', 'Courier New', Courier, monospace, sans-serif;
+}
+
+#wrapper {
+    position: relative;
+    display: flex;
+    flex-flow: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+#paddle-deco {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
+    opacity: 0.18;
+    font-size: 1.4rem;
+    line-height: 1.2;
+    pointer-events: none;
+    user-select: none;
+}
+
+#output-area {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-flow: column;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 12px;
+    box-sizing: border-box;
+}
+
+#output {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-flow: column;
+    gap: 8px;
+}
+
+li {
+    background: rgba(21, 27, 35, 0.52);
+    backdrop-filter: blur(2px);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    white-space: pre-wrap;
+    word-break: break-word;
+
+    &::before {
+        content: '[' attr(data-prompt) '] ';
+        opacity: 0.5;
+        font-weight: bold;
+        white-space: pre;
+    }
+
+    &.err {
+        border-left-color: var(--err);
+        color: var(--err);
+    }
+
+    &.print {
+        border-left-color: var(--print);
+        color: var(--print);
+    }
+
+    &.ok {
+        border-left-color: var(--ok);
+        color: var(--ok);
+    }
+
+    &.src {
+        border-left-color: var(--accent);
+        color: var(--text);
+        cursor: pointer;
+    }
+
+    &.src:hover {
+        border-color: var(--accent);
+    }
+}
+
+#input-area {
+    position: relative;
+    z-index: 1;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: stretch;
+    margin: 12px;
+    margin-bottom: max(12px, env(safe-area-inset-bottom));
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+}
+
+#input-area:focus-within {
+    border-color: var(--accent);
+}
+
+textarea {
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: 44px;
+    margin: 0;
+    padding: 10px 12px;
+    box-sizing: border-box;
+    background: transparent;
+    color: var(--text);
+    border: none;
+    outline: none;
+    resize: vertical;
+    font: inherit;
+    font-size: 16px;
+}
+
+#button-area {
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid var(--border);
+}
+
+button {
+    flex: 1 1 auto;
+    min-width: 44px;
+    min-height: 44px;
+    margin: 0;
+    padding: 0 16px;
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text);
+    border: none;
+    border-bottom: 1px solid var(--border);
+    font: inherit;
+    font-size: 16px;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    transition:
+        background 0.15s ease,
+        color 0.15s ease;
+}
+
+button:last-child {
+    border-bottom: none;
+}
+
+button:hover {
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--accent);
+}
+
+button:active {
+    background: rgba(0, 0, 0, 0.3);
+    box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+@media (max-width: 600px) {
+    #paddle-deco {
+        font-size: 0.55rem;
+    }
+
+    #input-area {
+        flex-direction: column;
+    }
+
+    textarea {
+        min-height: 72px;
+    }
+
+    #button-area {
+        flex-direction: row-reverse;
+        border-left: none;
+        border-top: 1px solid var(--border);
+    }
+
+    button {
+        border-bottom: none;
+        border-right: 1px solid var(--border);
+    }
+
+    button:last-child {
+        border-right: none;
+    }
+}
