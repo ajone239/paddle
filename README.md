@@ -16,6 +16,7 @@ model.
 - [ ] M0 — writeups
     + writeup of the `dumb_macros.pd` experiment
     + full data flow from bytes to eval in the readme
+    + project layout
 - [x] M1 — memory representation rework
     + [x] cons cells (Rc-cells)
     + [x] kill pervasive clones in `eval`/`apply`
