@@ -1,12 +1,12 @@
 use std::{cell::RefCell, path::PathBuf, rc::Rc};
 
 use anyhow::{Context, Result};
-use clap::{Parser, command};
+use clap::Parser;
 
-use paddle::{
+use paddle::repl::run_repl;
+use paddle_core::{
     cursor::{display_results, process, process_file},
     eval::Env,
-    repl::run_repl,
 };
 
 #[derive(Debug, Parser)]
@@ -24,7 +24,8 @@ struct Cli {
     no_std: bool,
 }
 
-static STD_LIB: &str = include_str!("../examples/base.pd");
+static STD_LIB: &str = include_str!("../../examples/base.pd");
+static STD_MAC: &str = include_str!("../../examples/macros.pd");
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -32,6 +33,7 @@ fn main() -> Result<()> {
 
     if !cli.no_std {
         process(STD_LIB, &env).context("failed to parse the std lib")?;
+        process(STD_MAC, &env).context("failed to parse the std lib macros")?;
     }
 
     if let Some(file_path) = cli.file.clone() {

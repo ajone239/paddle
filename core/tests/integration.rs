@@ -6,14 +6,14 @@
 
 use std::{cell::RefCell, rc::Rc};
 
-use paddle::{
+use paddle_core::{
     cursor::process,
     eval::{Env, value::Value},
 };
 
-static STD_LIB: &str = include_str!("../examples/base.pd");
-static FACT_PROGRAM: &str = include_str!("../examples/fact.pd");
-static IMPORT_PROGRAM: &str = include_str!("../examples/import.pd");
+static STD_LIB: &str = include_str!("../../examples/base.pd");
+static FACT_PROGRAM: &str = include_str!("../../examples/fact.pd");
+static IMPORT_PROGRAM: &str = include_str!("../../examples/import.pd");
 
 fn num(n: f64) -> Value {
     Value::Num(n)
@@ -409,7 +409,7 @@ mod examples {
 
 mod errors {
     use super::*;
-    use paddle::eval::EvalError;
+    use paddle_core::eval::EvalError;
 
     #[test]
     fn undefined_symbol_bubbles_up() {

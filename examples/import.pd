@@ -1,3 +1,4 @@
-(require examples/fact.pd)
+; TODO(ajone239): imports need to be made better
+(require ../examples/fact.pd)
 
 (fact 10)

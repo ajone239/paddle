@@ -3,7 +3,7 @@ use std::{cell::RefCell, fs::read_to_string, rc::Rc};
 use anyhow::Result;
 use rustyline::{DefaultEditor, error::ReadlineError};
 
-use crate::{
+use paddle_core::{
     cursor::{count_paren, display_results, is_ready_to_process, process},
     eval::Env,
 };
@@ -24,11 +24,10 @@ pub fn run_repl(env: &Rc<RefCell<Env>>) -> Result<()> {
 
         let line = line.trim();
 
-        if input.is_empty()
-            && handle_repl_cmd(env, line) {
-                rl.add_history_entry(line)?;
-                continue;
-            }
+        if input.is_empty() && handle_repl_cmd(env, line) {
+            rl.add_history_entry(line)?;
+            continue;
+        }
 
         input += line;
 
