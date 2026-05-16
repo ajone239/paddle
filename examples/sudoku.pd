@@ -111,17 +111,17 @@
   (print '>> i)
   (print-board b)
   (print)
-  (if (>= i (* 9 9))
-      b
-      (if (not (= 0 (get-n b i)))
-          (solve-board b (+ 1 i))
+  (cond
+    ((>= i (* 9 9)) b)
+    ((not (= 0 (get-n b i))) (solve-board b (+ 1 i)))
+    (else
+      (progn
+        (for/or (val (map add1 (seq 8)))
           (progn
-             (for/or (val (map add1 (seq 8)))
-               (progn
-                 (define test (lens b i val))
-                 ; TODO(austin.jones): make check board only check changes
-                 (when (check-board test)
-                   (solve-board test (+ 1 i)))))))))
+            (define test (lens b i val))
+            ; TODO(austin.jones): make check board only check changes
+            (when (check-board test)
+              (solve-board test (+ 1 i)))))))))
 
 (define board '(0 6 0 1 0 4 0 5 0
                 0 0 8 3 0 5 6 0 0
