@@ -16,7 +16,39 @@ pub fn eval(ast: &Value, env: &Rc<RefCell<Env>>) -> Result<Value> {
         Value::Cons(pair) => match pair.0 {
             Value::Nil => Ok(Value::Nil),
             Value::Form(f) => eval_form(f, &pair.1, env),
-            _ => apply(&pair.0, &pair.1, env),
+            _ => {
+                let head = eval(&pair.0, env)?;
+                let tail = &pair.1;
+
+                let (body, args, env) = match &head {
+                    Value::Func {
+                        name: _,
+                        body,
+                        args,
+                    }
+                    | Value::Macro {
+                        name: _,
+                        body,
+                        args,
+                    } => (body, args, env),
+                    Value::Lambda { env, body, args } => (body, args, &env.clone()),
+                    Value::Builtin(f, _) => {
+                        return f.0(&tail
+                            .to_cons_iter()
+                            .map(|v| eval(v, env))
+                            .collect::<Result<_, _>>()?);
+                    }
+                    v => return Ok(v.clone()),
+                };
+
+                let is_macro = matches!(head, Value::Macro { .. });
+
+                let nenv = setup_env(tail, args, is_macro, env)?;
+
+                let rv = eval(body, &nenv);
+
+                if is_macro { eval(&rv?, &env) } else { rv }
+            }
         },
         _ => Ok(ast.clone()),
     }
@@ -134,40 +166,13 @@ fn eval_form(form: Form, tail: &Value, env: &Rc<RefCell<Env>>) -> Result<Value> 
     }
 }
 
-fn apply(head: &Value, tail: &Value, env: &Rc<RefCell<Env>>) -> Result<Value> {
-    let head = eval(head, env)?;
-    let (fargs, body, new_env) = match &head {
-        Value::Lambda {
-            args: fargs,
-            body,
-            env,
-        } => {
-            let env = Rc::new(RefCell::new(Env::new_child(env.clone())));
-            (fargs, body, env)
-        }
-        Value::Macro {
-            name: _,
-            args: fargs,
-            body,
-        }
-        | Value::Func {
-            name: _,
-            args: fargs,
-            body,
-        } => {
-            let env = Rc::new(RefCell::new(Env::new_child(env.clone())));
-            (fargs, body, env)
-        }
-        Value::Builtin(f, _) => {
-            return f.0(&tail
-                .to_cons_iter()
-                .map(|v| eval(v, env))
-                .collect::<Result<_, _>>()?);
-        }
-        v => return Ok(v.clone()),
-    };
-
-    let is_macro = matches!(head, Value::Macro { .. });
+fn setup_env(
+    tail: &Value,
+    fargs: &Vec<String>,
+    is_macro: bool,
+    env: &Rc<RefCell<Env>>,
+) -> Result<Rc<RefCell<Env>>> {
+    let new_env = Rc::new(RefCell::new(Env::new_child(env.clone())));
 
     let varidx = fargs
         .iter()
@@ -205,11 +210,7 @@ fn apply(head: &Value, tail: &Value, env: &Rc<RefCell<Env>>) -> Result<Value> {
         return Err(EvalError::BadFunctionArgCount(fargs.len()).into());
     }
 
-    // eval the body with the new env
-    // return the value
-    let rv = eval(body, &new_env);
-
-    if is_macro { eval(&rv?, env) } else { rv }
+    Ok(new_env)
 }
 
 fn define(form: &Form, body: &Value, env: &Rc<RefCell<Env>>) -> Result<()> {
