@@ -11,46 +11,61 @@ use crate::eval::{
 };
 
 pub fn eval(ast: &Value, env: &Rc<RefCell<Env>>) -> Result<Value> {
-    match ast {
-        Value::Symbol(atom) => resolve(atom, env),
-        Value::Cons(pair) => match pair.0 {
-            Value::Nil => Ok(Value::Nil),
-            Value::Form(f) => eval_form(f, &pair.1, env),
-            _ => {
-                let head = eval(&pair.0, env)?;
-                let tail = &pair.1;
+    let Value::Cons(pair) = ast else {
+        return match ast {
+            Value::Symbol(atom) => resolve(atom, env),
+            _ => Ok(ast.clone()),
+        };
+    };
 
-                let (body, args, fenv) = match &head {
-                    Value::Func {
-                        name: _,
-                        body,
-                        args,
-                    }
-                    | Value::Macro {
-                        name: _,
-                        body,
-                        args,
-                    } => (body, args, env),
-                    Value::Lambda { env, body, args } => (body, args, &env.clone()),
-                    Value::Builtin(f, _) => {
-                        return f.0(&tail
-                            .to_cons_iter()
-                            .map(|v| eval(v, env))
-                            .collect::<Result<_, _>>()?);
-                    }
-                    v => return Ok(v.clone()),
-                };
+    match pair.0 {
+        Value::Nil => Ok(Value::Nil),
+        Value::Form(Form::Progn) => {
+            let mut body = pair.1.to_cons_iter().peekable();
 
-                let is_macro = matches!(head, Value::Macro { .. });
+            while let Some(b) = body.next() {
+                let val = eval(b, env)?;
 
-                let nenv = setup_env(tail, args, is_macro, env, fenv)?;
-
-                let rv = eval(body, &nenv);
-
-                if is_macro { eval(&rv?, &env) } else { rv }
+                if body.peek().is_none() {
+                    return Ok(val);
+                }
             }
-        },
-        _ => Ok(ast.clone()),
+
+            bail!("progn body can't be empty")
+        }
+        Value::Form(f) => eval_form(f, &pair.1, env),
+        _ => {
+            let head = eval(&pair.0, env)?;
+            let is_macro = matches!(head, Value::Macro { .. });
+            let tail = &pair.1;
+
+            let (body, args, fenv) = match head {
+                Value::Func {
+                    name: _,
+                    body,
+                    args,
+                }
+                | Value::Macro {
+                    name: _,
+                    body,
+                    args,
+                } => (body, args, env),
+                Value::Lambda { env, body, args } => (body, args, &env.clone()),
+                Value::Builtin(f, _) => {
+                    return f.0(&tail
+                        .to_cons_iter()
+                        .map(|v| eval(v, env))
+                        .collect::<Result<_, _>>()?);
+                }
+                v => return Ok(v.clone()),
+            };
+
+            let nenv = setup_env(tail, &args, is_macro, env, fenv)?;
+
+            let rv = eval(&body, &nenv);
+
+            if is_macro { eval(&rv?, &env) } else { rv }
+        }
     }
 }
 
@@ -112,17 +127,7 @@ fn eval_form(form: Form, tail: &Value, env: &Rc<RefCell<Env>>) -> Result<Value> 
             Ok(Value::Nil)
         }
         Form::Progn => {
-            let mut body = tail.to_cons_iter().peekable();
-
-            while let Some(b) = body.next() {
-                let val = eval(b, env)?;
-
-                if body.peek().is_none() {
-                    return Ok(val);
-                }
-            }
-
-            bail!("progn body can't be empty")
+            panic!("we shouldn't hit this");
         }
         Form::Eval => {
             let val = eval(tail, env)?;
