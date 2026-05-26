@@ -10,6 +10,28 @@ use crate::eval::{
     value::{Form, Value},
 };
 
+enum Trampoline {
+    Done(Value),
+    Continue(Value, Rc<RefCell<Env>>),
+}
+
+pub fn new_eval(ast: Value, env: Rc<RefCell<Env>>) -> Result<Value> {
+    let mut current = (ast, env);
+
+    loop {
+        match eval_step(current.0, current.1)? {
+            Trampoline::Done(v) => return Ok(v),
+            Trampoline::Continue(body, nenv) => current = (body, nenv),
+        }
+    }
+}
+
+fn eval_step(ast: Value, env: Rc<RefCell<Env>>) -> Result<Trampoline> {
+    let _ = ast;
+    let _ = env;
+    unimplemented!()
+}
+
 // TODO(ajone239): use a trampoline
 pub fn eval(ast: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
     let Value::Cons(pair) = ast else {
