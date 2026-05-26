@@ -32,17 +32,17 @@ fn main() -> Result<()> {
     let env = Rc::new(RefCell::new(Env::default()));
 
     if !cli.no_std {
-        process(STD_LIB, &env).context("failed to parse the std lib")?;
-        process(STD_MAC, &env).context("failed to parse the std lib macros")?;
+        process(STD_LIB, env.clone()).context("failed to parse the std lib")?;
+        process(STD_MAC, env.clone()).context("failed to parse the std lib macros")?;
     }
 
     if let Some(file_path) = cli.file.clone() {
-        let res = process_file(file_path, &env);
+        let res = process_file(file_path, env.clone());
         display_results(res);
     }
 
     if cli.repl || cli.file.is_none() {
-        run_repl(&env)?
+        run_repl(env)?
     }
 
     Ok(())

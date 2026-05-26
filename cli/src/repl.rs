@@ -8,7 +8,7 @@ use paddle_core::{
     eval::Env,
 };
 
-pub fn run_repl(env: &Rc<RefCell<Env>>) -> Result<()> {
+pub fn run_repl(env: Rc<RefCell<Env>>) -> Result<()> {
     let mut rl = DefaultEditor::new()?;
     let mut input = String::new();
 
@@ -24,7 +24,7 @@ pub fn run_repl(env: &Rc<RefCell<Env>>) -> Result<()> {
 
         let line = line.trim();
 
-        if input.is_empty() && handle_repl_cmd(env, line) {
+        if input.is_empty() && handle_repl_cmd(env.clone(), line) {
             rl.add_history_entry(line)?;
             continue;
         }
@@ -45,7 +45,7 @@ pub fn run_repl(env: &Rc<RefCell<Env>>) -> Result<()> {
         }
 
         rl.add_history_entry(&input)?;
-        let res = process(&input, env);
+        let res = process(&input, env.clone());
         display_results(res);
 
         input.clear();
@@ -54,7 +54,7 @@ pub fn run_repl(env: &Rc<RefCell<Env>>) -> Result<()> {
     Ok(())
 }
 
-fn handle_repl_cmd(env: &Rc<RefCell<Env>>, line: &str) -> bool {
+fn handle_repl_cmd(env: Rc<RefCell<Env>>, line: &str) -> bool {
     match line {
         ":env" => {
             env.borrow().dump();
@@ -65,7 +65,7 @@ fn handle_repl_cmd(env: &Rc<RefCell<Env>>, line: &str) -> bool {
                 .skip(1)
                 .for_each(|f| match read_to_string(f) {
                     Ok(contents) => {
-                        if let Err(err) = process(&contents, env) {
+                        if let Err(err) = process(&contents, env.clone()) {
                             println!("Problem reading {}: {:?}", f, err);
                         }
                     }
