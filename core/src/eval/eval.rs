@@ -1,4 +1,6 @@
+use core::panic;
 use std::cell::RefCell;
+use std::ops::Deref;
 use std::rc::Rc;
 
 use anyhow::{Ok, Result, bail};
@@ -9,6 +11,15 @@ use crate::eval::{
     env::Env,
     value::{Form, Value},
 };
+
+const OLD: bool = false;
+pub fn eval(ast: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
+    if OLD {
+        old_eval(ast, env)
+    } else {
+        new_eval(ast.clone(), env)
+    }
+}
 
 enum Trampoline {
     Done(Value),
@@ -27,13 +38,150 @@ pub fn new_eval(ast: Value, env: Rc<RefCell<Env>>) -> Result<Value> {
 }
 
 fn eval_step(ast: Value, env: Rc<RefCell<Env>>) -> Result<Trampoline> {
-    let _ = ast;
-    let _ = env;
-    unimplemented!()
+    let Value::Cons(pair) = ast else {
+        return match ast {
+            Value::Symbol(atom) => {
+                let val = resolve(&atom, env)?;
+                Ok(Trampoline::Done(val))
+            }
+            _ => Ok(Trampoline::Done(ast.clone())),
+        };
+    };
+
+    match pair.0 {
+        Value::Nil => Ok(Trampoline::Done(Value::Nil)),
+        Value::Form(Form::Progn) => {
+            let mut body = pair.1.to_cons_iter().peekable();
+
+            while let Some(b) = body.next() {
+                if body.peek().is_none() {
+                    return Ok(Trampoline::Continue(b.clone(), env.clone()));
+                }
+                let _ = eval(b, env.clone())?;
+            }
+
+            bail!("progn body can't be empty")
+        }
+        Value::Form(Form::Quote) => {
+            let Value::Cons(ref tailtail) = pair.1 else {
+                unreachable!("this is how quote is formed")
+            };
+            Ok(Trampoline::Done(tailtail.0.clone()))
+        }
+        Value::Form(Form::QuasiQuote) => {
+            let Value::Cons(ref tailtail) = pair.1 else {
+                unreachable!("this is how quasiquote is formed")
+            };
+            let qexpr = quasi_quote_eval(&tailtail.0, env)?;
+            Ok(Trampoline::Done(qexpr))
+        }
+        Value::Form(Form::UnQuote) => Err(EvalError::UnquoteOutsideQuasi.into()),
+        Value::Form(Form::Require) => {
+            let mut list = pair.1.to_cons_iter();
+
+            let file_name = list.next().ok_or(EvalError::BadRequireArgCount(0))?;
+
+            let file_name = match file_name {
+                Value::Str(atom) | Value::Symbol(atom) => atom,
+                _ => {
+                    return Err(EvalError::BadRequireArgs.into());
+                }
+            };
+
+            if list.next().is_some() {
+                return Err(EvalError::BadRequireArgCount(2).into());
+            }
+
+            process_file(file_name.into(), env)?;
+
+            Ok(Trampoline::Done(Value::Nil))
+        }
+        Value::Form(Form::Eval) => {
+            let val = eval(&pair.1, env.clone())?;
+            Ok(Trampoline::Continue(val, env.clone()))
+        }
+        Value::Form(Form::DefineMacro | Form::Define) => {
+            let Value::Form(form) = pair.0 else {
+                panic!("it's the pattern");
+            };
+            define(&form, &pair.1, env)?;
+
+            Ok(Trampoline::Done(Value::Nil))
+        }
+        Value::Form(Form::If) => {
+            let mut list = pair.1.to_cons_iter();
+
+            let cond = list.next().ok_or(EvalError::BadIfArgs)?;
+            let t_branch = list.next().ok_or(EvalError::BadIfArgs)?;
+            let f_branch = list.next().ok_or(EvalError::BadIfArgs)?;
+
+            if list.next().is_some() {
+                return Err(EvalError::BadIfArgs.into());
+            }
+
+            let cond = eval(cond, env.clone())?;
+
+            if cond.truthy() {
+                Ok(Trampoline::Continue(t_branch.clone(), env))
+            } else {
+                Ok(Trampoline::Continue(f_branch.clone(), env))
+            }
+        }
+        Value::Form(Form::Lambda) => {
+            let Value::Form(form) = pair.0 else {
+                panic!("it's the pattern");
+            };
+            let (_, args, body) = make_callable(&form, &pair.1)?;
+
+            let lambda = Value::Lambda {
+                args,
+                body,
+                env: env.clone(),
+            };
+
+            Ok(Trampoline::Done(lambda))
+        }
+        _ => {
+            let head = eval(&pair.0, env.clone())?;
+            let is_macro = matches!(head, Value::Macro { .. });
+            let tail = &pair.1;
+
+            let (body, args, fenv) = match head {
+                Value::Func {
+                    name: _,
+                    body,
+                    args,
+                }
+                | Value::Macro {
+                    name: _,
+                    body,
+                    args,
+                } => (body, args, env.clone()),
+                Value::Lambda { env, body, args } => (body, args, env.clone()),
+                Value::Builtin(f, _) => {
+                    let results = f.0(&tail
+                        .to_cons_iter()
+                        .map(|v| eval(v, env.clone()))
+                        .collect::<Result<_, _>>()?)?;
+                    return Ok(Trampoline::Done(results));
+                }
+                v => return Ok(Trampoline::Done(v.clone())),
+            };
+
+            let nenv = setup_env(tail, &args, is_macro, env.clone(), fenv)?;
+
+            return if is_macro {
+                let body = eval(&body, nenv)?;
+                Ok(Trampoline::Continue(body, env.clone()))
+            } else {
+                // TODO(austin.jones): kill this clone
+                Ok(Trampoline::Continue(body.deref().clone(), nenv.clone()))
+            };
+        }
+    }
 }
 
-// TODO(ajone239): use a trampoline
-pub fn eval(ast: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
+pub fn old_eval(ast: &Value, env: Rc<RefCell<Env>>) -> Result<Value> {
     let Value::Cons(pair) = ast else {
         return match ast {
             Value::Symbol(atom) => resolve(atom, env),
