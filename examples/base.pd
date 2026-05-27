@@ -31,7 +31,7 @@
             (f (car xs) (fold xxs))))
      (f init (fold xs)))
 
-(def (sum xs) (foldr + 0 xs))
+(def (sum xs) (foldl + 0 xs))
 
 (def (length xs)
      (if (not xs)
