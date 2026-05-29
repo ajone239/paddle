@@ -1,4 +1,5 @@
 mod arithmetic;
+mod tco;
 mod atoms;
 mod builtin_errors;
 mod cadr;
