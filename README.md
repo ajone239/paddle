@@ -22,7 +22,7 @@ model.
     + [x] kill pervasive clones in `eval`/`apply`
     + [x] fix nested-vector handling
 - [ ] M2 — make the language runnable
-    + [ ] tail-call optimization
+    + [x] tail-call optimization
     + [x] variadic arguments (fix macros after this)
     + [ ] `set!`
     + [ ] `let` / `let*`
