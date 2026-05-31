@@ -1,11 +1,12 @@
-use std::{cell::RefCell, fs::read_to_string, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 use anyhow::Result;
 use rustyline::{DefaultEditor, error::ReadlineError};
 
 use paddle_core::{
-    cursor::{count_paren, display_results, is_ready_to_process, process},
+    cursor::{Cursor, count_paren, display_result, is_ready_to_process},
     eval::Env,
+    lexer,
 };
 
 pub fn run_repl(env: Rc<RefCell<Env>>) -> Result<()> {
@@ -45,8 +46,13 @@ pub fn run_repl(env: Rc<RefCell<Env>>) -> Result<()> {
         }
 
         rl.add_history_entry(&input)?;
-        let res = process(&input, env.clone());
-        display_results(res);
+
+        let lexed = lexer::lex(&input);
+        let cursor = Cursor::new(&lexed, env.clone());
+
+        for res in cursor {
+            display_result(res);
+        }
 
         input.clear();
     }
@@ -58,19 +64,6 @@ fn handle_repl_cmd(env: Rc<RefCell<Env>>, line: &str) -> bool {
     match line {
         ":env" => {
             env.borrow().dump();
-            true
-        }
-        s if s.starts_with(":require ") => {
-            s.split_whitespace()
-                .skip(1)
-                .for_each(|f| match read_to_string(f) {
-                    Ok(contents) => {
-                        if let Err(err) = process(&contents, env.clone()) {
-                            println!("Problem reading {}: {:?}", f, err);
-                        }
-                    }
-                    Err(err) => println!("Problem reading {}: {:?}", f, err),
-                });
             true
         }
         _ => false,

@@ -10,3 +10,7 @@ anyhow = "1.0.102"
 clap = { version = "4.6.1", features = ["derive"] }
 rustyline = "18.0.0"
 thiserror = "2.0.18"
+
+[dev-dependencies]
+assert_cmd = "2"
+predicates = "3"
