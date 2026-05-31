@@ -3,9 +3,11 @@
 (define (add1 x) (+ 1 x))
 
 (define (take xs n)
-  (if (= 0 n)
-      '()
-      (cons (car xs) (take (cdr xs) (- n 1)))))
+  (define (take2 xs n ys)
+    (if (= 0 n)
+       ys
+       (take2 (cdr xs) (- n 1) (cons (car xs) ys))))
+  (take2 xs n '()))
 
 (define (skip xs n)
   (if (<= n 0)
@@ -16,11 +18,15 @@
   (filter (lambda (c) (not (= 0 c))) l))
 
 (define (dedup l)
-  (when l
-      (progn
-        (define xs (cdr l))
-        (define x (car l))
-        (cons x (filter (lambda (v) (not (= v x))) (dedup xs))))))
+  (define (dedup2 l acc)
+    (if (not l)
+        acc
+        (progn
+          (define xs (cdr l))
+          (define x (car l))
+          (define rest (filter (lambda (v) (not (= v x))) xs))
+          (dedup2 rest (cons x acc)))))
+  (dedup2 l '()))
 
 (define (get-n l i)
   (if (= i 0)
@@ -95,7 +101,7 @@
        squares))
 
 (define (check-board b)
-  (def (all-good l) (not (for/or (v l) (not v))))
+  (define (all-good l) (not (for/or (v l) (not v))))
   (when (all-good (check-rows b))
       (when (all-good (check-cols b))
           (when (all-good (check-squares b)) #t))))
@@ -115,13 +121,12 @@
     ((>= i (* 9 9)) b)
     ((not (= 0 (get-n b i))) (solve-board b (+ 1 i)))
     (else
-      (progn
-        (for/or (val (map add1 (seq 8)))
-          (progn
-            (define test (lens b i val))
-            ; TODO(austin.jones): make check board only check changes
-            (when (check-board test)
-              (solve-board test (+ 1 i)))))))))
+      (for/or (val (map add1 (seq 8)))
+        (progn
+          (define test (lens b i val))
+          ; TODO(austin.jones): make check board only check changes
+          (when (check-board test)
+            (solve-board test (+ 1 i))))))))
 
 (define board '(0 6 0 1 0 4 0 5 0
                 0 0 8 3 0 5 6 0 0
