@@ -51,13 +51,14 @@ fn eval_step(ast: Value, env: Rc<RefCell<Env>>) -> Result<Trampoline> {
                     name: _,
                     body,
                     args,
+                    env,
                 }
-                | Value::Macro {
+                | Value::Lambda { env, body, args } => (body, args, env.clone()),
+                Value::Macro {
                     name: _,
                     body,
                     args,
                 } => (body, args, env.clone()),
-                Value::Lambda { env, body, args } => (body, args, env.clone()),
                 Value::Builtin(f, _) => {
                     let results = f.0(&tail
                         .to_cons_iter()
@@ -71,12 +72,12 @@ fn eval_step(ast: Value, env: Rc<RefCell<Env>>) -> Result<Trampoline> {
             let nenv = setup_env(tail, &args, is_macro, env.clone(), fenv)?;
 
             let body = body.deref().clone();
-            return if is_macro {
+            if is_macro {
                 let body = eval(body, nenv)?;
                 Ok(Trampoline::Continue(body, env.clone()))
             } else {
                 Ok(Trampoline::Continue(body, nenv.clone()))
-            };
+            }
         }
     }
 }
@@ -89,8 +90,9 @@ fn resolve(atom: &str, env: Rc<RefCell<Env>>) -> Result<Value> {
 
 fn quasi_quote_eval(ast: Value, env: Rc<RefCell<Env>>) -> Result<Value> {
     match ast {
-        Value::Cons(pair) => match pair.0 {
-            Value::Nil => Ok(Value::Nil),
+        Value::Cons(ref pair) => match pair.0 {
+            // TODO(ajone239): this can cause a weird bug between quote and quasi quote
+            Value::Nil => Ok(ast.clone()),
             Value::Form(Form::UnQuote) => eval(pair.1.clone(), env),
             _ => {
                 let new_head = quasi_quote_eval(pair.0.clone(), env.clone())?;
@@ -107,7 +109,7 @@ fn eval_form(form: Form, tail: Value, env: Rc<RefCell<Env>>) -> Result<Trampolin
     match form {
         Form::Quote => {
             let Value::Cons(tailtail) = tail else {
-                unreachable!("this is how quote is formed")
+                unreachable!("this is how quote is formed: {}", tail)
             };
             Ok(Trampoline::Done(tailtail.0.clone()))
         }
@@ -266,7 +268,12 @@ fn define(form: &Form, body: &Value, env: Rc<RefCell<Env>>) -> Result<()> {
             let tag = name.clone();
 
             let proc = match form {
-                Form::Define => Value::Func { name, args, body },
+                Form::Define => Value::Func {
+                    name,
+                    args,
+                    body,
+                    env: env.clone(),
+                },
                 Form::DefineMacro => Value::Macro { name, args, body },
                 _ => unreachable!("should only get here from define or definemacro"),
             };

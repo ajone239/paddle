@@ -1,5 +1,4 @@
 mod arithmetic;
-mod tco;
 mod atoms;
 mod builtin_errors;
 mod cadr;
@@ -13,6 +12,7 @@ mod lambda;
 mod list;
 mod macros;
 mod quote;
+mod tco;
 mod variadic;
 
 use std::cell::RefCell;
