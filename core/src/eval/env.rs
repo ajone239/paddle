@@ -432,7 +432,7 @@ fn car(args: &Value) -> Result<Value> {
         _ => return Err(BuiltinError::WrongCarArgType.into()),
     };
 
-    if matches!(pair.0, Value::Nil) {
+    if matches!(pair.0, Value::Nil) && matches!(pair.1, Value::Nil) {
         return Err(BuiltinError::CarOnEmptyList.into());
     }
 
@@ -454,7 +454,7 @@ fn cdr(args: &Value) -> Result<Value> {
         _ => return Err(BuiltinError::WrongCdrArgType.into()),
     };
 
-    if matches!(pair.0, Value::Nil) {
+    if matches!(pair.0, Value::Nil) && matches!(pair.1, Value::Nil) {
         return Err(BuiltinError::CdrOnEmptyList.into());
     }
 
