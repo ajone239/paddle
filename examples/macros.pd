@@ -56,7 +56,7 @@
       (define iter (eval (cdr pair)))
       (define (for2 xs)
         (if (not xs)
-            'nil
+            #f
             `(progn
                (define res
                  ((lambda (,bind) ,(body)) ,(car xs)))

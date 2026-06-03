@@ -166,3 +166,20 @@ fn if_only_evaluates_false_branch() {
 fn if_nested() {
     assert_eq!(eval_str("(if #t (if #f 1 2) 3)"), num(2.0));
 }
+
+#[test]
+fn if_truthy_nonempty_list() {
+    assert_eq!(eval_str("(if '(1) 10 20)"), num(10.0));
+}
+
+#[test]
+fn if_truthy_list_with_nil_head() {
+    // a list whose first element is nil but tail is non-nil is a non-empty list — truthy
+    assert_eq!(eval_str("(if '(nil 1) 10 20)"), num(10.0));
+}
+
+#[test]
+fn if_truthy_singleton_nil_list() {
+    // '(nil) is a non-empty list and should be truthy
+    assert_eq!(eval_str("(if '(nil) 10 20)"), num(10.0));
+}

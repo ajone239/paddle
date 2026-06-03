@@ -35,6 +35,11 @@ fn car_of_atom() {
 }
 
 #[test]
+fn car_of_list_with_nil_head() {
+    assert_eq!(eval_str("(car '(nil 1))"), Value::Nil);
+}
+
+#[test]
 fn car_wrong_arity() {
     let err = eval_err("(car '(1) '(2))");
     assert_eq!(

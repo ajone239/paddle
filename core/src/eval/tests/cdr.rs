@@ -43,6 +43,11 @@ fn cdr_of_atom() {
 }
 
 #[test]
+fn cdr_of_list_with_nil_head() {
+    assert_eq!(eval_str("(cdr '(nil 1))"), cons(num(1.0), Value::Nil));
+}
+
+#[test]
 fn cdr_wrong_arity() {
     let err = eval_err("(cdr '(1) '(2))");
     assert_eq!(

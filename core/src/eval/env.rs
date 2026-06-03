@@ -132,6 +132,10 @@ impl Default for Env {
             ("cdr", cdr),
             ("list", list),
             ("print", print),
+            ("atom?", is_atom),
+            ("number?", is_number),
+            ("null?", is_null),
+            ("pair?", is_pair),
         ];
 
         for (name, f) in bins {
@@ -358,6 +362,8 @@ fn eq(args: &Value) -> Result<Value> {
 
     match (&pair.0, &pair2.0) {
         (Value::Num(last), Value::Num(penu)) => Ok(Value::Bool(penu == last)),
+        (Value::Nil, Value::Nil) => Ok(Value::Bool(true)),
+        (_, Value::Nil) | (Value::Nil, _) => Ok(Value::Bool(false)),
         (Value::Str(last), Value::Str(penu))
         | (Value::Symbol(last), Value::Str(penu))
         | (Value::Str(last), Value::Symbol(penu))
@@ -432,10 +438,6 @@ fn car(args: &Value) -> Result<Value> {
         _ => return Err(BuiltinError::WrongCarArgType.into()),
     };
 
-    if matches!(pair.0, Value::Nil) {
-        return Err(BuiltinError::CarOnEmptyList.into());
-    }
-
     Ok(pair.0.clone())
 }
 
@@ -454,10 +456,6 @@ fn cdr(args: &Value) -> Result<Value> {
         _ => return Err(BuiltinError::WrongCdrArgType.into()),
     };
 
-    if matches!(pair.0, Value::Nil) {
-        return Err(BuiltinError::CdrOnEmptyList.into());
-    }
-
     Ok(pair.1.clone())
 }
 
@@ -475,4 +473,64 @@ fn print(args: &Value) -> Result<Value> {
     println!("{}", out);
 
     Ok(Value::Nil)
+}
+
+fn is_number(args: &Value) -> Result<Value> {
+    let Value::Cons(args) = args else {
+        bail!("should give me an arg list");
+    };
+
+    if let Value::Cons(_) = &args.1 {
+        bail!("only one arg");
+    };
+
+    match args.0 {
+        Value::Num(_) => Ok(Value::Bool(true)),
+        _ => Ok(Value::Bool(false)),
+    }
+}
+
+fn is_atom(args: &Value) -> Result<Value> {
+    let Value::Cons(args) = args else {
+        bail!("should give me an arg list");
+    };
+
+    if let Value::Cons(_) = &args.1 {
+        bail!("only one arg");
+    };
+
+    match args.0 {
+        Value::Cons(_) => Ok(Value::Bool(false)),
+        _ => Ok(Value::Bool(true)),
+    }
+}
+
+fn is_null(args: &Value) -> Result<Value> {
+    let Value::Cons(args) = args else {
+        bail!("should give me an arg list");
+    };
+
+    if let Value::Cons(_) = &args.1 {
+        bail!("only one arg");
+    };
+
+    match &args.0 {
+        Value::Nil => Ok(Value::Bool(true)),
+        _ => Ok(Value::Bool(false)),
+    }
+}
+
+fn is_pair(args: &Value) -> Result<Value> {
+    let Value::Cons(args) = args else {
+        bail!("should give me an arg list");
+    };
+
+    if let Value::Cons(_) = &args.1 {
+        bail!("only one arg");
+    };
+
+    match args.0 {
+        Value::Cons(_) => Ok(Value::Bool(true)),
+        _ => Ok(Value::Bool(false)),
+    }
 }
