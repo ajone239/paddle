@@ -41,7 +41,7 @@ impl Value {
             Value::Bool(val) => *val,
             Value::Num(num) => num.ne(&0.0),
             Value::Str(s) => !s.is_empty(),
-            Value::Cons(pair) => !matches!(pair.0, Self::Nil),
+            Value::Cons(pair) => !(matches!(pair.0, Self::Nil) && matches!(pair.1, Self::Nil)),
             Value::Symbol(_)
             | Value::Form(_)
             | Value::Builtin(_, _)
