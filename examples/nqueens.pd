@@ -34,4 +34,7 @@
                 (cons opt sol))))))
   (sol2 board '()))
 
-(solve (board 20))
+(define (reverse xs)
+  (foldl cons '() xs))
+
+(reverse (solve (board 8)))
