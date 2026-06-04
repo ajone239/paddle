@@ -24,8 +24,9 @@ model.
 - [ ] M2 — make the language runnable
     + [x] tail-call optimization
     + [x] variadic arguments (fix macros after this)
-    + [ ] `set!`
-    + [ ] `let` / `let*`
+    + [x] `set!`
+    + [x] `let` / `let*`
+    + [ ] `let <name>`
     + [ ] error/condition system usable from Paddle
     + [ ] string builtins
         * [ ] `string-length`
