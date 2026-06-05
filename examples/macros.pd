@@ -1,8 +1,6 @@
 (defm (fun args body)
  `(def ,args ,body))
 
-;(fun (test x y) (+ x 1))
-
 (defm (unless cond body)
  `(if (not ,cond) ,body '()))
 
@@ -78,3 +76,43 @@
           `(progn @body...)
           `((lambda (,(car vars)) ,(let*2 (cdr vars) (cdr vals))) ,(car vals))))
       (let*2 vars vals))
+
+;; Results monads
+(define (ok v) (cons 'ok v))
+(define (err e) (cons 'err e))
+
+(define (res? r)
+  (if (pair? r)
+    (|| (= 'ok (car r))
+        (= 'err (car r)))
+    #f))
+(define (ok? r)
+  (if (pair? r) (= 'ok (car r)) #f))
+(define (err? r)
+  (if (pair? r) (= 'err (car r)) #f))
+(define (unwrap r) (cdr r))
+
+(define (unwrap-or-ret r)
+  (if (ok? r) (unwrap r) r))
+
+(define (map-ok f r)
+  (if (ok? r)
+    (ok (f (unwrap r)))
+    r))
+
+(define (and-then f r)
+  (if (ok? r)
+    (f (unwrap r))
+    r))
+
+(defm (let? bindings body...)
+      (define (let?2 bindings)
+        (if (null? bindings)
+          `(progn @body...)
+          (let ((var (car (car bindings)))
+                (expr (cadr (car bindings))))
+            `(let ((,var (unwrap-or-ret (,expr))))
+               (if (err? ,var)
+                 ,var
+                 ,(let?2 (cdr bindings)))))))
+      (let?2 bindings))

@@ -383,7 +383,7 @@ fn eq(args: &Value) -> Result<Value> {
         | (Value::Symbol(last), Value::Str(penu))
         | (Value::Str(last), Value::Symbol(penu))
         | (Value::Symbol(last), Value::Symbol(penu)) => Ok(Value::Bool(penu == last)),
-        _ => Err(BuiltinError::BadEqArgTypes.into()),
+        _ => Ok(Value::Bool(false)),
     }
 }
 

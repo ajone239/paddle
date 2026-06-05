@@ -27,7 +27,7 @@ model.
     + [x] `set!`
     + [x] `let` / `let*`
     + [ ] `let <name>`
-    + [ ] error/condition system usable from Paddle
+    + [x] error/condition system usable from Paddle
     + [ ] string builtins
         * [ ] `string-length`
         * [ ] `string-ref`
