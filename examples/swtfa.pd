@@ -1,6 +1,19 @@
-(def (fib n)
-     (if (< n 1)
-         1
-         (+ (fib (- n 2)) (fib (- n 1)))))
+(def (safe-div x y)
+     (if (= y 0)
+       (err "div by zero")
+       (ok (/ x y))))
 
-(map fib (range 25))
+(def (compute x y z)
+     (let? ((a (safe-div x y))
+            (b (safe-div a z)))
+           (ok (* a b))))
+
+(def (main)
+     (print (safe-div 10 2))
+     (print (safe-div 10 0))
+     (print)
+     (print (compute 6 2 3))
+     (print (compute 1 2 0))
+     (print (compute 1 0 3)))
+
+(main)

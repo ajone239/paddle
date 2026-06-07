@@ -1,11 +1,11 @@
 use std::{cell::RefCell, fs::read_to_string, path::PathBuf, rc::Rc};
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use clap::Parser;
 
 use paddle::repl::run_repl;
 use paddle_core::{
-    cursor::{Cursor, display_result, process},
+    cursor::{Cursor, display_result},
     eval::Env,
     lexer,
 };
@@ -25,17 +25,13 @@ struct Cli {
     no_std: bool,
 }
 
-static STD_LIB: &str = include_str!("../../examples/base.pd");
-static STD_MAC: &str = include_str!("../../examples/macros.pd");
-
 fn main() -> Result<()> {
     let cli = Cli::parse();
-    let env = Rc::new(RefCell::new(Env::default()));
-
-    if !cli.no_std {
-        process(STD_LIB, env.clone()).context("failed to parse the std lib")?;
-        process(STD_MAC, env.clone()).context("failed to parse the std lib macros")?;
-    }
+    let env = if !cli.no_std {
+        Env::with_stdlib()?
+    } else {
+        Rc::new(RefCell::new(Env::default()))
+    };
 
     if let Some(file_path) = cli.file.clone() {
         let contents = read_to_string(file_path)?;

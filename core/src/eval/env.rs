@@ -1,9 +1,15 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use anyhow::{Ok, Result, bail};
+use anyhow::{Context, Ok, Result, bail};
 use thiserror::Error;
 
-use crate::eval::value::{Builtin, BuiltinFn, Value};
+use crate::{
+    cursor::process,
+    eval::value::{Builtin, BuiltinFn, Value},
+};
+
+static STD_LIB: &str = include_str!("../../../examples/base.pd");
+static STD_MAC: &str = include_str!("../../../examples/macros.pd");
 
 #[derive(Debug, PartialEq)]
 pub struct Env {
@@ -45,6 +51,15 @@ impl Env {
         }
 
         None
+    }
+
+    pub fn with_stdlib() -> Result<Rc<RefCell<Self>>> {
+        let env = Rc::new(RefCell::new(Env::default()));
+
+        process(STD_LIB, env.clone()).context("failed to parse the std lib")?;
+        process(STD_MAC, env.clone()).context("failed to parse the std lib macros")?;
+
+        Ok(env)
     }
 
     pub fn small_dump(&self) {
@@ -368,7 +383,7 @@ fn eq(args: &Value) -> Result<Value> {
         | (Value::Symbol(last), Value::Str(penu))
         | (Value::Str(last), Value::Symbol(penu))
         | (Value::Symbol(last), Value::Symbol(penu)) => Ok(Value::Bool(penu == last)),
-        _ => Err(BuiltinError::BadEqArgTypes.into()),
+        _ => Ok(Value::Bool(false)),
     }
 }
 
