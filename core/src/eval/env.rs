@@ -195,8 +195,6 @@ pub enum BuiltinError {
     BadModArgTypes,
     #[error("Modulo: Expected 2 arguments")]
     BadModArgCount,
-    #[error("Eq: Expected comparable types")]
-    BadEqArgTypes,
     #[error("Eq: Expected 2 arguments")]
     BadEqArgCount,
 }
