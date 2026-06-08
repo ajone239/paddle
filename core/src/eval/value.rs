@@ -210,6 +210,7 @@ pub enum Form {
     DefineMacro,
     Lambda,
     Progn,
+    SetBang,
 }
 
 impl Form {
@@ -220,6 +221,7 @@ impl Form {
             "require" => Some(Self::Require),
             "eval" => Some(Self::Eval),
             "progn" => Some(Self::Progn),
+            "set!" => Some(Self::SetBang),
             "quote" | "'" => Some(Self::Quote),
             "quasiquote" | "`" => Some(Self::QuasiQuote),
             "unquotesplicing" | "@" => Some(Self::UnQuoteSplicing),

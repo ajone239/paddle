@@ -26,7 +26,7 @@ model.
     + [x] variadic arguments (fix macros after this)
     + [ ] `set!`
     + [x] `let` / `let*`
-    + [ ] `let <name>`
+    + [x] `let <name>`
     + [x] error/condition system usable from Paddle
     + [ ] string builtins
         * [ ] `string-length`

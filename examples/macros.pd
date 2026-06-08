@@ -77,6 +77,21 @@
           `((lambda (,(car vars)) ,(let*2 (cdr vars) (cdr vals))) ,(car vals))))
       (let*2 vars vals))
 
+(defm (letrec pairs body...)
+      (define vars (map car pairs))
+      (define vars-nil (map (lambda (v) `(,v ())) vars))
+      (define set-pairs (map (lambda (p) `(set! ,(car p) ,(cadr p))) pairs))
+      `(let (@vars-nil)
+                @set-pairs
+                @body...))
+
+(defm (letn name pairs body...)
+      (define vars (map car pairs))
+      (define vals (map cadr pairs))
+      `(letrec ((,name (lambda (@vars) @body...)))
+         (,name @vals)))
+
+
 ;; Results monads
 (define (ok v) (cons 'ok v))
 (define (err e) (cons 'err e))

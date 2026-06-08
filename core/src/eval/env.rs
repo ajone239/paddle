@@ -38,6 +38,28 @@ impl Env {
         self.env.insert(name.to_owned(), value);
     }
 
+    pub fn set_bang(&mut self, name: &str, value: Value) -> Result<()> {
+        if self.env.get(name).is_some() {
+            self.env.insert(name.to_string(), value);
+            return Ok(());
+        }
+
+        let mut parent = self.parent.clone();
+        while let Some(penv) = parent {
+            let mut benv = penv.borrow_mut();
+            if benv.env.get(name).is_some() {
+                benv.env.insert(name.to_string(), value);
+                return Ok(());
+            }
+            parent = benv.parent.clone();
+        }
+
+        bail!(
+            "Can only set! an existing variable: {} isn't in scope",
+            name
+        );
+    }
+
     pub fn resolve(&self, name: &str) -> Option<Value> {
         if let Some(val) = self.builtin.get(name) {
             return Some(val.clone());

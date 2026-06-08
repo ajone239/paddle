@@ -175,6 +175,26 @@ fn eval_form(form: Form, tail: Value, env: Rc<RefCell<Env>>) -> Result<Trampolin
 
             Ok(Trampoline::Done(Value::Nil))
         }
+        Form::SetBang => {
+            let mut list = tail.to_cons_iter();
+            let head = list.next().ok_or(EvalError::BadSetBangArgs)?;
+
+            let tail = list.next().ok_or(EvalError::BadSetBangArgs)?;
+
+            if list.next().is_some() {
+                return Err(EvalError::BadSetBangArgs.into());
+            }
+
+            let Value::Symbol(atom) = head else {
+                bail!("Bad set! head: {}", head)
+            };
+
+            let value = eval(tail.clone(), env.clone())?;
+
+            env.borrow_mut().set_bang(atom, value)?;
+
+            Ok(Trampoline::Done(Value::Nil))
+        }
         Form::If => {
             let mut list = tail.to_cons_iter();
 

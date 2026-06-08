@@ -19,6 +19,8 @@ pub enum EvalError {
     BadRequireArgCount(usize),
     #[error("Require takes strings or symbols as args")]
     BadRequireArgs,
+    #[error("Too few arguments were provided to the set! statement")]
+    BadSetBangArgs,
     #[error("Too few arguments were provided to the define statement")]
     BadDefineArgs,
     #[error("Too few arguments were provided to the if statement")]

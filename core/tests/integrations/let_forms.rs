@@ -1,6 +1,6 @@
 use super::*;
 
-// ── let ──────────────────────────────────────────────────────────────────
+// let
 
 #[test]
 fn let_single_binding() {
@@ -34,7 +34,7 @@ fn let_bindings_are_parallel() {
     assert_eq!(run_macros("(def x 10) (let ((x 20) (y x)) y)"), num(10.0));
 }
 
-// ── let* ─────────────────────────────────────────────────────────────────
+// let*
 
 #[test]
 fn let_star_later_binding_sees_earlier() {
@@ -54,5 +54,35 @@ fn let_star_inner_shadows_outer() {
     assert_eq!(
         run_macros("(def z 99) (let* ((z 7) (w (* z 2))) w)"),
         num(14.0)
+    );
+}
+
+//  letrec
+#[test]
+fn letrec_test() {
+    assert_eq!(
+        run_macros("(letrec ((f (.\\ (x) (* x 2))) (g (.\\ (y) (+ y 1)))) (def x 2) (f (g x)))"),
+        num(6.0)
+    );
+}
+
+#[test]
+fn letrec_mutual_recursion() {
+    assert_eq!(
+        run_macros(
+            "(letrec ((ev? (.\\ (n) (if (= n 0) #t (od? (- n 1))))) \
+                              (od? (.\\ (n) (if (= n 0) #f (ev? (- n 1)))))) \
+                       (ev? 10))"
+        ),
+        Value::Bool(true)
+    );
+}
+
+//  letn
+#[test]
+fn letn_sum() {
+    assert_eq!(
+        run_macros("(letn loop ((n 10) (acc 0)) (if (= 0 n) acc (loop (- n 1) (+ n acc))))"),
+        num(55.0)
     );
 }
