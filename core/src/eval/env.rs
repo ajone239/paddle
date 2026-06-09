@@ -176,6 +176,10 @@ impl Default for Env {
             ("print", print),
             ("atom?", is_atom),
             ("number?", is_number),
+            ("symbol?", is_symbol),
+            ("string?", is_string),
+            ("char?", is_char),
+            ("char", make_char),
             ("null?", is_null),
             ("pair?", is_pair),
             ("getchar", getchar),
@@ -406,6 +410,18 @@ fn eq(args: &Value) -> Result<Value> {
         (Value::Num(last), Value::Num(penu)) => Ok(Value::Bool(penu == last)),
         (Value::Nil, Value::Nil) => Ok(Value::Bool(true)),
         (_, Value::Nil) | (Value::Nil, _) => Ok(Value::Bool(false)),
+        (Value::Char(last), Value::Char(penu)) => Ok(Value::Bool(penu == last)),
+        (Value::Char(byte), Value::Str(s))
+        | (Value::Char(byte), Value::Symbol(s))
+        | (Value::Str(s), Value::Char(byte))
+        | (Value::Symbol(s), Value::Char(byte)) => {
+            if s.len() != 1 {
+                return Ok(Value::Bool(false));
+            }
+
+            let s = s.bytes().next().unwrap();
+            Ok(Value::Bool(s == *byte))
+        }
         (Value::Str(last), Value::Str(penu))
         | (Value::Symbol(last), Value::Str(penu))
         | (Value::Str(last), Value::Symbol(penu))
@@ -532,6 +548,51 @@ fn is_number(args: &Value) -> Result<Value> {
     }
 }
 
+fn is_symbol(args: &Value) -> Result<Value> {
+    let Value::Cons(args) = args else {
+        bail!("should give me an arg list");
+    };
+
+    if let Value::Cons(_) = &args.1 {
+        bail!("only one arg");
+    };
+
+    match args.0 {
+        Value::Symbol(_) => Ok(Value::Bool(true)),
+        _ => Ok(Value::Bool(false)),
+    }
+}
+
+fn is_char(args: &Value) -> Result<Value> {
+    let Value::Cons(args) = args else {
+        bail!("should give me an arg list");
+    };
+
+    if let Value::Cons(_) = &args.1 {
+        bail!("only one arg");
+    };
+
+    match args.0 {
+        Value::Char(_) => Ok(Value::Bool(true)),
+        _ => Ok(Value::Bool(false)),
+    }
+}
+
+fn is_string(args: &Value) -> Result<Value> {
+    let Value::Cons(args) = args else {
+        bail!("should give me an arg list");
+    };
+
+    if let Value::Cons(_) = &args.1 {
+        bail!("only one arg");
+    };
+
+    match args.0 {
+        Value::Str(_) => Ok(Value::Bool(true)),
+        _ => Ok(Value::Bool(false)),
+    }
+}
+
 fn is_atom(args: &Value) -> Result<Value> {
     let Value::Cons(args) = args else {
         bail!("should give me an arg list");
@@ -586,6 +647,26 @@ fn getchar(_args: &Value) -> Result<Value> {
         Ok(_) => Ok(Value::Char(buf[0])),
         Err(err) => Err(err.into()),
     }
+}
+
+fn make_char(args: &Value) -> Result<Value> {
+    let Value::Cons(args) = args else {
+        bail!("should give me an arg list");
+    };
+
+    if let Value::Cons(_) = &args.1 {
+        bail!("only one arg");
+    };
+
+    let byte = match args.0 {
+        Value::Symbol(ref args) | Value::Str(ref args) if args.len() == 1 => {
+            args.bytes().next().unwrap()
+        }
+        Value::Num(byte) if byte > 0.0 && byte < 256.0 => byte as u8,
+        _ => bail!("char takes num, sym, or str"),
+    };
+
+    Ok(Value::Char(byte))
 }
 
 fn getline(_args: &Value) -> Result<Value> {

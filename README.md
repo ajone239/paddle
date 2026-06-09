@@ -42,6 +42,8 @@ model.
     + [ ] `paddle.pd` — meta-circular evaluator
     + [ ] `forth.pd` — Forth interpreter in Paddle
     + [ ] AoC days in Paddle
+- [ ] M4 -- onwards
+    + [ ] bust up the built-ins
 
 Out of scope: bytecode VM, lexer iterator, AST arena.
 
