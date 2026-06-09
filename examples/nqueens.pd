@@ -1,9 +1,8 @@
 (define (repeat n xs)
-  (define (repeat2 n xs acc)
+  (letn loop ((n n) (xs xs) (acc '()))
     (if (<= n 0)
       acc
-      (repeat2 (- n 1) xs (cons xs acc))))
-  (repeat2 n xs '()))
+      (loop (- n 1) xs (cons xs acc)))))
 
 (define (board n)
   (repeat n (range n)))
@@ -13,26 +12,24 @@
     (= v x)))
 
 (define (eliminate xs val)
-  (define (elim xs val i)
+  (letn loop ((xs xs) (val val) (i 1))
     (when (pair? xs)
-      (progn
-        (define row (car xs))
-        (define rest (cdr xs))
-        (define elims (map (lambda (x) (+ val (* x i))) '(-1 0 1)))
-        (define nrow (filter (lambda (v) (not (memv v elims))) row))
-        (cons nrow (elim rest val (+ i 1))))))
-  (elim xs val 1))
+      (let* ((row (car xs))
+             (rest (cdr xs))
+             (ef (lambda (x) (+ val (* x i))))
+             (elims (map ef '(-1 0 1)))
+             (ff (lambda (v) (not (memv v elims))))
+             (nrow (filter ff row)))
+        (cons nrow (loop rest val (+ i 1)))))))
 
 (define (solve board)
-  (define (sol2 board sol)
+  (letn loop ((b board) (sol '()))
     (cond
-      ((null? board) sol)
-      ((null? (car board)) #f)
-      (else
-        (for/or (opt (car board))
-          (sol2 (eliminate (cdr board) opt)
-                (cons opt sol))))))
-  (sol2 board '()))
+      ((null? b) sol)
+      ((null? (car b)) #f)
+      (else (for/or (opt (car b))
+              (loop (eliminate (cdr b) opt)
+                    (cons opt sol)))))))
 
 (define (reverse xs)
   (foldl cons '() xs))
