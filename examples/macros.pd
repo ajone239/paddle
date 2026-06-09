@@ -1,14 +1,8 @@
-(defm (fun args body)
- `(def ,args ,body))
+(defm (unless cond body...)
+ `(if (not ,cond) (progn @body...) '()))
 
-(defm (unless cond body)
- `(if (not ,cond) ,body '()))
-
-(def (safe-div x y)
-    (unless (= y 0) (/ x y)))
-
-(defm (when cond body)
- `(if ,cond ,body '()))
+(defm (when cond body...)
+ `(if ,cond (progn @body...) '()))
 
 ; rec macros have to be defined like this so their args get processed
 (define else #t)
@@ -20,36 +14,27 @@
             ,(cond2 (cdr pairs)))))
     (cond2 pairs...))
 
-(def (even-odd xs)
-     (when xs
-        (cons
-          (cond
-            ((= 0 (car xs)) 'zero)
-            ((= 0 (% (car xs) 2)) 'even)
-            (else 'odd))
-          (even-odd (cdr xs)))))
-
-(defm (for pair body)
+(defm (for pair body...)
       (define bind (car pair))
       (define iter (eval (cdr pair)))
       (define (for2 xs)
         (if (not xs)
             'nil
             `((lambda (,bind)
-                ,(body)
+                @body...
                 ,(for2 (cdr xs)))
               ,(car xs))))
       (for2 iter))
 
-(defm (for/list pair body)
+(defm (for/list pair body...)
       (define (for2 xs)
         (if (not xs)
             '()
             `(cons ((lambda (,bind)
-                ,(body)) ,(car xs)) ,(for2 (cdr xs)))))
+                @body...) ,(car xs)) ,(for2 (cdr xs)))))
       (for2 iter))
 
-(defm (for/or pair body)
+(defm (for/or pair body...)
       (define bind (car pair))
       (define iter (eval (cdr pair)))
       (define (for2 xs)
@@ -57,7 +42,7 @@
             #f
             `(progn
                (define res
-                 ((lambda (,bind) ,(body)) ,(car xs)))
+                 ((lambda (,bind) @body...) ,(car xs)))
                (if res
                  res
                  ,(for2 (cdr xs))))))
