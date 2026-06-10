@@ -37,8 +37,5 @@ fn stdin_evaluates_expression() {
 
 #[test]
 fn missing_file_exits_nonzero() {
-    cmd()
-        .args(["nonexistent.pd"])
-        .assert()
-        .failure();
+    cmd().args(["nonexistent.pd"]).assert().failure();
 }
