@@ -1,0 +1,20 @@
+(define (get-lines)
+  (letn loop ((acc '()))
+        (let ((line (read-line)))
+          (if (err? line)
+            (reverse acc)
+            (loop (cons line acc))))))
+
+; word count is busted but ¯\_(ツ)_/¯
+(define (wc cont)
+  (letn loop ((cont cont) (l 0) (w 0) (c 0))
+        (if (null? cont)
+          (list l w c)
+          (let* ((line (car cont))
+                 (rest (cdr cont))
+                 (nc (len line))
+                 (nw (len (filter (.\ (c) (= c " ")) line))))
+            (loop (rest) (+ l 1) (+ w nw 1) (+ c nc 1))))))
+
+
+(wc (get-lines))
