@@ -34,16 +34,21 @@ model.
         * [ ] `substring`
         * [ ] `string-append`
         * [ ] `string->list`
+        * [ ] `string->num`
+        * [ ] `char->num`
         * [ ] `list->string`
         * [ ] `string=?`
     + [x] `getchar` builtin
-    + [ ] `read-line` in Paddle
+    + [x] `read-line` in Paddle
 - [ ] M3 — goalpost programs
     + [ ] `paddle.pd` — meta-circular evaluator
     + [ ] `forth.pd` — Forth interpreter in Paddle
     + [ ] AoC days in Paddle
 - [ ] M4 -- onwards
     + [ ] bust up the built-ins
+    + [ ] blend result macros and value.rs
+    + [ ] `if __name__ == '__main__': <code>`
+    + [ ] path based imports
 
 Out of scope: bytecode VM, lexer iterator, AST arena.
 

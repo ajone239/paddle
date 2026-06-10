@@ -1,7 +1,7 @@
 use std::{
     cell::RefCell,
     collections::HashMap,
-    io::{self, Read},
+    io::{self, ErrorKind, Read},
     rc::Rc,
 };
 
@@ -645,6 +645,10 @@ fn getchar(_args: &Value) -> Result<Value> {
 
     match res {
         Ok(_) => Ok(Value::Char(buf[0])),
+        Err(err) if err.kind() == ErrorKind::UnexpectedEof => Ok(Value::Cons(Rc::new((
+            Value::Symbol("err".into()),
+            Value::Str("EOF".into()),
+        )))),
         Err(err) => Err(err.into()),
     }
 }
