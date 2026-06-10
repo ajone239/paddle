@@ -4,6 +4,7 @@ mod builtin_errors;
 mod cadr;
 mod car;
 mod cdr;
+mod char_tests;
 mod cons;
 mod empty;
 mod env;

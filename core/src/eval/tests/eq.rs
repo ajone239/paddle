@@ -70,3 +70,43 @@ fn eq_number_nil() {
 fn eq_nil_false() {
     assert_eq!(eval_str("(= nil #f)"), Value::Bool(false));
 }
+
+#[test]
+fn eq_chars_equal() {
+    assert_eq!(eval_str("(= (char 65) (char 65))"), Value::Bool(true));
+}
+
+#[test]
+fn eq_chars_unequal() {
+    assert_eq!(eval_str("(= (char 65) (char 66))"), Value::Bool(false));
+}
+
+#[test]
+fn eq_char_and_string_same_content() {
+    assert_eq!(eval_str(r#"(= (char 65) "A")"#), Value::Bool(true));
+}
+
+#[test]
+fn eq_string_and_char_same_content() {
+    assert_eq!(eval_str(r#"(= "A" (char 65))"#), Value::Bool(true));
+}
+
+#[test]
+fn eq_char_and_symbol_same_content() {
+    assert_eq!(eval_str("(= (char 65) 'A)"), Value::Bool(true));
+}
+
+#[test]
+fn eq_symbol_and_char_same_content() {
+    assert_eq!(eval_str("(= 'A (char 65))"), Value::Bool(true));
+}
+
+#[test]
+fn eq_char_and_multi_char_string() {
+    assert_eq!(eval_str(r#"(= (char 65) "AB")"#), Value::Bool(false));
+}
+
+#[test]
+fn eq_char_and_number() {
+    assert_eq!(eval_str("(= (char 65) 65)"), Value::Bool(false));
+}

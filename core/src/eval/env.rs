@@ -666,7 +666,7 @@ fn make_char(args: &Value) -> Result<Value> {
         Value::Symbol(ref args) | Value::Str(ref args) if args.len() == 1 => {
             args.bytes().next().unwrap()
         }
-        Value::Num(byte) if byte > 0.0 && byte < 256.0 => byte as u8,
+        Value::Num(byte) if byte >= 0.0 && byte < 256.0 => byte as u8,
         _ => bail!("char takes num, sym, or str"),
     };
 

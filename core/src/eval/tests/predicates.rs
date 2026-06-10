@@ -99,6 +99,77 @@ fn number_of_list() {
     assert_eq!(eval_str("(number? '(1))"), Value::Bool(false));
 }
 
+// symbol?
+
+#[test]
+fn symbol_of_symbol() {
+    assert_eq!(eval_str("(symbol? 'foo)"), Value::Bool(true));
+}
+
+#[test]
+fn symbol_of_string() {
+    assert_eq!(eval_str(r#"(symbol? "foo")"#), Value::Bool(false));
+}
+
+#[test]
+fn symbol_of_number() {
+    assert_eq!(eval_str("(symbol? 1)"), Value::Bool(false));
+}
+
+#[test]
+fn symbol_of_char() {
+    assert_eq!(eval_str("(symbol? (char 65))"), Value::Bool(false));
+}
+
+// string?
+
+#[test]
+fn string_of_string() {
+    assert_eq!(eval_str(r#"(string? "foo")"#), Value::Bool(true));
+}
+
+#[test]
+fn string_of_symbol() {
+    assert_eq!(eval_str("(string? 'foo)"), Value::Bool(false));
+}
+
+#[test]
+fn string_of_number() {
+    assert_eq!(eval_str("(string? 1)"), Value::Bool(false));
+}
+
+#[test]
+fn string_of_char() {
+    assert_eq!(eval_str("(string? (char 65))"), Value::Bool(false));
+}
+
+// char?
+
+#[test]
+fn char_of_char() {
+    assert_eq!(eval_str("(char? (char 65))"), Value::Bool(true));
+}
+
+#[test]
+fn char_of_string() {
+    assert_eq!(eval_str(r#"(char? "A")"#), Value::Bool(false));
+}
+
+#[test]
+fn char_of_symbol() {
+    assert_eq!(eval_str("(char? 'A)"), Value::Bool(false));
+}
+
+#[test]
+fn char_of_number() {
+    assert_eq!(eval_str("(char? 65)"), Value::Bool(false));
+}
+
+#[test]
+fn char_of_nil() {
+    assert_eq!(eval_str("(char? nil)"), Value::Bool(false));
+}
+
 // atom?
 
 #[test]
