@@ -17,6 +17,7 @@ mod predicates;
 mod quote;
 mod set_bang;
 mod splice;
+mod string_tests;
 mod tco;
 mod variadic;
 
