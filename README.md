@@ -21,14 +21,14 @@ model.
     + [x] cons cells (Rc-cells)
     + [x] kill pervasive clones in `eval`/`apply`
     + [x] fix nested-vector handling
-- [ ] M2 — make the language runnable
+- [x] M2 — make the language runnable
     + [x] tail-call optimization
     + [x] variadic arguments (fix macros after this)
     + [x] `set!`
     + [x] `let` / `let*`
     + [x] `let <name>`
     + [x] error/condition system usable from Paddle
-    + [ ] string builtins
+    + [x] string builtins
         * [x] `string-length`
         * [x] `string-ref`
         * [x] `substring`
