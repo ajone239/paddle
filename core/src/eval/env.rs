@@ -93,7 +93,7 @@ impl Env {
     }
 
     pub fn set_bang(&mut self, name: &str, value: Value) -> Result<()> {
-        if self.env.get(name).is_some() {
+        if self.env.contains_key(name) {
             self.env.insert(name.to_string(), value);
             return Ok(());
         }
@@ -101,7 +101,7 @@ impl Env {
         let mut parent = self.parent.clone();
         while let Some(penv) = parent {
             let mut benv = penv.borrow_mut();
-            if benv.env.get(name).is_some() {
+            if benv.env.contains_key(name) {
                 benv.env.insert(name.to_string(), value);
                 return Ok(());
             }
