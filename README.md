@@ -46,7 +46,7 @@ model.
     + [ ] AoC days in Paddle
 - [ ] M4 -- onwards
     + [x] bust up the built-ins
-    + [ ] no print intrinsic
+    + [x] no print intrinsic
     + [ ] wasm playground
     + [ ] blend result macros and value.rs
     + [ ] `if __name__ == '__main__': <code>`

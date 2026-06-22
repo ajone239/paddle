@@ -64,6 +64,7 @@ pub fn process(contents: &str, env: Rc<RefCell<Env>>) -> Result<Vec<Value>> {
 pub fn display_result(res: Result<Value>) {
     match res {
         Err(err) => println!("ERROR: {:?}", err),
+        Ok(Value::NoPrint) => {}
         Ok(val) => println!("{}", val),
     }
 }

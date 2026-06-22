@@ -8,6 +8,7 @@ use crate::eval::env::Env;
 
 #[derive(Clone, PartialEq)]
 pub enum Value {
+    NoPrint,
     Nil,
     Bool(bool),
     Char(u8),
@@ -38,6 +39,7 @@ pub enum Value {
 impl Value {
     pub fn truthy(&self) -> bool {
         match self {
+            Value::NoPrint => false,
             Value::Nil => false,
             Value::Bool(val) => *val,
             Value::Num(num) => num.ne(&0.0),
@@ -88,6 +90,7 @@ impl Value {
 impl Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Value::NoPrint => Ok(()),
             Value::Nil => write!(f, "nil"),
             Value::Bool(b) => write!(f, "{}", if *b { "#t" } else { "#f" }),
             Value::Num(n) => write!(f, "{}", n),
@@ -147,6 +150,7 @@ impl FromIterator<Value> for Value {
 impl Debug for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Value::NoPrint => Ok(()),
             Value::Nil => write!(f, "Nil"),
             Value::Bool(arg0) => f.debug_tuple("Bool").field(arg0).finish(),
             Value::Num(arg0) => f.debug_tuple("Num").field(arg0).finish(),

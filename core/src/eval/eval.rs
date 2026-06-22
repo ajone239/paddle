@@ -152,7 +152,7 @@ fn eval_form(form: Form, tail: Value, env: Rc<RefCell<Env>>) -> Result<Trampolin
 
             process_file(file_name.to_string().into(), env)?;
 
-            Ok(Trampoline::Done(Value::Nil))
+            Ok(Trampoline::Done(Value::NoPrint))
         }
         Form::Progn => {
             let mut body = tail.to_cons_iter().peekable();
@@ -173,7 +173,7 @@ fn eval_form(form: Form, tail: Value, env: Rc<RefCell<Env>>) -> Result<Trampolin
         Form::DefineMacro | Form::Define => {
             define(&form, &tail, env)?;
 
-            Ok(Trampoline::Done(Value::Nil))
+            Ok(Trampoline::Done(Value::NoPrint))
         }
         Form::SetBang => {
             let mut list = tail.to_cons_iter();
@@ -193,7 +193,7 @@ fn eval_form(form: Form, tail: Value, env: Rc<RefCell<Env>>) -> Result<Trampolin
 
             env.borrow_mut().set_bang(atom, value)?;
 
-            Ok(Trampoline::Done(Value::Nil))
+            Ok(Trampoline::Done(Value::NoPrint))
         }
         Form::If => {
             let mut list = tail.to_cons_iter();
