@@ -1,11 +1,9 @@
-(require examples/macros.pd)
-
 (define (add1 x) (+ 1 x))
 
 (define (take xs n)
   (define (take2 xs n ys)
     (if (= 0 n)
-       ys
+       (reverse ys)
        (take2 (cdr xs) (- n 1) (cons (car xs) ys))))
   (take2 xs n '()))
 
@@ -33,14 +31,6 @@
       (car l)
       (get-n (cdr l) (- i 1))))
 
-(define (seq n)
-  (define (inseq n acc)
-      (if (< n 0)
-          acc
-          (inseq (- n 1) (cons n acc))))
-  (inseq n '()))
-
-
 (define (foo xs ys)
   (when xs
     (when ys
@@ -61,8 +51,12 @@
       ys
       (cons (car xs) (bat (cdr xs) ys))))
 
+(define (get-row b i)
+  (let ((r (* 9 i)))
+    (take (skip b r) 9)))
+
 (define (get-rows b)
-  (define is (seq 8))
+  (define is (range 9))
   (define rs (map (lambda (i) (* 9 i)) is))
   (map (lambda (i) (take (skip b i) 9)) rs))
 
@@ -75,8 +69,8 @@
   (define dr (dedup r))
   (= (length r) (length dr)))
 
-(define (check-rows b)
-  (map check-set (get-rows b)))
+(define (check-row b i)
+  (check-set (get-row b i)))
 
 (define (get-col b i)
   (map (lambda (r) (get-n r i)) (get-rows b)))
@@ -84,31 +78,24 @@
 (define (check-col b i)
   (check-set (get-col b i)))
 
-(define (check-cols b)
-  (map (lambda (i) (check-set (get-col b i))) (seq 8)))
-
-(define (check-squares b)
-  (define base (seq 2))
-  (define squares (foo base base))
-  (map (lambda (s) (check-square b (car s) (cdr s))) squares))
+(define (get-square b i j)
+  (define base (range 3))
+  (define js (map (lambda (x) (+ x (* 3 j))) base))
+  (define is (map (lambda (x) (+ x (* 3 i))) base))
+  (define rows (get-rows b))
+  (define squares (foo is js))
+  (map (lambda (s) (get-n (get-n rows (car s)) (cdr s))) squares))
 
 (define (check-square b i j)
   (check-set (get-square b i j)))
 
-(define (get-square b i j)
-  (define base (seq 2))
-  (define js (map (lambda (x) (+ x (* 3 j))) base))
-  (define is (map (lambda (x) (+ x (* 3 i))) base))
-  (define squares (foo is js))
-  (map (lambda (s) (get-n (get-n (get-rows b) (car s)) (cdr s)))
-       squares))
-
-(define (check-board b)
-  (define (all-good l) (not (for/or (v l) (not v))))
-  (when (all-good (check-rows b))
-      (when (all-good (check-cols b))
-          (when (all-good (check-squares b)) #t))))
-
+(define (check-move b i)
+  (def r (// i 9))
+  (def c (% i 9))
+  (when (check-row b r)
+    (when (check-col b c)
+      (when (check-square b (// r 3) (// c 3))
+        #t))))
 
 (define (lens l i v)
   (when l
@@ -124,11 +111,10 @@
     ((>= i (* 9 9)) b)
     ((not (= 0 (get-n b i))) (solve-board b (+ 1 i)))
     (else
-      (for/or (val (map add1 (seq 8)))
+      (for/or (val (map add1 (range 9)))
         (progn
           (define test (lens b i val))
-          ; TODO(austin.jones): make check board only check changes
-          (when (check-board test)
+          (when (check-move test i)
             (solve-board test (+ 1 i))))))))
 
 (define board '(0 6 0 1 0 4 0 5 0
