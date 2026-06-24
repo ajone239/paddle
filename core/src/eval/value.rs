@@ -97,7 +97,7 @@ impl Display for Value {
             Value::Char(b) => write!(f, "'{}'", char::from(*b)),
             Value::Symbol(s) => write!(f, ":{}", s),
             Value::Form(form) => write!(f, "{:?}", form),
-            Value::Str(s) => write!(f, "\"{}\"", s),
+            Value::Str(s) => write!(f, "{}", s),
             Value::Cons(pair) => {
                 let first = &pair.0;
                 let mut second = &pair.1;

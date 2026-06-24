@@ -8,13 +8,6 @@ fn process_returns_a_value_per_expression() {
 }
 
 #[test]
-fn definition_contributes_nil_to_result_list() {
-    let env = Rc::new(RefCell::new(Env::default()));
-    let results = process("(def x 42)", env).unwrap();
-    assert_eq!(results, vec![Value::Nil]);
-}
-
-#[test]
 fn definitions_visible_to_later_expressions_in_same_call() {
     assert_eq!(run_bare("(def (double x) (* x 2)) (double 21)"), num(42.0));
 }

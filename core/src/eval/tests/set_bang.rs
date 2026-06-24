@@ -22,8 +22,8 @@ fn set_bang_from_func() {
 }
 
 #[test]
-fn set_bang_returns_nil() {
-    assert_eq!(eval_str_env(&["(def x 3)", "(set! x 5)"]), Value::Nil)
+fn set_bang_returns_no_print() {
+    assert_eq!(eval_str_env(&["(def x 3)", "(set! x 5)"]), Value::NoPrint)
 }
 
 #[test]

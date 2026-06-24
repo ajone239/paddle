@@ -50,8 +50,8 @@ fn define_func_multi_body() {
 }
 
 #[test]
-fn define_func_returns_nil() {
-    assert_eq!(eval_str("(def (f x) (+ x 1))"), Value::Nil);
+fn define_func_returns_no_print() {
+    assert_eq!(eval_str("(def (f x) (+ x 1))"), Value::NoPrint);
 }
 
 #[test]
@@ -113,8 +113,8 @@ fn redefine() {
 }
 
 #[test]
-fn define_returns_nil() {
-    assert_eq!(eval_str("(def x 5)"), Value::Nil);
+fn define_returns_no_print() {
+    assert_eq!(eval_str("(def x 5)"), Value::NoPrint);
 }
 
 #[test]
