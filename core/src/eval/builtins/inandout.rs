@@ -16,7 +16,7 @@ pub fn print(args: &Value) -> Result<Value> {
 
     println!("{}", out);
 
-    Ok(Value::Nil)
+    Ok(Value::NoPrint)
 }
 
 pub fn getchar(_args: &Value) -> Result<Value> {
