@@ -16,7 +16,8 @@
         (else
           (let ((head (paddle op)))
             ; call here
-            (print head)))))))
+            (print head)
+            (print args)))))))
 (define (bi? op)
   (|| (= '+ op)
       (= '* op)
@@ -114,4 +115,6 @@
 
 ; (paddle program)
 ; (paddle '(+ 1 (* 2 (- 10 (/ 6 2)))))
-(paddle '((plam (x) (+ x x)) 2))
+(paddle '(pbegin
+          (pdef dub (plam (x) (+ x x)))
+          (dub 2)))
