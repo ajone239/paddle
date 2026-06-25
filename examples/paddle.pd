@@ -14,9 +14,9 @@
         ((bi? op) (apply-bi op (map paddle args)))
         ((form? op) (apply-form op args))
         (else
-          (progn
-            (print 'fail op args)
-            (err "unsupported apply")))))))
+          (let ((head (paddle op)))
+            ; call here
+            (print head)))))))
 (define (bi? op)
   (|| (= '+ op)
       (= '* op)
@@ -112,6 +112,6 @@
         (* three four)))
 
 
-(paddle program)
-(paddle '(+ 1 (* 2 (- 10 (/ 6 2)))))
-; (paddle '((plam (x) (+ x x)) 2))
+; (paddle program)
+; (paddle '(+ 1 (* 2 (- 10 (/ 6 2)))))
+(paddle '((plam (x) (+ x x)) 2))
