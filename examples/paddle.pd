@@ -15,9 +15,24 @@
         ((form? op) (apply-form op args))
         (else
           (let ((head (paddle op)))
-            ; call here
-            (print head)
-            (print args)))))))
+            (call head args)))))))
+
+  (define (call fn args)
+    (let ((args (if (lam? fn) (map paddle args) args))
+          (largs (lam-args fn))
+          (body (lam-body fn)))
+      (print 'args args)
+      (print 'largs largs)
+      (print 'body body)
+      (print my-env)
+      (letn loop ((as args)
+                  (ls largs))
+            (when (not (null? as))
+              (env-set! my-env (car ls) (car as))
+              (loop (cdr as) (cdr ls))))
+      (print my-env)
+      (paddle body)))
+
 (define (bi? op)
   (|| (= '+ op)
       (= '* op)
@@ -106,15 +121,43 @@
 
 (def my-env '())
 
-(def program
+(def var-test
      '(pbegin
         (pdef three (/ 27 9))
         (pdef four (+ 2 2))
         (* three four)))
 
+(def plam-test
+     '(pbegin
+        (pdef dub (plam (x) (+ x x)))
+        (dub 2)))
 
-; (paddle program)
-; (paddle '(+ 1 (* 2 (- 10 (/ 6 2)))))
-(paddle '(pbegin
-          (pdef dub (plam (x) (+ x x)))
-          (dub 2)))
+(def plam-test-2
+     '(pbegin
+        (pdef add (plam (x y) (+ x y)))
+        (add 2 3)))
+
+(def if-test
+     '(pbegin
+        (pdef safe-div (plam (x y) (pif (> 1 y) 0 (/ x y))))
+        (safe-div 10 0)))
+
+(def rec-test
+     '(pbegin
+        (pdef fact
+          (plam (n)
+            (pif (= 0 n)
+             1
+             (* n (fact (- n 1))))))
+        (fact 5)))
+
+(def rec-test-2
+     '(pbegin
+        (pdef fact
+          (plam (n acc)
+            (pif (= 0 n)
+                 acc
+             (fact (- n 1) (* acc n)))))
+        (fact 2 1)))
+
+(paddle rec-test-2)
