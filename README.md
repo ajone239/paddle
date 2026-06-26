@@ -41,7 +41,7 @@ model.
     + [x] `getchar` builtin
     + [x] `read-line` in Paddle
 - [ ] M3 — goalpost programs
-    + [ ] `paddle.pd` — meta-circular evaluator
+    + [x] `paddle.pd` — meta-circular evaluator
     + [ ] `forth.pd` — Forth interpreter in Paddle
     + [ ] AoC days in Paddle
 - [ ] M4 -- onwards
