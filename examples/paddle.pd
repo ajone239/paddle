@@ -1,89 +1,3 @@
-(define (paddle exp)
-  (cond
-    ((pair? exp) (apply exp))
-    ((number? exp) exp)
-    ((symbol? exp) (env-get my-env exp))
-    (else (err "only nums and symbols supported rn"))))
-
-
-(define (apply exp)
-  (when (not (null? exp))
-    (let ((op (car exp))
-          (args (cdr exp)))
-      (cond
-        ((bi? op) (apply-bi op (map paddle args)))
-        ((form? op) (apply-form op args))
-        (else
-          (let ((head (paddle op)))
-            (call head args)))))))
-
-  (define (call fn args)
-    (let ((args (if (lam? fn) (map paddle args) args))
-          (largs (lam-args fn))
-          (body (lam-body fn)))
-      (print 'args args)
-      (print 'largs largs)
-      (print 'body body)
-      (print my-env)
-      (letn loop ((as args)
-                  (ls largs))
-            (when (not (null? as))
-              (env-set! my-env (car ls) (car as))
-              (loop (cdr as) (cdr ls))))
-      (print my-env)
-      (paddle body)))
-
-(define (bi? op)
-  (|| (= '+ op)
-      (= '* op)
-      (= '- op)
-      (= '/ op)
-      (= '= op)
-      (= '> op)))
-
-(define (apply-bi op args)
-  (cond
-    ((= '+ op) (foldl + 0 args))
-    ((= '* op) (foldl * 1 args))
-    ((= '- op) (- (car args) (cadr args)))
-    ((= '/ op) (/ (car args) (cadr args)))
-    ((= '= op) (= (car args) (cadr args)))
-    ((= '> op) (> (car args) (cadr args)))
-    (else (err "unsupported bi"))))
-
-; p(addle) prepended to builtins to get around the parser
-(define (form? op)
-  (|| (= 'pquote op)
-      (= 'pif op)
-      (= 'plam op)
-      (= 'pbegin op)
-      (= 'pdef op)))
-
-(define (apply-form op args)
-  (cond
-    ((= 'pquote op) (car args))
-    ((= 'plam op) (lam (car args) (cadr args)))
-    ((= 'pbegin op)
-     (letn loop ((prog args))
-           (cond
-             ((null? prog) '())
-             ((= 1 (len prog)) (paddle (car prog)))
-             (else
-               (progn
-                 (paddle (car prog))
-                 (loop (cdr prog)))))))
-    ((= 'pif op)
-     (let ((condish (car args))
-           (tbranch (cadr args))
-           (fbranch (caddr args)))
-       (if (paddle condish)
-         (paddle tbranch)
-         (paddle fbranch))))
-    ((= 'pdef op)
-     (env-set! my-env ((car args)) (paddle (cadr args))))
-    (else (error "unsupported form"))))
-
-
 ;; Env
 
 (define (entry key val) (list key val))
@@ -112,52 +26,284 @@
 
 ;; Lambda
 
-(define (lam args body) (list 'lam args body))
-(define (lam? obj) (= 'lam (car obj)))
+(define (lam args body env) (list 'lam args body env))
+(define (lam? obj) (if (pair? obj) (= 'lam (car obj)) #f))
 (define (lam-args lam) (cadr lam))
 (define (lam-body lam) (caddr lam))
+(define (lam-env lam) (cadddr lam))
+
+;; Paddle: Meta Eval
+
+(define (paddle exp)
+  (cond
+    ((pair? exp) (apply exp))
+    ((number? exp) exp)
+    ((bool? exp) exp)
+    ((symbol? exp) (env-get my-env exp))
+    (else (err "only nums and symbols supported rn"))))
+
+(define (apply exp)
+  (when (not (null? exp))
+    (let ((op (car exp))
+          (args (cdr exp)))
+      (cond
+        ((bi? op) (apply-bi op (map paddle args)))
+        ((form? op) (apply-form op args))
+        (else
+          (let ((head (paddle op)))
+            (if (not (lam? head))
+              (err (string-append op " not defined"))
+              (call head args))))))))
+
+(define (call fn args)
+  (let ((saved my-env)
+        (largs (lam-args fn))
+        (body (lam-body fn))
+        (env (lam-env fn)))
+    (set! my-env (append env my-env))
+    (letn loop ((as (if (lam? fn) (map paddle args) args))
+                (ls largs))
+          (when (not (null? as))
+            (env-set! my-env (car ls) (car as))
+            (loop (cdr as) (cdr ls))))
+    (def result (paddle body))
+    (set! my-env saved)
+    result))
+
+(define (bi? op)
+  (|| (= '+ op)
+      (= '* op)
+      (= '- op)
+      (= '/ op)
+      (= '= op)
+      (= '> op)
+      (= 'pcons op)
+      (= 'pcar op)
+      (= 'pcdr op)))
+
+(define (apply-bi op args)
+  (cond
+    ((= '+ op) (foldl + 0 args))
+    ((= '* op) (foldl * 1 args))
+    ((= '- op) (- (car args) (cadr args)))
+    ((= '/ op) (/ (car args) (cadr args)))
+    ((= '= op) (= (car args) (cadr args)))
+    ((= '> op) (> (car args) (cadr args)))
+    ((= 'pcons op) (cons (car args) (cadr args)))
+    ((= 'pcar op) (car (car args)))
+    ((= 'pcdr op) (cdr (car args)))
+    (else (err "unsupported bi"))))
+
+; p(addle) prepended to builtins to get around the parser
+(define (form? op)
+  (|| (= 'pquote op)
+      (= 'pif op)
+      (= 'plam op)
+      (= 'pbegin op)
+      (= 'pdef op)))
+
+(define (apply-form op args)
+  (cond
+    ((= 'pquote op) (car args))
+    ((= 'plam op) (lam (car args) (cadr args) my-env))
+    ((= 'pbegin op)
+     (letn loop ((prog args))
+           (cond
+             ((null? prog) '())
+             ((null? (cdr prog)) (paddle (car prog)))
+             (else
+               (progn
+                 (paddle (car prog))
+                 (loop (cdr prog)))))))
+    ((= 'pif op)
+     (let ((condish (car args))
+           (tbranch (cadr args))
+           (fbranch (caddr args)))
+       (if (paddle condish)
+         (paddle tbranch)
+         (paddle fbranch))))
+    ((= 'pdef op)
+     (env-set! my-env (car args) (paddle (cadr args))))
+    (else (error "unsupported form"))))
 
 ;; Run it
 
 (def my-env '())
 
 (def var-test
-     '(pbegin
-        (pdef three (/ 27 9))
-        (pdef four (+ 2 2))
-        (* three four)))
+ '(pbegin
+    (pdef three (/ 27 9))
+    (pdef four (+ 2 2))
+    (* three four)))
 
 (def plam-test
-     '(pbegin
-        (pdef dub (plam (x) (+ x x)))
-        (dub 2)))
+ '(pbegin
+    (pdef dub (plam (x) (+ x x)))
+    (dub 2)))
 
 (def plam-test-2
-     '(pbegin
-        (pdef add (plam (x y) (+ x y)))
-        (add 2 3)))
+ '(pbegin
+    (pdef add (plam (x y) (+ x y)))
+    (add 2 3)))
 
 (def if-test
-     '(pbegin
-        (pdef safe-div (plam (x y) (pif (> 1 y) 0 (/ x y))))
-        (safe-div 10 0)))
+ '(pbegin
+    (pdef safe-div (plam (x y) (pif (> 1 y) 0 (/ x y))))
+    (safe-div 10 0)))
+
+(def bool-test
+ '(pbegin
+    (pdef and (plam (a b) (pif a b #f)))
+    (pdef test (plam (x y) (and (> x 0) (> y 0))))
+    (test -1 3)))
 
 (def rec-test
-     '(pbegin
-        (pdef fact
-          (plam (n)
-            (pif (= 0 n)
-             1
-             (* n (fact (- n 1))))))
-        (fact 5)))
+ '(pbegin
+    (pdef fact
+      (plam (n)
+        (pif (= 0 n)
+         1
+         (* n (fact (- n 1))))))
+    (fact 5)))
 
 (def rec-test-2
-     '(pbegin
-        (pdef fact
-          (plam (n acc)
-            (pif (= 0 n)
-                 acc
-             (fact (- n 1) (* acc n)))))
-        (fact 2 1)))
+ '(pbegin
+    (pdef fact2
+      (plam (n acc)
+        (pif (= 0 n)
+         acc
+         (fact2 (- n 1) (* acc n)))))
+    (fact2 5 1)))
 
-(paddle rec-test-2)
+(def seq-test
+ '(pbegin
+    (pdef seq (plam (n acc)
+        (pif (= n 0)
+         acc
+         (seq (- n 1) (pcons n acc)))))
+    (seq 10 (pquote ()))))
+
+(def sum-test
+ '(pbegin
+    (pdef seq
+      (plam (n acc)
+        (pif (= n 0)
+         acc
+         (seq (- n 1) (pcons n acc)))))
+    (pdef sum
+      (plam (xs acc)
+        (pif xs
+         (sum (pcdr xs) (+ (pcar xs) acc))
+         acc)))
+    (sum (seq 10 (pquote ())) 0)))
+
+(def env-test
+ '(pbegin
+    (pdef make-adder
+      (plam (x)
+       (plam (y) (+ x y))))
+    (pdef add5 (make-adder 5))
+    (pdef x 99)
+    (add5 3)))
+
+(def stress-test
+ '(pbegin
+    (pdef fact
+      (plam (n)
+        (pif (= 0 n)
+         1
+         (* n (fact (- n 1))))))
+
+    (pdef make-adder
+      (plam (x)
+        (plam (y) (+ x y))))
+
+    (pdef ignored (fact 5))
+
+    (pdef add5 (make-adder 5))
+
+    (add5 3)))
+
+(def kitchen-sink
+'(pbegin
+   ; pquote, pcons, pcar, pcdr
+   (pdef nums (pcons 1 (pcons 2 (pcons 3 (pquote ())))))
+
+   ; closures: inner plam captures x from outer call frame
+   (pdef make-adder (plam (x) (plam (y) (+ x y))))
+   (pdef add10 (make-adder 10))
+
+   ; non-tail recursion (tests env save/restore)
+   (pdef fact
+     (plam (n)
+       (pif (= 0 n) 1 (* n (fact (- n 1))))))
+
+   ; tail recursion
+   (pdef sum-list
+     (plam (xs acc)
+       (pif xs
+         (sum-list (pcdr xs) (+ (pcar xs) acc))
+         acc)))
+
+   ; all arithmetic + comparison in one place
+   (pdef clamp
+     (plam (lo hi x)
+       (pif (> lo x) lo
+         (pif (> x hi) hi
+           x))))
+
+   ; fact(4)=24, add10(sum-list(nums,0))=16, clamp(1,20,(- 30 15))=15 → 55
+   (+ (fact 4) (+ (add10 (sum-list nums 0)) (clamp 1 20 (- 30 15))))))
+
+(def merge-sort
+'(pbegin
+   (pdef merge
+     (plam (xs ys)
+       (pif xs
+         (pif ys
+           (pif (> (pcar ys) (pcar xs))
+             (pcons (pcar xs) (merge (pcdr xs) ys))
+             (pcons (pcar ys) (merge xs (pcdr ys))))
+           xs)
+         ys)))
+
+   ; alternating split: each step swaps left/right and prepends head to right
+   (pdef split
+     (plam (xs left right)
+       (pif xs
+         (split (pcdr xs) right (pcons (pcar xs) left))
+         (pcons left right))))
+
+   (pdef msort
+     (plam (xs)
+       (pif (pcdr xs)
+         ((plam (halves)
+            (merge (msort (pcar halves))
+                   (msort (pcdr halves))))
+          (split xs (pquote ()) (pquote ())))
+         xs)))
+
+   (msort (pquote (5 3 8 1 9 2 7 4 6)))))
+
+; (paddle merge-sort)
+
+(define all-tests
+  '((12                     var-test)
+    (4                      plam-test)
+    (5                      plam-test-2)
+    (0                      if-test)
+    (#f                     bool-test)
+    (120                    rec-test-2)
+    (120                    rec-test)
+    ((1 2 3 4 5 6 7 8 9 10) seq-test)
+    (55                     sum-test)
+    (8                      env-test)
+    (8                      stress-test)
+    (55                     kitchen-sink)
+    ((1 2 3 4 5 6 7 8 9)    merge-sort)))
+
+(for (t all-tests)
+  (print 'test (cadr t))
+  (print 'expect (car t))
+  (print 'result (paddle (eval (cadr t))))
+  (print))
