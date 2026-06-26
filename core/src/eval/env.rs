@@ -43,6 +43,7 @@ impl Default for Env {
             ("list", builtins::list::list),
             ("append", builtins::list::append),
             ("atom?", builtins::predicate::is_atom),
+            ("bool?", builtins::predicate::is_bool),
             ("number?", builtins::predicate::is_number),
             ("symbol?", builtins::predicate::is_symbol),
             ("string?", builtins::predicate::is_string),

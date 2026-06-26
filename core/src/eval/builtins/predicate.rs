@@ -16,6 +16,21 @@ pub fn is_number(args: &Value) -> Result<Value> {
     }
 }
 
+pub fn is_bool(args: &Value) -> Result<Value> {
+    let Value::Cons(args) = args else {
+        bail!("should give me an arg list");
+    };
+
+    if let Value::Cons(_) = &args.1 {
+        bail!("only one arg");
+    };
+
+    match args.0 {
+        Value::Bool(_) => Ok(Value::Bool(true)),
+        _ => Ok(Value::Bool(false)),
+    }
+}
+
 pub fn is_symbol(args: &Value) -> Result<Value> {
     let Value::Cons(args) = args else {
         bail!("should give me an arg list");
