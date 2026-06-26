@@ -7,8 +7,8 @@
 (define (env-set env key val)
   (cons (entry key val) env))
 
-(defm (env-set! env key val)
-      `(set! ,env (env-set ,env ,key ,val)))
+(define (env-set! env key val)
+      (set! env (env-set env key val)))
 
 (define (env-get env key)
   (letn loop ((env env))

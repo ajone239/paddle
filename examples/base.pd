@@ -60,6 +60,7 @@
 (def (cadr x) (car (cdr x)))
 (def (caddr x) (car (cdr (cdr x))))
 (def (cadddr x) (car (cdr (cdr (cdr x)))))
+(def (caddddr x) (car (cdr (cdr (cdr (cdr x))))))
 
 ; 10 is the byte value of ascii '\n'
 ; yes it's hacky but it saved me parser work
