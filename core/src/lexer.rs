@@ -47,7 +47,7 @@ pub fn lex<'a>(code: &'a str) -> Vec<Token<'a>> {
         }
 
         let (buf_end, next_kind) = match c {
-            '\n' => {
+            '\n' if !building_string => {
                 line += 1;
                 column = 0;
                 comment = false;
