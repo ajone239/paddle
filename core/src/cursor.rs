@@ -30,6 +30,7 @@ impl<'a> Iterator for Cursor<'a> {
         let parse_res = parser::parse_expr(self.working);
 
         let Ok((ast, rest)) = parse_res else {
+            self.working = &[];
             return Some(Err(parse_res.err().unwrap().into()));
         };
 

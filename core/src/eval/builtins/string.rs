@@ -121,7 +121,10 @@ pub fn string_num(args: &Value) -> Result<Value> {
     };
 
     match s.parse() {
-        Ok(val) => Ok(Value::Num(val)),
+        Ok(val) => Ok(Value::Cons(Rc::new((
+            Value::Symbol("ok".into()),
+            Value::Num(val),
+        )))),
         Err(_) => Ok(Value::Cons(Rc::new((
             Value::Symbol("err".into()),
             Value::Str("badparse".into()),

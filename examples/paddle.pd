@@ -4,13 +4,6 @@
 (define (entry-key entry) (car entry))
 (define (entry-val entry) (cadr entry))
 
-(define (env-contains env key)
-  (letn loop ((env env))
-        (cond
-          ((null? env) #f)
-          ((= key (entry-key (car env))) #t)
-          (else (loop (cdr env))))))
-
 (define (env-set env key val)
   (cons (entry key val) env))
 

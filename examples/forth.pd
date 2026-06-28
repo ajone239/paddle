@@ -1,25 +1,157 @@
-(define (forth commands)
-  (print commands))
+(define (forth commands stack)
+  (letn loop ((cs commands) (stack stack))
+        (if (null? cs)
+            stack
+            (let* ((nc (car cs))
+                   (css (cdr cs))
+                   (numres (string->num nc)))
+              (cond
+                ((err? cs) (print "something bad"))
+                ((ok? numres) (loop css (cons (unwrap numres) stack)))
+                ((= nc 'T) (loop css (cons #t stack)))
+                ((= nc 'F) (loop css (cons #f stack)))
+                ((= nc "if")
+                 (let ((a (car stack))
+                       (tail (cdr stack)))
+                   (if a
+                       (loop css tail)
+                       (loop (skip css 'then) tail))))
+                ((= nc 'then) (loop css stack))
+                ((= nc ':)
+                 (let* ((spl (get-def css))
+                       (name (car spl))
+                       (body (cadr spl))
+                       (tail (caddr spl)))
+                   (env-set! my-env name body)
+                   (loop tail stack)))
+                ((= nc '.)
+                 (let ((a (car stack))
+                       (tail (cdr stack)))
+                   (print a)
+                   (loop css tail)))
+                ((= nc 'drop)
+                   (loop css (cdr stack)))
+                ((= nc 'dup)
+                 (let ((a (car stack)))
+                   (loop css (cons a stack))))
+                ((= nc 'swap)
+                 (let ((a (car stack))
+                       (b (cadr stack))
+                       (tail (cdr (cdr stack))))
+                   (loop css (cons b (cons a tail)))))
+                ((arith? nc)
+                 (loop css (arith nc stack)))
+                (else
+                  (loop (append (env-get my-env nc) css) stack)))))))
+
+(define (skip commands to)
+  (letn loop ((cs commands))
+        (if (|| (null? cs) (= (car cs) to))
+            cs
+            (loop (cdr cs)))))
+
+(define (get-def commands)
+  (def name (car commands))
+  (letn loop ((cs (cdr commands)) (body '()))
+        (if (null? cs)
+            (list name (reverse body) (cdr cs))
+            (let* ((nc (car cs))
+                   (css (cdr cs)))
+              (cond
+                ((= nc '!) (list name (reverse body) css))
+                (else (loop css (cons nc body))))))))
+
+(define (arith? op)
+  (|| (= op '+)
+      (= op '-)
+      (= op '*)
+      (= op '/)
+      (= op '=)
+      (= op '>)
+      (= op '>=)
+      (= op 'and)
+      (= op 'or)))
+
+(define (arith op stack)
+  (let* ((a (car stack))
+         (b (cadr stack))
+         (f (cond
+              ((= op '+) +)
+              ((= op '-) -)
+              ((= op '*) *)
+              ((= op '/) /)
+              ((= op '>) >)
+              ((= op '=) =)
+              ((= op '>=) >=)
+              ((= op 'and) &&)
+              ((= op 'or) ||)))
+         (tail (cdr (cdr stack))))
+    (cons (f b a) tail)))
+
+(define (entry key val) (list key val))
+(define (entry-key entry) (car entry))
+(define (entry-val entry) (cadr entry))
+
+(define (env-set env key val)
+  (cons (entry key val) env))
+
+(defm (env-set! env key val)
+      `(set! ,env (env-set ,env ,key ,val)))
+
+(define (env-get env key)
+  (letn loop ((env env))
+        (cond
+          ((null? env) (err (string-append "'" key "' not found")))
+          ((= key (entry-key (car env))) (entry-val (car env)))
+          (else (loop (cdr env))))))
 
 (define (split s)
+  (get-bits (string->list s)))
+
+(define (get-bits chars)
   (def rls (.\ (cs) (list->string (reverse cs))))
-  (letn loop ((cs (string->list s))
-             (w '())
-             (ws '()))
-    (cond
-      ((null? cs)
-       (reverse (cons (rls w) ws)))
-      ((|| (= (car cs) (char " ")) (= (car cs) nl))
-       (loop (cdr cs)
-             '()
-             (if (pair? w) (cons (rls w) ws) ws)))
-      (else
-        (loop (cdr cs)
-              (cons (car cs) w)
-              ws)))))
+  (letn loop ((cs chars)
+              (w '())
+              (ws '()))
+        (cond
+          ((null? cs)
+           (reverse (cons (rls w) ws)))
+          ((|| (= (car cs) (char " ")) (= (car cs) nl))
+           (loop (cdr cs)
+                 '()
+                 (if (pair? w) (cons (rls w) ws) ws)))
+          (else
+            (loop (cdr cs)
+                  (cons (car cs) w)
+                  ws)))))
+
+(define (repl)
+  (letn loop ((n 0) (stack '()))
+        (print n "# ")
+        (let? ((chars (read-line))
+               (bits (ok (get-bits chars)))
+               (res (ok (forth bits stack))))
+            (loop (+ n 1) res))))
+
+(define my-env '())
+
+; (+ 1 (* 2 (- 10 (/ 6 2)))) ; => 15.0
+(define arith-test "10 6 2 / - 2 * 1 + .")
+
+(define dup-test "2 dup * .")
+
+(define swap-test "6 5 swap - .")
+
+(define env-test
+  ": bigdouble dub > 3 2 * !
+   : eight bigdouble 4 !
+   : notsix bigdouble 3 !
+   eight .
+   not six .")
 
 (define program
-  "2 2 +
-  3 5 *")
+  ": fact dup 1 > if dup 1 - fact * then !
+   5 fact .")
 
-(split program)
+; (forth (split program))
+(repl)
