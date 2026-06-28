@@ -42,7 +42,7 @@ model.
     + [x] `read-line` in Paddle
 - [ ] M3 — goalpost programs
     + [x] `paddle.pd` — meta-circular evaluator
-    + [ ] `forth.pd` — Forth interpreter in Paddle
+    + [x] `forth.pd` — Forth interpreter in Paddle
     + [ ] AoC days in Paddle
 - [ ] M4 -- onwards
     + [x] bust up the built-ins
