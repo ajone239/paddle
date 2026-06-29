@@ -1,0 +1,62 @@
+(define (get-lines)
+  (letn loop ((acc '()))
+        (let ((line (read-line)))
+          (if (err? line)
+              (reverse acc)
+              (loop (cons line acc))))))
+
+(define (parse-line line)
+  (let ((dir (car line))
+        (val (unwrap (string->num (list->string (cdr line))))))
+    (cond
+      ((= 'L dir) (* -1 val))
+      (else val))))
+
+(define (part-a vals)
+  (letn loop ((vs vals) (dial 50) (zc 0))
+        (if (null? vs)
+            zc
+            (let* ((v (car vs))
+                   (vss (cdr vs))
+                   (nd (% (+ dial v) 100)))
+              (loop vss nd (if (= nd 0) (+ zc 1) zc))))))
+
+(define (abs v) (if (< v 0) (* v -1) v))
+
+;            zero_count += full_turns;
+;
+;            let turn = turn % dial_size;
+;
+;            dial += turn;
+;
+;            if dial == 0 {
+;                zero_count += 1;
+;            } else if dial < 0 {
+;                dial += 100;
+;                if last_dial != 0 {
+;                    zero_count += 1;
+;                }
+;            } else if dial >= dial_size {
+;                dial %= dial_size;
+;                zero_count += 1;
+;            }
+
+(define (part-b vals)
+  (letn loop ((vs vals) (dial 50) (zc 0))
+        (if (null? vs)
+            zc
+            (let* ((v (car vs))
+                   (vss (cdr vs))
+                   (ft (// (abs v) 100))
+                   (nz (+ zc ft))
+                   (nd (+ dial v)))
+              (cond
+                ((= nd 0) (loop vss nd (+ nz 1)))
+                ((>= nd 100) (loop vss (% nd 100) (+ nz 1)))
+                ((< nd 0) (loop vss (+ nd 100) (+ nz (if (= 0 dial) 0 1))))
+                (else (loop vss nd nz)))))))
+
+(let* ((lines (get-lines))
+       (parsed (map parse-line lines)))
+  (print 'a (part-a parsed))
+  (print 'b (part-b parsed)))

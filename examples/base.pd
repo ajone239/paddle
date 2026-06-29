@@ -1,8 +1,9 @@
 (def (map f xs)
-     (if (not xs)
-       '()
-       (cons (f (car xs))
-             (map f (cdr xs)))))
+     (def (map2 xs acc)
+        (if (null? xs)
+            acc
+            (map2 (cdr xs) (cons (f (car xs)) acc))))
+     (reverse (map2 xs '())))
 
 (def (filter p xs)
      (if (not xs)

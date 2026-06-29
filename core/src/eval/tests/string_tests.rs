@@ -155,17 +155,17 @@ fn string_list_of_num_errors() {
 
 #[test]
 fn string_num_integer() {
-    assert_eq!(eval_str(r#"(string->num "42")"#), num(42.0));
+    assert_eq!(eval_str(r#"(cdr (string->num "42"))"#), num(42.0));
 }
 
 #[test]
 fn string_num_decimal() {
-    assert_eq!(eval_str(r#"(string->num "3.14")"#), num(3.14));
+    assert_eq!(eval_str(r#"(cdr (string->num "3.14"))"#), num(3.14));
 }
 
 #[test]
 fn string_num_invalid_string_errors() {
-    eval_err(r#"(string->num "abc")"#);
+    assert_eq!(eval_str(r#"(car (string->num "abc"))"#), sym("err"));
 }
 
 #[test]
