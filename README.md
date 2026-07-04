@@ -52,6 +52,7 @@ model.
     + [ ] `if __name__ == '__main__': <code>`
     + [ ] path based imports
     + [ ] fix env leak for functions
+    + [ ] redefine def macro doesn't work
 
 Out of scope: bytecode VM, lexer iterator, AST arena.
 

@@ -1,0 +1,11 @@
+(define (get-lines)
+  (letn loop ((lines '()))
+        (let ((line (read-line)))
+          (if (err? line)
+              (reverse lines)
+              (loop (cons line lines))))))
+
+(-> (range 10)
+  (map (.\ (x) (* x x)))
+  (filter (.\ (x) (= 0 (% x 2))))
+  (sum))

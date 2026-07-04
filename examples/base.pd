@@ -6,7 +6,7 @@
      (reverse (map2 xs '())))
 
 (def (filter p xs)
-     (if (not xs)
+     (if (null? xs)
        '()
        (if (p (car xs))
            (cons (car xs) (filter p (cdr xs)))
@@ -61,6 +61,7 @@
 ; 10 is the byte value of ascii '\n'
 ; yes it's hacky but it saved me parser work
 (def nl (char 10))
+
 (def (read-line)
   (letn loop ((acc '()))
     (let? ((c (getchar)))

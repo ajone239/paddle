@@ -116,3 +116,11 @@
                  ,var
                  ,(let?2 (cdr bindings)))))))
       (let?2 bindings))
+
+(defm (-> init pairs...)
+      (def (threading rpairs)
+           (if (null? rpairs)
+               init
+               `(@(car rpairs) ,(threading (cdr rpairs)))))
+      (threading (reverse pairs...)))
+
