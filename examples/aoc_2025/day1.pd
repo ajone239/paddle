@@ -23,24 +23,6 @@
 
 (define (abs v) (if (< v 0) (* v -1) v))
 
-;            zero_count += full_turns;
-;
-;            let turn = turn % dial_size;
-;
-;            dial += turn;
-;
-;            if dial == 0 {
-;                zero_count += 1;
-;            } else if dial < 0 {
-;                dial += 100;
-;                if last_dial != 0 {
-;                    zero_count += 1;
-;                }
-;            } else if dial >= dial_size {
-;                dial %= dial_size;
-;                zero_count += 1;
-;            }
-
 (define (part-b vals)
   (letn loop ((vs vals) (dial 50) (zc 0))
         (if (null? vs)
@@ -48,8 +30,9 @@
             (let* ((v (car vs))
                    (vss (cdr vs))
                    (ft (// (abs v) 100))
+                   (rv (% v 100)) ; protects from negatives
                    (nz (+ zc ft))
-                   (nd (+ dial v)))
+                   (nd (+ dial rv)))
               (cond
                 ((= nd 0) (loop vss nd (+ nz 1)))
                 ((>= nd 100) (loop vss (% nd 100) (+ nz 1)))
