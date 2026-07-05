@@ -1,6 +1,10 @@
 (defm (unless cond body...)
  `(if (not ,cond) (progn @body...) '()))
 
+; macros w/o quasiquote
+(defm (when cond body)
+ (list 'if cond body '()))
+
 (defm (when cond body...)
  `(if ,cond (progn @body...) '()))
 

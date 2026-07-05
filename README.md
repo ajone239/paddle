@@ -3,86 +3,125 @@
 A Lisp interpreter written in Rust whose name is a pun that is built on my mistaking racket for racquet.
 This is built as a learning project for exploring programming language implementation.
 
-## Goal
+# Data flow
 
-Make a Lisp capable of running non-trivial programs, as a vehicle for learning
-programming-language implementation and getting comfortable with Rust's memory
-model.
+The following is a rough flow for the interpreter.
 
-## Roadmap
+- **Input**: Bytes from a file or stdin.
+- **Lexer**: Chops those bytes into tokens.
+- **Cursor**: Wraps the running of the parser, lower, and eval so multi-ast input can run.
+- **Parser**: Grabs tokens in units of full AST.
+    + **Parser Value**: A simplified data representation to keep the parser simple
+    + **AST**: Abstract syntax tree (tokens with structure).
+    + **Rest**: The remaining unused tokens.
+- **Lower**: Converts the simple parser value to a rich eval value.
+- **Evaluator**: Semi-recursively evaluates an AST reducing it to one value.
+    + **Environment**: A persistent scratch pad for evaluation.
+    + **Trampoline**: Bootstraps TCO into the evaluator.
+- **Display**: Shows the results of the work to the user.
+- **REPL**: The loop this all can run in.
 
-### Milestones
+<!--
+:! graph-easy
+-->
+<!--
+graph { flow: down }
+[ user_input ] { border: 1px dotted black; }
+[ source ] { border: 1px dotted black; }
+[ loop ] { border: 1px dashed black; }
+[ user_input ] -> [ lexer ]
+[ source ] -> [ lexer ]
+[ lexer ] -> [ cursor ]
+[ cursor ] => [ parser ]
+[ parser ] -> [ lower ]
+[ parser ] -> [ rest ]
+[ rest ] -> [ cursor ]
+[ lower ] -> [ eval ]
+[ eval ] -> [ display ]
+[ eval ] -> [ trampoline ]
+[ trampoline ] -> [ eval ]
+[ trampoline ] <..> [ env ]
+[ eval ] <-> [ env ]
+[ display ] -> [ loop ]
+-->
 
-- [ ] M0 — writeups
-    + writeup of the `dumb_macros.pd` experiment
-    + full data flow from bytes to eval in the readme
-    + project layout
-- [x] M1 — memory representation rework
-    + [x] cons cells (Rc-cells)
-    + [x] kill pervasive clones in `eval`/`apply`
-    + [x] fix nested-vector handling
-- [x] M2 — make the language runnable
-    + [x] tail-call optimization
-    + [x] variadic arguments (fix macros after this)
-    + [x] `set!`
-    + [x] `let` / `let*`
-    + [x] `let <name>`
-    + [x] error/condition system usable from Paddle
-    + [x] string builtins
-        * [x] `string-length`
-        * [x] `string-ref`
-        * [x] `substring`
-        * [x] `string-append`
-        * [x] `string->list`
-        * [x] `string->num`
-        * [x] `list->string`
-        * [x] `string=?`
-        * [x] `append`
-    + [x] `getchar` builtin
-    + [x] `read-line` in Paddle
-- [ ] M3 — goalpost programs
-    + [x] `paddle.pd` — meta-circular evaluator
-    + [x] `forth.pd` — Forth interpreter in Paddle
-    + [ ] AoC days in Paddle
-- [ ] M4 -- onwards
-    + [x] bust up the built-ins
-    + [x] no print intrinsic
-    + [ ] wasm playground
-    + [ ] blend result macros and value.rs
-    + [ ] `if __name__ == '__main__': <code>`
-    + [ ] path based imports
-    + [ ] fix env leak for functions
-    + [ ] redefine def macro doesn't work
+```
+                   ...........
+                   : source  :
+                   :.........:
+                     |
+                     |
+                     v
+..............     +---------+
+: user_input : --> |  lexer  |
+:............:     +---------+
+                     |
+                     |
+                     v
+                   +---------+
+  +--------------> | cursor  |
+  |                +---------+
+  |                  H
+  |                  H
+  |                  v
++------------+     +---------+
+|    rest    | <-- | parser  |
++------------+     +---------+
+                     |
+                     |
+                     v
+                   +---------+
+                   |  lower  |
+                   +---------+
+                     |
+                     |
+                     v
+                   +----------------------------+
+                   |            eval            | -+
+                   +----------------------------+  |
+                     |          ^    ^             |
+                     |          |    |             |
+                     |          |    |             |
+                     v          |    v             |
+                   +---------+  |  +------------+  |
+                   | display |  |  |    env     |  |
+                   +---------+  |  +------------+  |
+                     |          |    ^             |
+                     |          |    :             |
+                     |          |    :             |
+                     v          |    v             |
+                   + - - - - +  |  +------------+  |
+                   '  loop   '  +- | trampoline | <+
+                   + - - - - +     +------------+
+```
 
-Out of scope: bytecode VM, lexer iterator, AST arena.
 
-### Foundation (work so far)
+# TODO Some day
 
-#### Frontend
-- [x] Lexer — tokenizes source into `LeftParen`, `RightParen`, `Quote`, `Symbol`
-- [x] Source spans — line/column attached to every token
-- [x] String literals — space-safe quoted strings
-- [x] Escape sequences — `\"` and `\\` inside strings
-- [x] Parser — recursive descent, produces `Expr::Atom` / `Expr::List`
-- [x] Quote expansion — `'x` → `(quote x)` at parse time
-- [x] Parse errors with source location
+- writeup of the `dumb_macros.pd` experiment
+- wasm playground
+- blend result macros and value.rs
+- `if __name__ == '__main__': <code>`
+- path based imports
+- bytecode VM
+- lexer iterator
+- AST arena
 
-#### Evaluator
-- [x] Value type design
-- [x] Basic eval — literals, arithmetic, `quote`
-- [x] Environment — `define`
-- [x] Lambdas and closures
-- [x] Macros — `define-macro`, quasiquote, unquote
+# Examples
 
-#### Runtime
-- [x] Standard library — arithmetic
-- [x] Standard library — `car`, `cdr`, `cons`.
-- [x] Standard library — `fold`, `map`, etc.
-- [x] REPL
-- [x] Line editing
-- [x] Runtime errors with source location instead of panics
-- [x] better printing
-- [x] File runner — cursor-based multi-expression evaluation
-- [x] :require
-- [x] "(require xxx)"
-- [x] comments
+base.pd
+macros.pd
+
+dumb_macros.pd
+
+fact.pd
+import.pd
+y_combinator.pd
+
+forth.pd
+paddle.pd
+
+nqueens.pd
+sudoku.pd
+wc.pd
+
