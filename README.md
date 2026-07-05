@@ -95,6 +95,19 @@ graph { flow: down }
                    + - - - - +     +------------+
 ```
 
+# Examples
+
+- `base.pd`: Standard lib lisp functions.
+- `macros.pd`: Standard lib lisp functions.
+- `dumb_macros.pd`: A learning experiment for homoiconicity.
+- `fact.pd`: Sanity integration test.
+- `import.pd`: Import integration test.
+- `y_combinator.pd`: Math fun.
+- `forth.pd`: A forth interpreter.
+- `paddle.pd`: A meta evaluator for my SICP badge.
+- `nqueens.pd`: Solver for the N-Queens problem.
+- `sudoku.pd`: Sudoku Solver.
+- `wc.pd`: An implementation of the `wc` utility.
 
 # TODO Some day
 
@@ -106,22 +119,4 @@ graph { flow: down }
 - bytecode VM
 - lexer iterator
 - AST arena
-
-# Examples
-
-base.pd
-macros.pd
-
-dumb_macros.pd
-
-fact.pd
-import.pd
-y_combinator.pd
-
-forth.pd
-paddle.pd
-
-nqueens.pd
-sudoku.pd
-wc.pd
 

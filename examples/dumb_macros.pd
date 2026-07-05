@@ -7,8 +7,7 @@
  (list 'if cond body '()))
 
 (def (safe-div x y)
-    (eval
-    (unless '(= y 0) '(/ x y))))
+    (eval (unless '(= y 0) '(/ x y))))
 
 (define else #t)
 (define (dumb_cond pairs...)

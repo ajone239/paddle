@@ -30,9 +30,8 @@
 (define (paddle exp)
   (cond
     ((pair? exp) (apply exp))
-    ((number? exp) exp)
-    ((bool? exp) exp)
     ((symbol? exp) (env-get my-env exp))
+    ((|| (number? exp) (bool? exp)) exp)
     (else (err "only nums and symbols supported rn"))))
 
 (define (apply exp)
