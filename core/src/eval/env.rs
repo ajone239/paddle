@@ -159,10 +159,8 @@ impl Env {
     pub fn dump(&self) {
         let venv: Vec<_> = self.env.iter().collect();
 
-        let b = venv.iter().filter(|(_, v)| matches!(v, Value::Builtin(..)));
-
         println!("Built-Ins:");
-        for (k, v) in b {
+        for (k, v) in self.builtin.iter() {
             println!("{}: {}", k, v)
         }
 

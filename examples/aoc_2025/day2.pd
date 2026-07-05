@@ -5,7 +5,62 @@
               (reverse lines)
               (loop (cons line lines))))))
 
-(-> (range 10)
-  (map (.\ (x) (* x x)))
-  (filter (.\ (x) (= 0 (% x 2))))
-  (sum))
+(define (split c cs)
+  (letn loop ((cs cs) (acc '()) (rv '()))
+        (cond
+          ((null? cs)
+           (reverse (cons acc rv)))
+          ((= c (car cs))
+           (loop (cdr cs) '() (cons (reverse acc) rv)))
+          (else
+            (loop (cdr cs) (cons (car cs) acc) rv)))))
+
+(define (dtc d) (char (+ d 48)))
+(define (num->str n)
+  (letn loop ((n n) (acc '()))
+        (if (<= n 0)
+            (list->string (map dtc acc))
+            (loop (// n 10) (cons (% n 10) acc)))))
+
+(define (twice? s)
+  (let* ((l (string-length s))
+         (h (// l 2))
+         (a (substring s 0 h))
+         (b (substring s h)))
+    (= a b)))
+
+(define (blah from to)
+  (letn loop ((i from) (sum 0))
+        (cond
+          ((> i to) sum)
+          ((twice? (num->str i))
+           (progn
+             (print i)
+             (loop (+ 1 i) (+ sum i))))
+          (else (loop (+ 1 i) sum)))))
+
+(def (caar xs) (car (car xs)))
+(def (cadar xs) (cadr (car xs)))
+(define (part-a pairs)
+  (letn loop ((ps pairs) (sum 0))
+        (print sum (car ps))
+        (if (null? ps)
+            sum
+            (loop (cdr ps)
+                  (+ sum (blah (caar ps) (cadar ps)))))))
+
+(define (part-b vals)
+  'b)
+
+(let* ((lines (get-lines))
+       (csv (flatmap (.\ (s) (split "," s)) lines))
+       (gcsv (filter pair? csv))
+       (pairs (map (.\ (s) (-> s
+                               (split "-")
+                               (map list->string)
+                               (map string->num)
+                               (map unwrap)))
+                           gcsv)))
+  (print 'a (part-a pairs))
+  (print 'b (part-b '())))
+

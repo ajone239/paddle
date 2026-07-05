@@ -5,6 +5,9 @@
             (map2 (cdr xs) (cons (f (car xs)) acc))))
      (reverse (map2 xs '())))
 
+(define (flatmap f xs)
+  (foldr append '() (map f xs)))
+
 (def (filter p xs)
      (if (null? xs)
        '()
