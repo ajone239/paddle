@@ -111,7 +111,6 @@ graph { flow: down }
 
 # TODO Some day
 
-- writeup of the `dumb_macros.pd` experiment
 - wasm playground
 - blend result macros and value.rs
 - `if __name__ == '__main__': <code>`

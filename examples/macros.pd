@@ -5,8 +5,10 @@
 (defm (when cond body)
  (list 'if cond body '()))
 
-(defm (when cond body...)
- `(if ,cond (progn @body...) '()))
+(defmacro (when cond body...)
+ `(if ,cond
+      (progn @body...)
+      '()))
 
 ; rec macros have to be defined like this so their args get processed
 (define else #t)
