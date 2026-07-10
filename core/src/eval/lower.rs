@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
 use crate::eval::value::{Form, Value};
+use crate::lexer::Span;
 use crate::parser::Expr;
 
 pub fn lower(ast: &Expr) -> Value {
@@ -9,34 +10,39 @@ pub fn lower(ast: &Expr) -> Value {
 
 fn quote_eval(ast: &Expr) -> Value {
     match ast {
-        Expr::Atom(atom, _) => classify(atom),
-        Expr::List(list, _) => {
-            let mut rv = Value::Nil;
+        Expr::Atom(atom, span) => classify(atom, span.clone()),
+        Expr::List(list, span) => {
+            // TODO(austin.jones): I don't think this is right way to handle the
+            //                     list span
+            let mut rv = Value::Nil(span.clone());
+
             for val in list.iter().map(quote_eval).rev() {
-                rv = Value::Cons(Rc::new((val, rv)));
+                let span = val.get_span();
+                rv = Value::Cons(Rc::new((val, rv)), span);
             }
             rv
         }
     }
 }
 
-fn classify(atom: &str) -> Value {
+fn classify(atom: &str, span: Span) -> Value {
     if let Ok(num) = atom.parse::<f64>() {
-        return Value::Num(num);
+        return Value::Num(num, span);
     }
 
     if let Some(form) = Form::try_parse(atom) {
-        return Value::Form(form);
+        return Value::Form(form, span);
     }
 
     match atom {
-        "nil" => Value::Nil,
-        "#t" => Value::Bool(true),
-        "#f" => Value::Bool(false),
-        _ if atom.starts_with('"') && atom.ends_with('"') => Value::Str(Rc::from(
-            atom.strip_prefix("\"").unwrap().strip_suffix("\"").unwrap(),
-        )),
-        _ => Value::Symbol(Rc::from(atom)),
+        "nil" => Value::Nil(span),
+        "#t" => Value::Bool(true, span),
+        "#f" => Value::Bool(false, span),
+        _ if atom.starts_with('"') && atom.ends_with('"') => Value::Str(
+            Rc::from(atom.strip_prefix("\"").unwrap().strip_suffix("\"").unwrap()),
+            span,
+        ),
+        _ => Value::Symbol(Rc::from(atom), span),
     }
 }
 

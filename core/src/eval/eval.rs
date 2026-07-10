@@ -264,7 +264,7 @@ fn setup_env(
 
     if varidx < fargs.len() {
         let rest = if is_macro {
-            citer.into_cons_list().clone()
+            citer.into_cons_list()
         } else {
             citer
                 .map(|val| eval(val.clone(), old_env.clone()))
@@ -351,7 +351,7 @@ fn make_callable(form: &Form, body: &Value) -> Result<CallableInfo> {
 
     let body = Rc::new(Value::Cons(Rc::new((
         Value::Form(Form::Progn),
-        list.into_cons_list().clone(),
+        list.into_cons_list(),
     ))));
 
     Ok((name, args, body))
