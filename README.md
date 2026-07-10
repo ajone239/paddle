@@ -112,6 +112,7 @@ graph { flow: down }
 # TODO Some day
 
 - wasm playground
+- errors that don't suck
 - try out pest
 - blend result macros and value.rs
 - `if __name__ == '__main__': <code>`
