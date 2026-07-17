@@ -1,5 +1,4 @@
 use std::cell::RefCell;
-use std::default;
 use std::fmt::{Debug, Display};
 use std::rc::Rc;
 
@@ -69,6 +68,55 @@ impl Value {
         rv
     }
 
+    pub fn set_span(self, new_span: Span) -> Self {
+        match self {
+            Value::NoPrint => self,
+            Value::Nil(_) => Value::Nil(new_span),
+            Value::Bool(b, _) => Value::Bool(b, new_span),
+            Value::Num(n, _) => Value::Num(n, new_span),
+            Value::Char(c, _) => Value::Char(c, new_span),
+            Value::Str(s, _) => Value::Str(s, new_span),
+            Value::Cons(p, _) => Value::Cons(p, new_span),
+            Value::Symbol(s, _) => Value::Symbol(s, new_span),
+            Value::Form(f, _) => Value::Form(f, new_span),
+            Value::Builtin(f, s, _) => Value::Builtin(f, s, new_span),
+            Value::Func {
+                name,
+                args,
+                body,
+                env,
+                span: _,
+            } => Value::Func {
+                name,
+                args,
+                body,
+                env,
+                span: new_span,
+            },
+            Value::Macro {
+                name,
+                args,
+                body,
+                span: _,
+            } => Value::Macro {
+                name,
+                args,
+                body,
+                span: new_span,
+            },
+            Value::Lambda {
+                args,
+                body,
+                env,
+                span: _,
+            } => Value::Lambda {
+                args,
+                body,
+                env,
+                span: new_span,
+            },
+        }
+    }
     pub fn get_span(&self) -> Span {
         match self {
             Value::NoPrint => Span::default(),

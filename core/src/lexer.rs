@@ -30,7 +30,7 @@ pub enum TokenKind<'a> {
 pub fn lex<'a>(code: &'a str) -> Vec<Token<'a>> {
     let mut tokens = Vec::with_capacity(code.len() / 4);
 
-    let mut line = 0;
+    let mut line = 1;
     let mut column = 0;
     let mut token_start_col = 0;
     let mut last = 0;

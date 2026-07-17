@@ -9,6 +9,7 @@ use crate::{
         builtins,
         value::{Builtin, BuiltinFn, Value},
     },
+    lexer::Span,
 };
 
 static STD_LIB: &str = include_str!("../../../examples/base.pd");
@@ -76,7 +77,7 @@ impl Default for Env {
 }
 
 fn tobi(f: Builtin, name: &str) -> Value {
-    Value::Builtin(BuiltinFn(f), name.to_owned())
+    Value::Builtin(BuiltinFn(f), name.to_owned(), Span::default())
 }
 
 impl Env {
