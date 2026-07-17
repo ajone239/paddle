@@ -1,0 +1,17 @@
+; nested calls so the error site is buried a few frames deep,
+; away from the line/col of any of the enclosing forms.
+
+(define (inner x)
+  (+ x
+     nested-undefined-symbol))
+
+(define (middle x)
+  (inner
+    (* x 2)))
+
+(define (outer x)
+  (middle
+    (+ x
+       1)))
+
+(outer 5)

@@ -1,0 +1,36 @@
+; each toplevel form here should fail with a span pointing at a
+; predictable line:col so we can eyeball the error reporting.
+
+; undefined symbol, deep in a line
+(+ 1
+   totally-undefined-symbol)
+
+; too few args to if
+(if)
+
+; too few args to define
+(define)
+
+; lambda missing args list
+(lambda)
+
+; lambda args list must be a list, not an atom
+(lambda 5 (+ 1 1))
+
+; lambda args list must be all symbols
+(lambda (a 2 c) a)
+
+; set! missing args
+(set!)
+
+; require with wrong arg count
+(require)
+
+; require with non-string/symbol args
+(require 5 6)
+
+; empty progn body
+(progn)
+
+; unquote outside quasiquote
+(unquote 1)
