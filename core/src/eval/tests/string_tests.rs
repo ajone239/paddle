@@ -36,12 +36,18 @@ fn string_length_of_num_errors() {
 
 #[test]
 fn string_ref_first_char() {
-    assert_eq!(eval_str(r#"(string-ref "hello" 0)"#), Value::Char(b'h'));
+    assert_eq!(
+        eval_str(r#"(string-ref "hello" 0)"#),
+        Value::Char(b'h', Span::default())
+    );
 }
 
 #[test]
 fn string_ref_last_char() {
-    assert_eq!(eval_str(r#"(string-ref "hello" 4)"#), Value::Char(b'o'));
+    assert_eq!(
+        eval_str(r#"(string-ref "hello" 4)"#),
+        Value::Char(b'o', Span::default())
+    );
 }
 
 #[test]
@@ -65,7 +71,7 @@ fn string_ref_too_few_args_errors() {
 fn substring_with_from_and_to() {
     assert_eq!(
         eval_str(r#"(substring "hello" 1 3)"#),
-        Value::Str("el".into())
+        Value::Str("el".into(), Span::default())
     );
 }
 
@@ -73,7 +79,7 @@ fn substring_with_from_and_to() {
 fn substring_without_to_goes_to_end() {
     assert_eq!(
         eval_str(r#"(substring "hello" 1)"#),
-        Value::Str("ello".into())
+        Value::Str("ello".into(), Span::default())
     );
 }
 
@@ -81,7 +87,7 @@ fn substring_without_to_goes_to_end() {
 fn substring_to_beyond_len_is_clamped() {
     assert_eq!(
         eval_str(r#"(substring "hello" 1 100)"#),
-        Value::Str("ello".into())
+        Value::Str("ello".into(), Span::default())
     );
 }
 
@@ -101,7 +107,7 @@ fn substring_from_after_to_errors() {
 fn string_append_two_strings() {
     assert_eq!(
         eval_str(r#"(string-append "foo" "bar")"#),
-        Value::Str("foobar".into())
+        Value::Str("foobar".into(), Span::default())
     );
 }
 
@@ -109,13 +115,16 @@ fn string_append_two_strings() {
 fn string_append_strings_and_symbols() {
     assert_eq!(
         eval_str(r#"(string-append "foo" 'bar)"#),
-        Value::Str("foobar".into())
+        Value::Str("foobar".into(), Span::default())
     );
 }
 
 #[test]
 fn string_append_no_args_is_empty_string() {
-    assert_eq!(eval_str("(string-append)"), Value::Str("".into()));
+    assert_eq!(
+        eval_str("(string-append)"),
+        Value::Str("".into(), Span::default())
+    );
 }
 
 #[test]
@@ -129,7 +138,10 @@ fn string_append_of_num_errors() {
 fn string_list_basic() {
     assert_eq!(
         eval_str(r#"(string->list "ab")"#),
-        Value::to_cons_list(vec![Value::Char(b'a'), Value::Char(b'b')])
+        Value::to_cons_list(vec![
+            Value::Char(b'a', Span::default()),
+            Value::Char(b'b', Span::default())
+        ])
     );
 }
 
@@ -179,7 +191,7 @@ fn string_num_too_many_args_errors() {
 fn list_string_of_chars() {
     assert_eq!(
         eval_str("(list->string (list (char 97) (char 98)))"),
-        Value::Str("ab".into())
+        Value::Str("ab".into(), Span::default())
     );
 }
 
@@ -187,7 +199,7 @@ fn list_string_of_chars() {
 fn list_string_round_trips_with_string_list() {
     assert_eq!(
         eval_str(r#"(list->string (string->list "hello"))"#),
-        Value::Str("hello".into())
+        Value::Str("hello".into(), Span::default())
     );
 }
 
@@ -195,7 +207,7 @@ fn list_string_round_trips_with_string_list() {
 fn list_string_of_nums_stringifies_each() {
     assert_eq!(
         eval_str("(list->string (list 1 2))"),
-        Value::Str("12".into())
+        Value::Str("12".into(), Span::default())
     );
 }
 

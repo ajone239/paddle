@@ -51,40 +51,44 @@ mod tests {
     use std::rc::Rc;
 
     use super::lower;
+    use crate::eval::tests::strip_value_span;
     use crate::eval::value::Value;
-    use crate::lexer::lex;
+    use crate::lexer::{Span, lex};
     use crate::parser::parse_expr;
 
     fn lower_str(s: &str) -> Value {
         let tokens = lex(s);
         let (ast, _) = parse_expr(&tokens).unwrap();
-        lower(&ast)
+        strip_value_span(&lower(&ast))
     }
 
     fn cons(head: Value, tail: Value) -> Value {
-        Value::Cons(Rc::new((head, tail)))
+        Value::Cons(Rc::new((head, tail)), Span::default())
     }
 
     fn num(n: f64) -> Value {
-        Value::Num(n)
+        Value::Num(n, Span::default())
     }
 
     fn sym(s: &str) -> Value {
-        Value::Symbol(Rc::from(s))
+        Value::Symbol(Rc::from(s), Span::default())
     }
 
     #[test]
     fn list_three_elements() {
         assert_eq!(
             lower_str("(1 2 3)"),
-            cons(num(1.0), cons(num(2.0), cons(num(3.0), Value::Nil)))
+            cons(
+                num(1.0),
+                cons(num(2.0), cons(num(3.0), Value::Nil(Span::default())))
+            )
         );
     }
 
     #[test]
     fn empty_list() {
         // empty list lowers to a single Cons with Nil head and Nil tail
-        assert_eq!(lower_str("()"), Value::Nil);
+        assert_eq!(lower_str("()"), Value::Nil(Span::default()));
     }
 
     #[test]
@@ -92,10 +96,13 @@ mod tests {
         assert_eq!(
             lower_str("((1 1) (2 2) (3 3))"),
             cons(
-                cons(num(1.0), cons(num(1.0), Value::Nil)),
+                cons(num(1.0), cons(num(1.0), Value::Nil(Span::default()))),
                 cons(
-                    cons(num(2.0), cons(num(2.0), Value::Nil)),
-                    cons(cons(num(3.0), cons(num(3.0), Value::Nil)), Value::Nil)
+                    cons(num(2.0), cons(num(2.0), Value::Nil(Span::default()))),
+                    cons(
+                        cons(num(3.0), cons(num(3.0), Value::Nil(Span::default()))),
+                        Value::Nil(Span::default())
+                    )
                 )
             )
         );
@@ -103,7 +110,10 @@ mod tests {
 
     #[test]
     fn single_element_list() {
-        assert_eq!(lower_str("(42)"), cons(num(42.0), Value::Nil));
+        assert_eq!(
+            lower_str("(42)"),
+            cons(num(42.0), Value::Nil(Span::default()))
+        );
     }
 
     #[test]
@@ -122,7 +132,13 @@ mod tests {
             lower_str("(1 foo #t)"),
             cons(
                 num(1.0),
-                cons(sym("foo"), cons(Value::Bool(true), Value::Nil))
+                cons(
+                    sym("foo"),
+                    cons(
+                        Value::Bool(true, Span::default()),
+                        Value::Nil(Span::default())
+                    )
+                )
             )
         );
     }
@@ -131,7 +147,10 @@ mod tests {
     fn deeply_nested() {
         assert_eq!(
             lower_str("((()))"),
-            cons(cons(Value::Nil, Value::Nil), Value::Nil)
+            cons(
+                cons(Value::Nil(Span::default()), Value::Nil(Span::default())),
+                Value::Nil(Span::default())
+            )
         );
     }
 }

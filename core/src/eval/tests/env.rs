@@ -13,7 +13,7 @@ fn define_func_scope() {
     let err = eval_env_err(&["(def (double x) (* x 2))", "(double 3)", "x"]);
     assert_eq!(
         err.downcast_ref::<EvalError>(),
-        Some(&EvalError::SymbolUndefined("x".into()))
+        Some(&EvalError::SymbolUndefined("x".into(), Span::default()))
     );
 }
 
@@ -61,7 +61,7 @@ fn define_func_fact() {
             "(def (fact n) (if (< n 1) 1 (* n (fact (- n 1)))))",
             "(fact 5)"
         ]),
-        Value::Num(120.0)
+        Value::Num(120.0, Span::default())
     );
 }
 
@@ -77,7 +77,7 @@ fn define_func_fact_cute() {
 ",
             "(fact 5)"
         ]),
-        Value::Num(120.0)
+        Value::Num(120.0, Span::default())
     );
 }
 
@@ -98,7 +98,7 @@ fn define_func_wrong_arity() {
     let err = eval_env_err(&["(def (f x) (+ x 1))", "(f 1 2)"]);
     assert_eq!(
         err.downcast_ref::<EvalError>(),
-        Some(&EvalError::BadFunctionArgCount(1))
+        Some(&EvalError::BadFunctionArgCount(1, Span::default()))
     );
 }
 

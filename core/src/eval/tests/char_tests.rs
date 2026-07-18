@@ -4,7 +4,7 @@ use super::*;
 
 #[test]
 fn char_from_num() {
-    assert_eq!(eval_str("(char 65)"), Value::Char(65));
+    assert_eq!(eval_str("(char 65)"), Value::Char(65, Span::default()));
 }
 
 #[test]
@@ -14,19 +14,19 @@ fn char_from_num_displays_as_letter() {
 
 #[test]
 fn char_from_max_byte() {
-    assert_eq!(eval_str("(char 255)"), Value::Char(255));
+    assert_eq!(eval_str("(char 255)"), Value::Char(255, Span::default()));
 }
 
 // char from string / symbol
 
 #[test]
 fn char_from_string() {
-    assert_eq!(eval_str(r#"(char "A")"#), Value::Char(65));
+    assert_eq!(eval_str(r#"(char "A")"#), Value::Char(65, Span::default()));
 }
 
 #[test]
 fn char_from_symbol() {
-    assert_eq!(eval_str("(char 'A)"), Value::Char(65));
+    assert_eq!(eval_str("(char 'A)"), Value::Char(65, Span::default()));
 }
 
 // errors: wrong shape of str/sym
@@ -88,6 +88,6 @@ fn char_too_many_args_errors() {
 fn char_is_truthy() {
     assert_eq!(
         eval_str(r#"(if (char 65) "yes" "no")"#),
-        Value::Str("yes".into())
+        Value::Str("yes".into(), Span::default())
     );
 }

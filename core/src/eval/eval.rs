@@ -228,8 +228,7 @@ fn eval_form(form: Form, span: Span, tail: Value, env: Rc<RefCell<Env>>) -> Resu
             }
         }
         Form::Lambda => {
-            let (_, args, body) =
-                make_callable(&form, &tail).context(format!("error making lambda at {}", span))?;
+            let (_, args, body) = make_callable(&form, &tail)?;
 
             let lambda = Value::Lambda {
                 args,
@@ -357,7 +356,7 @@ fn make_callable(form: &Form, body: &Value) -> Result<CallableInfo> {
         .to_cons_iter()
         .map(|e| match e {
             Value::Symbol(a, _) => Ok(a.to_string()),
-            _ => Err(EvalError::BadCallableArgsListType(*form, bspan).into()),
+            _ => Err(EvalError::BadCallableArgsListType(*form, e.get_span()).into()),
         })
         .collect::<Result<Vec<String>, _>>()?;
 

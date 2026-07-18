@@ -7,7 +7,8 @@ fn undefined_symbol_bubbles_up() {
     assert_eq!(
         err.downcast_ref::<EvalError>(),
         Some(&EvalError::SymbolUndefined(
-            "totally-undefined-symbol".into()
+            "totally-undefined-symbol".into(),
+            Span::default()
         ))
     );
 }
@@ -17,7 +18,7 @@ fn wrong_arg_count_bubbles_up() {
     let err = run_err("(def (f x) (+ x 1)) (f 1 2)");
     assert_eq!(
         err.downcast_ref::<EvalError>(),
-        Some(&EvalError::BadFunctionArgCount(1))
+        Some(&EvalError::BadFunctionArgCount(1, Span::default()))
     );
 }
 
@@ -26,7 +27,10 @@ fn bad_lambda_missing_body_bubbles_up() {
     let err = run_err("(lambda (x))");
     assert_eq!(
         err.downcast_ref::<EvalError>(),
-        Some(&EvalError::BadCallableBodyArgs(Form::Lambda))
+        Some(&EvalError::BadCallableBodyArgs(
+            Form::Lambda,
+            Span::default()
+        ))
     );
 }
 

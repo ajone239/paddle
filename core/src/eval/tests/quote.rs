@@ -2,7 +2,10 @@ use super::*;
 
 #[test]
 fn quote_symbol() {
-    assert_eq!(eval_str("(quote x)"), Value::Symbol("x".into()));
+    assert_eq!(
+        eval_str("(quote x)"),
+        Value::Symbol("x".into(), Span::default())
+    );
 }
 
 #[test]
@@ -13,7 +16,7 @@ fn quote_number() {
 
 #[test]
 fn quote_nil() {
-    assert_eq!(eval_str("(quote nil)"), Value::Nil);
+    assert_eq!(eval_str("(quote nil)"), Value::Nil(Span::default()));
 }
 
 #[test]
@@ -28,7 +31,11 @@ fn quote_list() {
 fn quote_suppresses_eval() {
     assert_eq!(
         eval_str("(quote (+ 1 2))"),
-        Value::to_cons_list(vec![Value::Symbol("+".into()), num(1.0), num(2.0),])
+        Value::to_cons_list(vec![
+            Value::Symbol("+".into(), Span::default()),
+            num(1.0),
+            num(2.0),
+        ])
     );
 }
 

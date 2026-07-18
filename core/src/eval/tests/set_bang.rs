@@ -29,7 +29,7 @@ fn set_bang_returns_no_print() {
 #[test]
 fn set_bang_undefined_variable() {
     let err = eval_env_err(&["(set! y 5)"]);
-    assert!(err.to_string().contains("isn't in scope"));
+    assert!(format!("{err:#}").contains("isn't in scope"));
 }
 
 #[test]
@@ -37,7 +37,7 @@ fn set_bang_too_few_args() {
     let err = eval_env_err(&["(set! x)"]);
     assert_eq!(
         err.downcast_ref::<EvalError>(),
-        Some(&EvalError::BadSetBangArgs)
+        Some(&EvalError::BadSetBangArgs(Span::default()))
     );
 }
 
@@ -46,7 +46,7 @@ fn set_bang_too_many_args() {
     let err = eval_env_err(&["(def x 3)", "(set! x 5 6)"]);
     assert_eq!(
         err.downcast_ref::<EvalError>(),
-        Some(&EvalError::BadSetBangArgs)
+        Some(&EvalError::BadSetBangArgs(Span::default()))
     );
 }
 
@@ -59,7 +59,7 @@ fn set_bang_non_symbol_head() {
 #[test]
 fn set_bang_builtin_not_in_scope() {
     let err = eval_env_err(&["(set! + 1)"]);
-    assert!(err.to_string().contains("isn't in scope"));
+    assert!(format!("{err:#}").contains("isn't in scope"));
 }
 
 #[test]

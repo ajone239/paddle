@@ -30,7 +30,11 @@ fn list_evaluates_args() {
 fn list_mixed_types() {
     assert_eq!(
         eval_str("(list 1 #t nil)"),
-        Value::to_cons_list(vec![num(1.0), Value::Bool(true), Value::Nil])
+        Value::to_cons_list(vec![
+            num(1.0),
+            Value::Bool(true, Span::default()),
+            Value::Nil(Span::default())
+        ])
     );
 }
 
@@ -51,7 +55,10 @@ fn cdr_of_list() {
 fn list_with_quoted_symbol() {
     assert_eq!(
         eval_str("(list 'a 'b)"),
-        Value::to_cons_list(vec![Value::Symbol("a".into()), Value::Symbol("b".into())])
+        Value::to_cons_list(vec![
+            Value::Symbol("a".into(), Span::default()),
+            Value::Symbol("b".into(), Span::default())
+        ])
     );
 }
 
@@ -81,7 +88,11 @@ fn list_of_lists() {
 fn quote_of_list_call_suppresses_eval() {
     assert_eq!(
         eval_str("'(list 1 2)"),
-        Value::to_cons_list(vec![Value::Symbol("list".into()), num(1.0), num(2.0)])
+        Value::to_cons_list(vec![
+            Value::Symbol("list".into(), Span::default()),
+            num(1.0),
+            num(2.0)
+        ])
     );
 }
 
@@ -113,7 +124,7 @@ fn append_second_empty() {
 
 #[test]
 fn append_both_empty() {
-    assert_eq!(eval_str("(append nil nil)"), Value::Nil);
+    assert_eq!(eval_str("(append nil nil)"), Value::Nil(Span::default()));
 }
 
 #[test]

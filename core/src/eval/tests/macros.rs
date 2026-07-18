@@ -37,7 +37,7 @@ fn defm_when_false_returns_nil() {
             "(defm (when cond body) (list 'if cond body '()))",
             "(when #f 99)",
         ]),
-        Value::Nil
+        Value::Nil(Span::default())
     );
 }
 
@@ -59,7 +59,7 @@ fn defm_unless_true_returns_nil() {
             "(defm (unless cond body) (list 'if (list 'not cond) body '()))",
             "(unless #t 7)",
         ]),
-        Value::Nil
+        Value::Nil(Span::default())
     );
 }
 
@@ -91,6 +91,6 @@ fn macro_used_inside_function_condition_false() {
             "(def (safe-inc x) (when (< 0 x) (+ x 1)))",
             "(safe-inc -1)",
         ]),
-        Value::Nil
+        Value::Nil(Span::default())
     );
 }

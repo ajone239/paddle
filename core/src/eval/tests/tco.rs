@@ -19,6 +19,6 @@ fn mutual_recursion_deep() {
             "(def (odd? n) (if (= n 0) #f (even? (- n 1))))",
             "(even? 2500)"
         ]),
-        Value::Bool(true)
+        Value::Bool(true, Span::default())
     );
 }

@@ -2,7 +2,10 @@ use super::*;
 
 #[test]
 fn map_on_empty_list_returns_empty() {
-    assert_eq!(run("(map (lambda (x) (* x 2)) '())"), Value::Nil);
+    assert_eq!(
+        run("(map (lambda (x) (* x 2)) '())"),
+        Value::Nil(Span::default())
+    );
 }
 
 #[test]

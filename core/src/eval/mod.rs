@@ -16,9 +16,9 @@ use crate::{eval::value::Form, lexer::Span};
 
 #[derive(Debug, PartialEq, Error)]
 pub enum EvalError {
-    #[error("Require takes 2 arguments got {0} as {1}")]
+    #[error("Require takes 2 arguments got {0} at {1}")]
     BadRequireArgCount(usize, Span),
-    #[error("Require takes strings or symbols as args as {0}")]
+    #[error("Require takes strings or symbols as args at {0}")]
     BadRequireArgs(Span),
     #[error("Too few arguments were provided to the set! statement at {0}")]
     BadSetBangArgs(Span),
@@ -46,7 +46,7 @@ pub enum EvalError {
     EmptyPrognBody(Span),
     #[error("Unquoute called outside of a quasiquote context at {0}")]
     UnquoteOutsideQuasi(Span),
-    #[error("Variadic args must come last. at {0}")]
+    #[error("Variadic args must come last at {0}")]
     VariadicArgsMustBeLast(Span),
     #[error("No args provided for callable: {0:?} at {1}")]
     BadCallableArgs(Form, Span),

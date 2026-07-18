@@ -8,20 +8,23 @@ fn cdr_of_cons() {
 
 #[test]
 fn cdr_of_list() {
-    assert_eq!(eval_str("(cdr '(1 2))"), cons(num(2.0), Value::Nil));
+    assert_eq!(
+        eval_str("(cdr '(1 2))"),
+        cons(num(2.0), Value::Nil(Span::default()))
+    );
 }
 
 #[test]
 fn cdr_of_quoted_list() {
     assert_eq!(
         eval_str("(cdr '(1 2 3))"),
-        cons(num(2.0), cons(num(3.0), Value::Nil))
+        cons(num(2.0), cons(num(3.0), Value::Nil(Span::default())))
     );
 }
 
 #[test]
 fn cdr_of_single_element_list_is_empty_list() {
-    assert_eq!(eval_str("(cdr '(1))"), Value::Nil)
+    assert_eq!(eval_str("(cdr '(1))"), Value::Nil(Span::default()))
 }
 
 #[test]
@@ -44,7 +47,10 @@ fn cdr_of_atom() {
 
 #[test]
 fn cdr_of_list_with_nil_head() {
-    assert_eq!(eval_str("(cdr '(nil 1))"), cons(num(1.0), Value::Nil));
+    assert_eq!(
+        eval_str("(cdr '(nil 1))"),
+        cons(num(1.0), Value::Nil(Span::default()))
+    );
 }
 
 #[test]

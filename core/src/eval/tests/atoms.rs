@@ -1,4 +1,5 @@
 use super::*;
+use crate::lexer::Span;
 
 #[test]
 fn integer_literal() {
@@ -17,15 +18,15 @@ fn negative_literal() {
 
 #[test]
 fn nil_literal() {
-    assert_eq!(eval_str("nil"), Value::Nil);
+    assert_eq!(eval_str("nil"), Value::Nil(Span::default()));
 }
 
 #[test]
 fn true_literal() {
-    assert_eq!(eval_str("#t"), Value::Bool(true));
+    assert_eq!(eval_str("#t"), Value::Bool(true, Span::default()));
 }
 
 #[test]
 fn false_literal() {
-    assert_eq!(eval_str("#f"), Value::Bool(false));
+    assert_eq!(eval_str("#f"), Value::Bool(false, Span::default()));
 }

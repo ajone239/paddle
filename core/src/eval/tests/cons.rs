@@ -8,7 +8,10 @@ fn cons_two_atoms() {
 
 #[test]
 fn cons_with_nil_tail() {
-    assert_eq!(eval_str("(cons 1 nil)"), cons(num(1.0), Value::Nil));
+    assert_eq!(
+        eval_str("(cons 1 nil)"),
+        cons(num(1.0), Value::Nil(Span::default()))
+    );
 }
 
 #[test]
@@ -16,7 +19,10 @@ fn cons_with_list_tail() {
     // cons does not flatten — tail stays as a nested list
     assert_eq!(
         eval_str("(cons 1 '(2 3))"),
-        cons(num(1.0), cons(num(2.0), cons(num(3.0), Value::Nil)))
+        cons(
+            num(1.0),
+            cons(num(2.0), cons(num(3.0), Value::Nil(Span::default())))
+        )
     );
 }
 

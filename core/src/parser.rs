@@ -120,19 +120,19 @@ mod tests {
 
     fn strip_spans(expr: Expr) -> Expr {
         match expr {
-            Expr::Atom(text, _) => Expr::Atom(text, sp!(0, 0)),
+            Expr::Atom(text, _) => Expr::Atom(text, sp!(1, 0)),
             Expr::List(items, _) => {
-                Expr::List(items.into_iter().map(strip_spans).collect(), sp!(0, 0))
+                Expr::List(items.into_iter().map(strip_spans).collect(), sp!(1, 0))
             }
         }
     }
 
     fn a(s: &str) -> Expr<'_> {
-        Expr::Atom(s, sp!(0, 0))
+        Expr::Atom(s, sp!(1, 0))
     }
 
     fn l(items: Vec<Expr>) -> Expr {
-        Expr::List(items, sp!(0, 0))
+        Expr::List(items, sp!(1, 0))
     }
 
     // --- structure (spans ignored) ---
@@ -238,7 +238,7 @@ mod tests {
     fn atom_span() {
         let tokens = lex("foo");
         let (expr, _) = parse_expr(&tokens).unwrap();
-        assert_eq!(expr, atom("foo", 0, 1));
+        assert_eq!(expr, atom("foo", 1, 1));
     }
 
     #[test]
@@ -246,7 +246,7 @@ mod tests {
         // "   foo" — foo starts at column 4
         let tokens = lex("   foo");
         let (expr, _) = parse_expr(&tokens).unwrap();
-        assert_eq!(expr, atom("foo", 0, 4));
+        assert_eq!(expr, atom("foo", 1, 4));
     }
 
     #[test]
@@ -254,7 +254,7 @@ mod tests {
         let tokens = lex("foo\nbar");
         let (_, rest) = parse_expr(&tokens).unwrap();
         let (expr, _) = parse_expr(rest).unwrap();
-        assert_eq!(expr, atom("bar", 1, 1));
+        assert_eq!(expr, atom("bar", 2, 1));
     }
 
     #[test]
@@ -263,9 +263,9 @@ mod tests {
         let tokens = lex("(+ 1 2)");
         let (expr, _) = parse_expr(&tokens).unwrap();
         if let Expr::List(_, span) = expr {
-            assert_eq!(span, sp!(0, 2)); // '+' is at column 2
+            assert_eq!(span, sp!(1, 2)); // '+' is at column 2
         } else {
-            assert_eq!(0, 1, "expected list");
+            assert_eq!(1, 1, "expected list");
         }
     }
 

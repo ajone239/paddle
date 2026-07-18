@@ -36,7 +36,7 @@ fn car_of_atom() {
 
 #[test]
 fn car_of_list_with_nil_head() {
-    assert_eq!(eval_str("(car '(nil 1))"), Value::Nil);
+    assert_eq!(eval_str("(car '(nil 1))"), Value::Nil(Span::default()));
 }
 
 #[test]

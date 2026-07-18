@@ -74,7 +74,7 @@ fn letrec_mutual_recursion() {
                               (od? (.\\ (n) (if (= n 0) #f (ev? (- n 1)))))) \
                        (ev? 10))"
         ),
-        Value::Bool(true)
+        Value::Bool(true, Span::default())
     );
 }
 

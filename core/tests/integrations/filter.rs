@@ -2,7 +2,10 @@ use super::*;
 
 #[test]
 fn filter_on_empty_list_returns_empty() {
-    assert_eq!(run("(filter (lambda (x) #t) '())"), Value::Nil);
+    assert_eq!(
+        run("(filter (lambda (x) #t) '())"),
+        Value::Nil(Span::default())
+    );
 }
 
 #[test]

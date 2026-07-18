@@ -72,7 +72,7 @@ fn wrong_arity() {
     let err = eval_err("((lambda (x) x) 1 2)");
     assert_eq!(
         err.downcast_ref::<EvalError>(),
-        Some(&EvalError::BadFunctionArgCount(1))
+        Some(&EvalError::BadFunctionArgCount(1, Span::default()))
     );
 }
 

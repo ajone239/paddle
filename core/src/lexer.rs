@@ -564,30 +564,30 @@ mod tests {
 
     #[test]
     fn symbol_span() {
-        assert_eq!(lex("foo")[0], tok(sym("foo"), 0, 1));
+        assert_eq!(lex("foo")[0], tok(sym("foo"), 1, 1));
     }
 
     #[test]
     fn symbol_span_after_whitespace() {
         // "   foo" — column increments per char, foo starts after 3 spaces
-        assert_eq!(lex("   foo")[0], tok(sym("foo"), 0, 4));
+        assert_eq!(lex("   foo")[0], tok(sym("foo"), 1, 4));
     }
 
     #[test]
     fn paren_span() {
-        assert_eq!(lex("(foo)")[0], tok(TokenKind::LeftParen, 0, 1));
+        assert_eq!(lex("(foo)")[0], tok(TokenKind::LeftParen, 1, 1));
     }
 
     #[test]
     fn second_line_span() {
         let tokens = lex("foo\nbar");
-        assert_eq!(tokens[1], tok(sym("bar"), 1, 1));
+        assert_eq!(tokens[1], tok(sym("bar"), 2, 1));
     }
 
     #[test]
     fn column_resets_after_newline() {
         // "(+\n1)" — 1 is at line 1, column 1
         let tokens = lex("(+\n1)");
-        assert_eq!(tokens[2], tok(sym("1"), 1, 1));
+        assert_eq!(tokens[2], tok(sym("1"), 2, 1));
     }
 }

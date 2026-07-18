@@ -127,7 +127,7 @@ fn outside_quasiquote_errors() {
     let err = eval_env_err(&["@xs"]);
     assert_eq!(
         err.downcast_ref::<EvalError>(),
-        Some(&EvalError::UnquoteOutsideQuasi)
+        Some(&EvalError::UnquoteOutsideQuasi(Span::default()))
     );
 }
 
