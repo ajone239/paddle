@@ -3,17 +3,33 @@
 
 <head>
     <meta charset="utf-8" />
-    <title>hello-wasm example</title>
+    <title>very basic runner example</title>
 </head>
 
 <body>
     <script type="module">
-        import init, {greet} from "./pkg/wasm.js";
+        import init, {run_code} from "./pkg/wasm.js";
 
         init().then(() => {
-            greet("WebAssembly");
+            alert("ready");
         });
+
+        document.getElementById("run")
+        .addEventListener("click", () => {
+            let input = document.getElementById("input").value;
+
+            console.log(input)
+            run_code(input);
+        });
+
     </script>
+
+    <div>
+        <textarea id="input"></textarea>
+    </div>
+    <div>
+        <button id="run">run</button>
+    </div>
 </body>
 
 </html>

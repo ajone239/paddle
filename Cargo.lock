@@ -533,6 +533,7 @@ dependencies = [
 name = "wasm"
 version = "0.1.0"
 dependencies = [
+ "paddle_core",
  "wasm-bindgen",
 ]
 
