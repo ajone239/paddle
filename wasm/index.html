@@ -8,20 +8,26 @@
 
 <body>
     <script type="module">
-        import init, {run_code} from "./pkg/wasm.js";
+        import init, {Runner} from "./pkg/wasm.js";
 
         init().then(() => {
             alert("ready");
+
+            const runner = Runner.new();
+
+            document.getElementById("run")
+                .addEventListener("click", () => {
+                    let input = document.getElementById("input").value;
+
+                    runner.run_code(input);
+
+                    let res_ptr = runner.results_ptr();
+                    let res_len = runner.results_len();
+
+                    console.log(res_ptr);
+                    console.log(res_len);
+                });
         });
-
-        document.getElementById("run")
-        .addEventListener("click", () => {
-            let input = document.getElementById("input").value;
-
-            console.log(input)
-            run_code(input);
-        });
-
     </script>
 
     <div>

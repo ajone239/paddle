@@ -8,4 +8,5 @@ crate-type = ["cdylib"]
 
 [dependencies]
 paddle_core = { path = "../core" }
+anyhow = "1.0.102"
 wasm-bindgen = "0.2.121"
