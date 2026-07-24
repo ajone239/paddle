@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content" />
     <title>very basic runner example</title>
     <link rel="stylesheet" href="styles.css" />
 </head>
@@ -20,6 +20,21 @@
 /_/    \__,_/\__,_/\__,_/_/\___/`
 
         document.getElementById('paddle-deco').textContent = paddle_figlet;
+
+        const setAppHeight = () => {
+            const vv = window.visualViewport;
+            const height = vv ? vv.height : window.innerHeight;
+            const top = vv ? vv.offsetTop : 0;
+            document.documentElement.style.setProperty('--app-height', `${height}px`);
+            document.documentElement.style.setProperty('--app-top', `${top}px`);
+        };
+        setAppHeight();
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', setAppHeight);
+            window.visualViewport.addEventListener('scroll', setAppHeight);
+        } else {
+            window.addEventListener('resize', setAppHeight);
+        }
 
         init().then(() => {
             const runner = Runner.new();
