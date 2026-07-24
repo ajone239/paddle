@@ -8,17 +8,6 @@ use paddle_core::{
 };
 use wasm_bindgen::prelude::*;
 
-/*
- * Le plan
- *
- * - make a result type
- *     + maybe box?
- * - store them in a vec
- * - expose the vec with memory.js
- * - render them
- * - clear on render
- */
-
 #[wasm_bindgen]
 pub enum Tag {
     Err,
