@@ -113,8 +113,6 @@ graph { flow: down }
 
 # TODO Some day
 
-- wasm playground
-- try out pest
 - blend result macros and value.rs
 - `if __name__ == '__main__': <code>`
 - path based imports
