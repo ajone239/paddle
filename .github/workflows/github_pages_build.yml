@@ -1,0 +1,40 @@
+name: Github Pages Build
+
+on:
+    push:
+        branches:
+            - deploy
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Check out repository code
+              uses: actions/checkout@v4
+            - name: Setup WebPack
+              uses: jetli/wasm-pack-action@v0.4.0
+              with:
+                version: 'latest'
+            - run: wasm-pack build wasm --target web
+            - run: mkdir build
+            - run: cp -r wasm/index.html wasm/styles.css wasm/pkg build
+            - name: Upload static files as artifact
+              id: deployment
+              uses: actions/upload-pages-artifact@v3
+              with:
+                  path: build/
+
+    deploy:
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
+        permissions:
+            pages: write
+            id-token: write
+
+        needs: build
+        runs-on: ubuntu-latest
+        steps:
+            - name: Deploy to GitHub Pages
+              id: deployment
+              uses: actions/deploy-pages@v4
