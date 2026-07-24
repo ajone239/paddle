@@ -35,7 +35,7 @@ With the aforementioned macro system, in Paddle, you can simply:
 
 ```racket
 (defmacro (unless cond body...)
- `(if ,cond
+ `(if (not ,cond)
       (progn @body...)
       '()))
 
