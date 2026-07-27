@@ -126,6 +126,7 @@
                   ws)))))
 
 (define (repl)
+  (print 'forth-repl)
   (letn loop ((n 0) (stack '()))
         (print n "# ")
         (let? ((chars (read-line))
@@ -135,23 +136,34 @@
 
 (define my-env '())
 
+; (1 + 2 * (10 - 6 / 2)) ; => 15.0
 ; (+ 1 (* 2 (- 10 (/ 6 2)))) ; => 15.0
-(define arith-test "10 6 2 / - 2 * 1 + .")
+(define arith-test "10 6 2 / - 2 * 1 +")
+(define arith-test-2 "1 2 10 6 2 / - * +")
 
-(define dup-test "2 dup * .")
+(define dup-test "2 dup *")
 
-(define swap-test "6 5 swap - .")
+(define swap-test "6 5 swap -")
 
 (define env-test
-  ": bigdouble dub > 3 2 * !
-   : eight bigdouble 4 !
-   : notsix bigdouble 3 !
-   eight .
-   not six .")
+  ": bigdouble dup 3 > if 2 * then ! : eight 4 bigdouble ! : notsix 3 bigdouble ! eight notsix")
 
-(define program
-  ": fact dup 1 > if dup 1 - fact * then !
-   5 fact .")
+(define fact-test ": fact dup 1 > if dup 1 - fact * then ! 5 fact")
 
-; (forth (split program))
-(repl)
+(define all-tests
+ '((15     arith-test)
+   (15     arith-test-2)
+   (4      dup-test)
+   (-1     swap-test)
+   ("3 8"  env-test)
+   (120    fact-test)))
+
+(def (run-tests)
+    (for (t all-tests)
+      (print 'test (cadr t))
+      (print 'expect (car t))
+      (print 'result (forth (split (eval (cadr t))) '()))
+      (print)))
+
+(run-tests)
+; (repl)
