@@ -1,8 +1,8 @@
 (define (repeat n xs)
   (letn loop ((n n) (xs xs) (acc '()))
-    (if (<= n 0)
-      acc
-      (loop (- n 1) xs (cons xs acc)))))
+        (if (<= n 0)
+          acc
+          (loop (- n 1) xs (cons xs acc)))))
 
 (define (board n)
   (repeat n (range n)))
@@ -13,25 +13,49 @@
 
 (define (eliminate xs val)
   (letn loop ((xs xs) (val val) (i 1))
-    (when (pair? xs)
-      (let* ((row (car xs))
-             (rest (cdr xs))
-             (ef (lambda (x) (+ val (* x i))))
-             (elims (map ef '(-1 0 1)))
-             (ff (lambda (v) (not (memv v elims))))
-             (nrow (filter ff row)))
-        (cons nrow (loop rest val (+ i 1)))))))
+        (when (pair? xs)
+          (let* ((row (car xs))
+                 (rest (cdr xs))
+                 (ef (lambda (x) (+ val (* x i))))
+                 (elims (map ef '(-1 0 1)))
+                 (ff (lambda (v) (not (memv v elims))))
+                 (nrow (filter ff row)))
+            (cons nrow (loop rest val (+ i 1)))))))
 
 (define (solve board)
   (letn loop ((b board) (sol '()))
-    (cond
-      ((null? b) sol)
-      ((null? (car b)) #f)
-      (else (for/or (opt (car b))
-              (loop (eliminate (cdr b) opt)
-                    (cons opt sol)))))))
+        (cond
+          ((null? b) sol)
+          ((null? (car b)) #f)
+          (else (for/or (opt (car b))
+                  (loop (eliminate (cdr b) opt)
+                        (cons opt sol)))))))
+
+(define (solve-all b)
+  (cond
+    ((null? b) #t)
+    ((null? (car b)) #f)
+    (else
+      (letn loop ((opts (car b)) (rv '()))
+            (if (null? opts) rv
+              (let* ((opt (car opts))
+                     (nb (eliminate (cdr b) opt))
+                     (sols (solve-all nb))
+                     (proc
+                       (if (bool? sols)
+                         (if sols `(,opt) '())
+                         (map (.\ (s) (cons opt s)) sols)))
+                     (nv (append proc rv)))
+                (loop (cdr opts) nv)))))))
+
 
 (define (reverse xs)
   (foldl cons '() xs))
 
-(reverse (solve (board 8)))
+(let* ((n 8)
+       (b (board n))
+       (sol (reverse (solve b)))
+       (sols ((reverse (solve-all b)))))
+  (print sol)
+  (print)
+  (for (s sols) (print s)))
