@@ -130,3 +130,21 @@
                `(@(car rpairs) ,(threading (cdr rpairs)))))
       (threading (reverse pairs...)))
 
+(defm (struct name fields...)
+      (let ((make-symbol (.\ (parts...) (string->symbol (list->string parts...)))))
+        `(progn
+           (define (,name @fields...) (list ',name @fields...))
+           (define (,(make-symbol name "?") obj)
+             (if (pair? obj) (= ',name (car obj)) #f))
+           @(letn loop ((i 1) (fs fields...) (acc '()))
+                  (if (null? fs)
+                    acc
+                    (let* ((field-name (car fs))
+                           (getter
+                             `(define (,(make-symbol name "-" field-name) obj)
+                                (car ,(letn loop ((i i))
+                                            (if (<= i 0)
+                                              'obj
+                                              `(cdr ,(loop (- i 1)))))))
+                             ))
+                      (loop (+ 1 i) (cdr fs) (cons getter acc))))))))

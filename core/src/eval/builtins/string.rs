@@ -138,6 +138,23 @@ pub fn string_num(args: &Value) -> Result<Value> {
     }
 }
 
+pub fn string_symbol(args: &Value) -> Result<Value> {
+    let Value::Cons(pair, _) = args else {
+        bail!("should give me a list");
+    };
+
+    if !matches!(pair.1, Value::Nil(_)) {
+        bail!("only one arg");
+    }
+
+    let s = match &pair.0 {
+        Value::Str(s, _) | Value::Symbol(s, _) => s,
+        _ => bail!("only strs for string->num"),
+    };
+
+    Ok(Value::Symbol(s.clone(), Span::default()))
+}
+
 // list->string
 pub fn list_string(args: &Value) -> Result<Value> {
     let Value::Cons(pair, _) = args else {
@@ -153,6 +170,7 @@ pub fn list_string(args: &Value) -> Result<Value> {
         .to_cons_iter()
         .map(|v| match v {
             Value::Char(b, _) => char::from(*b).to_string(),
+            Value::Symbol(s, _) => s.to_string(),
             _ => v.to_string(),
         })
         .collect::<String>();

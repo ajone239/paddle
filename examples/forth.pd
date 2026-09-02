@@ -88,9 +88,8 @@
          (tail (cdr (cdr stack))))
     (cons (f b a) tail)))
 
-(define (entry key val) (list key val))
-(define (entry-key entry) (car entry))
-(define (entry-val entry) (cadr entry))
+
+(struct entry key val)
 
 (define (env-set env key val)
   (cons (entry key val) env))
