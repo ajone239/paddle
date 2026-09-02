@@ -1,8 +1,9 @@
-;; Env
+;; Structs
 
-(define (entry key val) (list key val))
-(define (entry-key entry) (car entry))
-(define (entry-val entry) (cadr entry))
+(struct lam args body env)
+(struct entry key val)
+
+;; Env
 
 (define (env-set env key val)
   (cons (entry key val) env))
@@ -16,14 +17,6 @@
           ((null? env) (err (string-append "'" key "' not found")))
           ((= key (entry-key (car env))) (entry-val (car env)))
           (else (loop (cdr env))))))
-
-;; Lambda
-
-(define (lam args body env) (list 'lam args body env))
-(define (lam? obj) (if (pair? obj) (= 'lam (car obj)) #f))
-(define (lam-args lam) (cadr lam))
-(define (lam-body lam) (caddr lam))
-(define (lam-env lam) (cadddr lam))
 
 ;; Paddle: Meta Eval
 

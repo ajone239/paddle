@@ -61,6 +61,7 @@ impl Default for Env {
             ("string-append", builtins::string::string_append),
             ("string->list", builtins::string::string_list),
             ("string->num", builtins::string::string_num),
+            ("string->symbol", builtins::string::string_symbol),
             ("list->string", builtins::string::list_string),
         ];
 
