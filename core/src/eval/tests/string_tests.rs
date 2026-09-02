@@ -196,6 +196,14 @@ fn list_string_of_chars() {
 }
 
 #[test]
+fn list_string_of_mixed() {
+    assert_eq!(
+        eval_str(r#"(list->string (list "string" 1 'symbol 2 "?"))"#),
+        Value::Str("string1symbol2?".into(), Span::default())
+    );
+}
+
+#[test]
 fn list_string_round_trips_with_string_list() {
     assert_eq!(
         eval_str(r#"(list->string (string->list "hello"))"#),
