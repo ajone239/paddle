@@ -113,10 +113,33 @@ graph { flow: down }
 
 # TODO Some day
 
+- macro fun
+    + [ ] `or` / `and` - real short-circuiting macros
+    + [ ] `swap!` - swap two places; avoid double-evaluating non-variable args
+    + [ ] `match` - structural pattern match
+    + [ ] `aif`/`awhen` - anaphoric macros binding implicit `it`
+    + [ ] `#lang`- style embedded DSL / reader macro
+- Thunks
+    + Warm-up: make laziness visible (~30 min)
+        * Write a zero-arg fn that prints before returning
+        * Call it eagerly, observe print fires immediately
+        * Call it wrapped in `(lambda () ...)`, pass to something that calls it conditionally
+        * Confirm via print order that wrapping delays execution
+    + Build `delay`/`force` from scratch, with memoization (~2–3 hrs)
+        * Implement `my-delay` as a macro — wraps an unevaluated expr in a thunk
+        * Implement `my-force` — calls the thunk, caches the result
+        * On repeat `force` calls, return the cached value instead of recomputing
+        * Prove memoization: put a print inside the delayed expr, force multiple times, confirm it only fires once
+    + Lazy infinite stream + sieve of Eratosthenes (~1 day)
+        * Build `stream-cons` / `stream-car` / `stream-cdr` (tail is always a thunk) on top of `my-delay`/`my-force`
+        * Implement an infinite stream of naturals starting from 2
+        * Implement a lazy sieve: filter multiples of the head, recursively sieve the rest
+        * Pull results with `stream-take` (e.g. first 20 primes)
+        * Be able to explain why defining the infinite stream doesn't blow the stack or infinite-loop
 - blend result macros and value.rs
-- `if __name__ == '__main__': <code>`
 - path based imports
+    + thread path in spans
+    + `if __name__ == '__main__': <code>`
 - bytecode VM
 - lexer iterator
 - AST arena
-
