@@ -120,11 +120,6 @@ graph { flow: down }
     + [ ] `aif`/`awhen` - anaphoric macros binding implicit `it`
     + [ ] `#lang`- style embedded DSL / reader macro
 - Thunks
-    + Warm-up: make laziness visible (~30 min)
-        * Write a zero-arg fn that prints before returning
-        * Call it eagerly, observe print fires immediately
-        * Call it wrapped in `(lambda () ...)`, pass to something that calls it conditionally
-        * Confirm via print order that wrapping delays execution
     + Build `delay`/`force` from scratch, with memoization (~2–3 hrs)
         * Implement `my-delay` as a macro — wraps an unevaluated expr in a thunk
         * Implement `my-force` — calls the thunk, caches the result
