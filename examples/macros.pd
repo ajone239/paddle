@@ -20,6 +20,27 @@
             ,(cond2 (cdr pairs)))))
     (cond2 pairs...))
 
+(defmacro (or exprs...)
+    (define (or2 exprs)
+      (if (null? exprs)
+        #f
+        `(let ((test ,(car exprs)))
+           (if test
+               test
+               ,(or2 (cdr exprs))))))
+    (or2 exprs...))
+
+(defmacro (and exprs...)
+    (define (and2 exprs)
+      (if (null? exprs)
+        #f
+        `(let ((test ,(car exprs)))
+           (if (not test)
+               test
+               ,(and2 (cdr exprs))))))
+    (and2 exprs...))
+
+
 (defm (for pair body...)
       (define bind (car pair))
       (define iter (eval (cdr pair)))
