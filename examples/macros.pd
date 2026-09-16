@@ -169,3 +169,14 @@
                                               `(cdr ,(loop (- i 1)))))))
                              ))
                       (loop (+ 1 i) (cdr fs) (cons getter acc))))))))
+
+(defmacro (delay expr)
+  `(let ((calced #f)
+         (memo ()))
+     (lambda ,'()
+       (if calced
+           memo
+           (progn
+             (set! memo ,(expr))
+             (set! calced #t)
+             memo)))))
