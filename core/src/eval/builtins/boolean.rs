@@ -1,6 +1,6 @@
 use crate::{
     eval::{env::BuiltinError, value::Value},
-    lexer::Span,
+    span::Span,
 };
 use anyhow::{Result, bail};
 

@@ -26,8 +26,9 @@ use std::rc::Rc;
 
 use super::*;
 use crate::eval::value::Value;
-use crate::lexer::{Span, lex};
+use crate::lexer::lex_no_file;
 use crate::parser::parse_expr;
+use crate::span::Span;
 
 // `Value` and `EvalError` both carry a `Span` now, and both derive `PartialEq`
 // over it. Real spans from parsing never equal the `Span::default()` placeholder
@@ -124,7 +125,7 @@ fn normalize_err(err: anyhow::Error) -> anyhow::Error {
 
 fn eval_str(s: &str) -> Value {
     let env = Env::default();
-    let tokens = lex(s);
+    let tokens = lex_no_file(s);
     let (expr, _) = parse_expr(&tokens).unwrap();
     let expr = lower(&expr);
     let val = eval(expr, Rc::new(RefCell::new(env))).unwrap();
@@ -137,7 +138,7 @@ fn eval_str_env(exprs: &[&str]) -> Value {
     let mut last = None;
 
     for expr in exprs {
-        let tokens = lex(expr);
+        let tokens = lex_no_file(expr);
         let (e, _) = parse_expr(&tokens).unwrap();
         let e = lower(&e);
         let val = eval(e, env.clone());
@@ -161,7 +162,7 @@ fn cons(head: Value, tail: Value) -> Value {
 
 fn eval_err(s: &str) -> anyhow::Error {
     let env = Env::default();
-    let tokens = lex(s);
+    let tokens = lex_no_file(s);
     let (expr, _) = parse_expr(&tokens).unwrap();
     let expr = lower(&expr);
     let err = eval(expr, Rc::new(RefCell::new(env))).unwrap_err();
@@ -171,7 +172,7 @@ fn eval_err(s: &str) -> anyhow::Error {
 fn eval_env_err(exprs: &[&str]) -> anyhow::Error {
     let env = Rc::new(RefCell::new(Env::default()));
     for s in exprs {
-        let tokens = lex(s);
+        let tokens = lex_no_file(s);
         let (e, _) = parse_expr(&tokens).unwrap();
         let e = lower(&e);
         if let Err(err) = eval(e, env.clone()) {

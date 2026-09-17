@@ -8,6 +8,7 @@ use paddle_core::{
     cursor::{Cursor, display_result},
     eval::Env,
     lexer,
+    span::intern,
 };
 
 #[derive(Debug, Parser)]
@@ -34,8 +35,10 @@ fn main() -> Result<()> {
     };
 
     if let Some(file_path) = cli.file.clone() {
+        let file_id = intern(file_path.to_str().unwrap().to_owned());
+
         let contents = read_to_string(file_path)?;
-        let lexed = lexer::lex(&contents);
+        let lexed = lexer::lex(&contents, file_id);
 
         let cursor = Cursor::new(&lexed, env.clone());
 

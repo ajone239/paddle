@@ -2,7 +2,7 @@ use std::{ops::Deref, rc::Rc};
 
 use anyhow::{Context, Result, bail};
 
-use crate::{eval::value::Value, lexer::Span};
+use crate::{eval::value::Value, span::Span};
 
 // string-length
 pub fn string_length(args: &Value) -> Result<Value> {

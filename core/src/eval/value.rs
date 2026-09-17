@@ -5,7 +5,7 @@ use std::rc::Rc;
 use anyhow::{Result, bail};
 
 use crate::eval::env::Env;
-use crate::lexer::Span;
+use crate::span::Span;
 
 #[derive(Clone, PartialEq)]
 pub enum Value {

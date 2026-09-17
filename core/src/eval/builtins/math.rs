@@ -2,7 +2,7 @@ use anyhow::{Result, bail};
 
 use crate::{
     eval::{env::BuiltinError, value::Value},
-    lexer::Span,
+    span::Span,
 };
 
 pub fn add(args: &Value) -> Result<Value> {

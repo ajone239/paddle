@@ -1,6 +1,7 @@
 use thiserror::Error;
 
-use crate::lexer::{Span, Token, TokenKind};
+use crate::lexer::{Token, TokenKind};
+use crate::span::Span;
 
 #[derive(Debug, PartialEq, Error)]
 pub enum ParseError {
@@ -103,19 +104,27 @@ fn parse_list<'a>(tokens: &'a [Token<'a>]) -> ParseResult<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::lexer::lex;
+    use crate::lexer::lex_no_file;
 
     macro_rules! sp {
         ($line:expr, $col:expr) => {
             Span {
                 line: $line,
                 column: $col,
+                ..Default::default()
             }
         };
     }
 
     fn atom(s: &str, line: usize, column: usize) -> Expr<'_> {
-        Expr::Atom(s, Span { line, column })
+        Expr::Atom(
+            s,
+            Span {
+                line,
+                column,
+                ..Default::default()
+            },
+        )
     }
 
     fn strip_spans(expr: Expr) -> Expr {
@@ -139,7 +148,7 @@ mod tests {
 
     #[test]
     fn single_atom() {
-        let tokens = lex("foo");
+        let tokens = lex_no_file("foo");
         let (expr, rest) = parse_expr(&tokens).unwrap();
         assert_eq!(strip_spans(expr), a("foo"));
         assert!(rest.is_empty());
@@ -147,7 +156,7 @@ mod tests {
 
     #[test]
     fn double_atom() {
-        let tokens = lex("foo bar");
+        let tokens = lex_no_file("foo bar");
         let (expr, rest) = parse_expr(&tokens).unwrap();
         assert_eq!(strip_spans(expr), a("foo"));
         assert!(!rest.is_empty());
@@ -155,7 +164,7 @@ mod tests {
 
     #[test]
     fn empty_list() {
-        let tokens = lex("()");
+        let tokens = lex_no_file("()");
         let (expr, rest) = parse_expr(&tokens).unwrap();
         assert_eq!(strip_spans(expr), l(vec![]));
         assert!(rest.is_empty());
@@ -163,7 +172,7 @@ mod tests {
 
     #[test]
     fn simple_list() {
-        let tokens = lex("(+ 1 2)");
+        let tokens = lex_no_file("(+ 1 2)");
         let (expr, rest) = parse_expr(&tokens).unwrap();
         assert_eq!(strip_spans(expr), l(vec![a("+"), a("1"), a("2")]));
         assert!(rest.is_empty());
@@ -171,7 +180,7 @@ mod tests {
 
     #[test]
     fn nested_list() {
-        let tokens = lex("(+ (- 3 1) 2)");
+        let tokens = lex_no_file("(+ (- 3 1) 2)");
         let (expr, rest) = parse_expr(&tokens).unwrap();
         assert_eq!(
             strip_spans(expr),
@@ -182,7 +191,7 @@ mod tests {
 
     #[test]
     fn deeply_nested() {
-        let tokens = lex("(a (b (c)))");
+        let tokens = lex_no_file("(a (b (c)))");
         let (expr, rest) = parse_expr(&tokens).unwrap();
         assert_eq!(
             strip_spans(expr),
@@ -193,7 +202,7 @@ mod tests {
 
     #[test]
     fn quote_inside_list() {
-        let tokens = lex("(foo 'x)");
+        let tokens = lex_no_file("(foo 'x)");
         let (expr, rest) = parse_expr(&tokens).unwrap();
         assert_eq!(
             strip_spans(expr),
@@ -204,7 +213,7 @@ mod tests {
 
     #[test]
     fn quote_atom() {
-        let tokens = lex("'x");
+        let tokens = lex_no_file("'x");
         let (expr, rest) = parse_expr(&tokens).unwrap();
         assert_eq!(strip_spans(expr), l(vec![a("quote"), a("x")]));
         assert!(rest.is_empty());
@@ -212,7 +221,7 @@ mod tests {
 
     #[test]
     fn double_quote() {
-        let tokens = lex("''x");
+        let tokens = lex_no_file("''x");
         let (expr, rest) = parse_expr(&tokens).unwrap();
         assert_eq!(
             strip_spans(expr),
@@ -223,7 +232,7 @@ mod tests {
 
     #[test]
     fn quote_list() {
-        let tokens = lex("'(+ 1 2)");
+        let tokens = lex_no_file("'(+ 1 2)");
         let (expr, rest) = parse_expr(&tokens).unwrap();
         assert_eq!(
             strip_spans(expr),
@@ -236,7 +245,7 @@ mod tests {
 
     #[test]
     fn atom_span() {
-        let tokens = lex("foo");
+        let tokens = lex_no_file("foo");
         let (expr, _) = parse_expr(&tokens).unwrap();
         assert_eq!(expr, atom("foo", 1, 1));
     }
@@ -244,14 +253,14 @@ mod tests {
     #[test]
     fn atom_span_after_whitespace() {
         // "   foo" — foo starts at column 4
-        let tokens = lex("   foo");
+        let tokens = lex_no_file("   foo");
         let (expr, _) = parse_expr(&tokens).unwrap();
         assert_eq!(expr, atom("foo", 1, 4));
     }
 
     #[test]
     fn atom_on_second_line() {
-        let tokens = lex("foo\nbar");
+        let tokens = lex_no_file("foo\nbar");
         let (_, rest) = parse_expr(&tokens).unwrap();
         let (expr, _) = parse_expr(rest).unwrap();
         assert_eq!(expr, atom("bar", 2, 1));
@@ -260,7 +269,7 @@ mod tests {
     #[test]
     fn list_span_is_first_element() {
         // span of a list is the first token inside it (the opening paren is consumed)
-        let tokens = lex("(+ 1 2)");
+        let tokens = lex_no_file("(+ 1 2)");
         let (expr, _) = parse_expr(&tokens).unwrap();
         if let Expr::List(_, span) = expr {
             assert_eq!(span, sp!(1, 2)); // '+' is at column 2
@@ -273,13 +282,13 @@ mod tests {
 
     #[test]
     fn empty_input() {
-        let tokens = lex("");
+        let tokens = lex_no_file("");
         assert_eq!(parse_expr(&tokens), Err(ParseError::EmptyInput));
     }
 
     #[test]
     fn unclosed_paren() {
-        let tokens = lex("(+ 1 2");
+        let tokens = lex_no_file("(+ 1 2");
         assert!(matches!(
             parse_expr(&tokens),
             Err(ParseError::UnexpectedEof { .. })
@@ -288,7 +297,7 @@ mod tests {
 
     #[test]
     fn bare_quote_at_end() {
-        let tokens = lex("'");
+        let tokens = lex_no_file("'");
         assert!(matches!(
             parse_expr(&tokens),
             Err(ParseError::UnexpectedEof { .. })
@@ -297,7 +306,7 @@ mod tests {
 
     #[test]
     fn unexpected_close_paren() {
-        let tokens = lex(")");
+        let tokens = lex_no_file(")");
         assert!(matches!(
             parse_expr(&tokens),
             Err(ParseError::UnexpectedToken { .. })

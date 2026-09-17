@@ -10,7 +10,7 @@ use crate::eval::{
     env::Env,
     value::{Form, Value},
 };
-use crate::lexer::Span;
+use crate::span::Span;
 
 enum Trampoline {
     Done(Value),

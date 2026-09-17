@@ -1,14 +1,4 @@
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
-pub struct Span {
-    pub line: usize,
-    pub column: usize,
-}
-
-impl std::fmt::Display for Span {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}:{}", self.line, self.column)
-    }
-}
+use crate::span::{FileId, Span};
 
 #[derive(Debug, PartialEq)]
 pub struct Token<'a> {
@@ -27,7 +17,11 @@ pub enum TokenKind<'a> {
     Symbol(&'a str),
 }
 
-pub fn lex<'a>(code: &'a str) -> Vec<Token<'a>> {
+pub fn lex_no_file<'a>(code: &'a str) -> Vec<Token<'a>> {
+    lex(code, FileId::default())
+}
+
+pub fn lex<'a>(code: &'a str, file_name_id: FileId) -> Vec<Token<'a>> {
     let mut tokens = Vec::with_capacity(code.len() / 4);
 
     let mut line = 1;
@@ -93,6 +87,7 @@ pub fn lex<'a>(code: &'a str) -> Vec<Token<'a>> {
                 span: Span {
                     line,
                     column: token_start_col,
+                    file_name_id,
                 },
             };
             tokens.push(token);
@@ -102,7 +97,11 @@ pub fn lex<'a>(code: &'a str) -> Vec<Token<'a>> {
         if let Some(kind) = next_kind {
             let token = Token {
                 kind,
-                span: Span { line, column },
+                span: Span {
+                    line,
+                    column,
+                    file_name_id,
+                },
             };
             tokens.push(token);
         }
@@ -117,6 +116,7 @@ pub fn lex<'a>(code: &'a str) -> Vec<Token<'a>> {
             span: Span {
                 line,
                 column: token_start_col,
+                file_name_id,
             },
         };
         tokens.push(token);
@@ -136,7 +136,11 @@ mod tests {
     fn tok(kind: TokenKind, line: usize, column: usize) -> Token {
         Token {
             kind,
-            span: Span { line, column },
+            span: Span {
+                line,
+                column,
+                ..Default::default()
+            },
         }
     }
 
@@ -148,28 +152,28 @@ mod tests {
 
     #[test]
     fn empty_input() {
-        assert_eq!(lex(""), vec![]);
+        assert_eq!(lex_no_file(""), vec![]);
     }
 
     #[test]
     fn only_whitespace() {
-        assert_eq!(lex("   \n  "), vec![]);
+        assert_eq!(lex_no_file("   \n  "), vec![]);
     }
 
     #[test]
     fn single_number() {
-        assert_eq!(kinds(lex("42")), vec![sym("42")]);
+        assert_eq!(kinds(lex_no_file("42")), vec![sym("42")]);
     }
 
     #[test]
     fn single_symbol() {
-        assert_eq!(kinds(lex("foo")), vec![sym("foo")]);
+        assert_eq!(kinds(lex_no_file("foo")), vec![sym("foo")]);
     }
 
     #[test]
     fn empty_parens() {
         assert_eq!(
-            kinds(lex("()")),
+            kinds(lex_no_file("()")),
             vec![TokenKind::LeftParen, TokenKind::RightParen]
         );
     }
@@ -179,7 +183,7 @@ mod tests {
     #[test]
     fn simple_addition() {
         assert_eq!(
-            kinds(lex("(+ 1 2)")),
+            kinds(lex_no_file("(+ 1 2)")),
             vec![
                 TokenKind::LeftParen,
                 sym("+"),
@@ -193,7 +197,7 @@ mod tests {
     #[test]
     fn define_expression() {
         assert_eq!(
-            kinds(lex("(define x 10)")),
+            kinds(lex_no_file("(define x 10)")),
             vec![
                 TokenKind::LeftParen,
                 sym("define"),
@@ -209,7 +213,7 @@ mod tests {
     #[test]
     fn extra_spaces_between_tokens() {
         assert_eq!(
-            kinds(lex("(+   1   2)")),
+            kinds(lex_no_file("(+   1   2)")),
             vec![
                 TokenKind::LeftParen,
                 sym("+"),
@@ -223,7 +227,7 @@ mod tests {
     #[test]
     fn newlines_between_tokens() {
         assert_eq!(
-            kinds(lex("(+\n1\n2)")),
+            kinds(lex_no_file("(+\n1\n2)")),
             vec![
                 TokenKind::LeftParen,
                 sym("+"),
@@ -239,7 +243,7 @@ mod tests {
     #[test]
     fn nested_expression() {
         assert_eq!(
-            kinds(lex("(+ (- 3 1) 2)")),
+            kinds(lex_no_file("(+ (- 3 1) 2)")),
             vec![
                 TokenKind::LeftParen,
                 sym("+"),
@@ -257,7 +261,7 @@ mod tests {
     #[test]
     fn deeply_nested() {
         assert_eq!(
-            kinds(lex("(a (b (c)))")),
+            kinds(lex_no_file("(a (b (c)))")),
             vec![
                 TokenKind::LeftParen,
                 sym("a"),
@@ -276,17 +280,17 @@ mod tests {
 
     #[test]
     fn float_number() {
-        assert_eq!(kinds(lex("3.14")), vec![sym("3.14")]);
+        assert_eq!(kinds(lex_no_file("3.14")), vec![sym("3.14")]);
     }
 
     #[test]
     fn negative_number() {
-        assert_eq!(kinds(lex("-7")), vec![sym("-7")]);
+        assert_eq!(kinds(lex_no_file("-7")), vec![sym("-7")]);
     }
 
     #[test]
     fn negative_float() {
-        assert_eq!(kinds(lex("-0.5")), vec![sym("-0.5")]);
+        assert_eq!(kinds(lex_no_file("-0.5")), vec![sym("-0.5")]);
     }
 
     // --- symbols ---
@@ -294,23 +298,23 @@ mod tests {
     #[test]
     fn operator_symbols() {
         for op in ["+", "-", "*", "/", "=", "<", ">", "<=", ">="] {
-            assert_eq!(kinds(lex(op)), vec![sym(op)], "operator: {op}");
+            assert_eq!(kinds(lex_no_file(op)), vec![sym(op)], "operator: {op}");
         }
     }
 
     #[test]
     fn multi_char_symbol() {
-        assert_eq!(kinds(lex("lambda")), vec![sym("lambda")]);
+        assert_eq!(kinds(lex_no_file("lambda")), vec![sym("lambda")]);
     }
 
     #[test]
     fn symbol_with_hyphen() {
-        assert_eq!(kinds(lex("my-var")), vec![sym("my-var")]);
+        assert_eq!(kinds(lex_no_file("my-var")), vec![sym("my-var")]);
     }
 
     #[test]
     fn symbol_with_question_mark() {
-        assert_eq!(kinds(lex("nil?")), vec![sym("nil?")]);
+        assert_eq!(kinds(lex_no_file("nil?")), vec![sym("nil?")]);
     }
 
     // --- whacky whitespace ---
@@ -318,7 +322,7 @@ mod tests {
     #[test]
     fn tab_between_tokens() {
         assert_eq!(
-            kinds(lex("(+\t1\t2)")),
+            kinds(lex_no_file("(+\t1\t2)")),
             vec![
                 TokenKind::LeftParen,
                 sym("+"),
@@ -332,7 +336,7 @@ mod tests {
     #[test]
     fn carriage_return_between_tokens() {
         assert_eq!(
-            kinds(lex("(+\r\n1\r\n2)")),
+            kinds(lex_no_file("(+\r\n1\r\n2)")),
             vec![
                 TokenKind::LeftParen,
                 sym("+"),
@@ -345,13 +349,13 @@ mod tests {
 
     #[test]
     fn only_tabs_and_carriage_returns() {
-        assert_eq!(lex("\t\t\r\n\t"), vec![]);
+        assert_eq!(lex_no_file("\t\t\r\n\t"), vec![]);
     }
 
     #[test]
     fn mixed_whitespace_between_tokens() {
         assert_eq!(
-            kinds(lex("(+  \t  1)")),
+            kinds(lex_no_file("(+  \t  1)")),
             vec![
                 TokenKind::LeftParen,
                 sym("+"),
@@ -365,13 +369,13 @@ mod tests {
 
     #[test]
     fn string_literal_no_spaces() {
-        assert_eq!(kinds(lex("\"hello\"")), vec![sym("\"hello\"")]);
+        assert_eq!(kinds(lex_no_file("\"hello\"")), vec![sym("\"hello\"")]);
     }
 
     #[test]
     fn string_literal_with_spaces() {
         assert_eq!(
-            kinds(lex("(print \"hello world\")")),
+            kinds(lex_no_file("(print \"hello world\")")),
             vec![
                 TokenKind::LeftParen,
                 sym("print"),
@@ -384,7 +388,7 @@ mod tests {
     #[test]
     fn two_string_literals_with_spaces() {
         assert_eq!(
-            kinds(lex("(print \"hello world\" \"hello world\")")),
+            kinds(lex_no_file("(print \"hello world\" \"hello world\")")),
             vec![
                 TokenKind::LeftParen,
                 sym("print"),
@@ -397,13 +401,13 @@ mod tests {
 
     #[test]
     fn empty_string_literal() {
-        assert_eq!(kinds(lex("\"\"")), vec![sym("\"\"")]);
+        assert_eq!(kinds(lex_no_file("\"\"")), vec![sym("\"\"")]);
     }
 
     #[test]
     fn string_containing_parens() {
         assert_eq!(
-            kinds(lex("\"(not a paren)\"")),
+            kinds(lex_no_file("\"(not a paren)\"")),
             vec![sym("\"(not a paren)\"")]
         );
     }
@@ -412,18 +416,18 @@ mod tests {
 
     #[test]
     fn quote_atom() {
-        assert_eq!(kinds(lex("'x")), vec![TokenKind::Quote, sym("x")]);
+        assert_eq!(kinds(lex_no_file("'x")), vec![TokenKind::Quote, sym("x")]);
     }
 
     #[test]
     fn quote_number() {
-        assert_eq!(kinds(lex("'42")), vec![TokenKind::Quote, sym("42")]);
+        assert_eq!(kinds(lex_no_file("'42")), vec![TokenKind::Quote, sym("42")]);
     }
 
     #[test]
     fn quote_list() {
         assert_eq!(
-            kinds(lex("'(+ 1 2)")),
+            kinds(lex_no_file("'(+ 1 2)")),
             vec![
                 TokenKind::Quote,
                 TokenKind::LeftParen,
@@ -438,7 +442,7 @@ mod tests {
     #[test]
     fn quote_inside_expression() {
         assert_eq!(
-            kinds(lex("(eq 'a 'b)")),
+            kinds(lex_no_file("(eq 'a 'b)")),
             vec![
                 TokenKind::LeftParen,
                 sym("eq"),
@@ -454,7 +458,7 @@ mod tests {
     #[test]
     fn double_quote_shorthand() {
         assert_eq!(
-            kinds(lex("''x")),
+            kinds(lex_no_file("''x")),
             vec![TokenKind::Quote, TokenKind::Quote, sym("x")]
         );
     }
@@ -462,7 +466,7 @@ mod tests {
     #[test]
     fn quote_string() {
         assert_eq!(
-            kinds(lex("'\"hello\"")),
+            kinds(lex_no_file("'\"hello\"")),
             vec![TokenKind::Quote, sym("\"hello\"")]
         );
     }
@@ -471,28 +475,37 @@ mod tests {
 
     #[test]
     fn escaped_quote_in_string() {
-        assert_eq!(kinds(lex(r#""say \"hi\"""#)), vec![sym(r#""say \"hi\"""#)]);
+        assert_eq!(
+            kinds(lex_no_file(r#""say \"hi\"""#)),
+            vec![sym(r#""say \"hi\"""#)]
+        );
     }
 
     #[test]
     fn escaped_backslash_in_string() {
-        assert_eq!(kinds(lex(r#""foo\\bar""#)), vec![sym(r#""foo\\bar""#)]);
+        assert_eq!(
+            kinds(lex_no_file(r#""foo\\bar""#)),
+            vec![sym(r#""foo\\bar""#)]
+        );
     }
 
     #[test]
     fn escaped_quote_at_end_of_string() {
-        assert_eq!(kinds(lex(r#""hello\\""#)), vec![sym(r#""hello\\""#)]);
+        assert_eq!(
+            kinds(lex_no_file(r#""hello\\""#)),
+            vec![sym(r#""hello\\""#)]
+        );
     }
 
     #[test]
     fn string_with_only_escaped_quote() {
-        assert_eq!(kinds(lex(r#""\"""#)), vec![sym(r#""\"""#)]);
+        assert_eq!(kinds(lex_no_file(r#""\"""#)), vec![sym(r#""\"""#)]);
     }
 
     #[test]
     fn escaped_quote_does_not_break_surrounding_tokens() {
         assert_eq!(
-            kinds(lex(r#"(print "say \"hi\"")"#)),
+            kinds(lex_no_file(r#"(print "say \"hi\"")"#)),
             vec![
                 TokenKind::LeftParen,
                 sym("print"),
@@ -507,7 +520,7 @@ mod tests {
     #[test]
     fn backslash_before_quote_shorthand() {
         assert_eq!(
-            kinds(lex(r"\'x")),
+            kinds(lex_no_file(r"\'x")),
             vec![sym(r"\"), TokenKind::Quote, sym("x")]
         );
     }
@@ -515,7 +528,7 @@ mod tests {
     #[test]
     fn backslash_before_left_paren() {
         assert_eq!(
-            kinds(lex(r"\(foo)")),
+            kinds(lex_no_file(r"\(foo)")),
             vec![
                 sym(r"\"),
                 TokenKind::LeftParen,
@@ -528,7 +541,7 @@ mod tests {
     #[test]
     fn backslash_as_symbol_character() {
         assert_eq!(
-            kinds(lex(r"(foo \ bar)")),
+            kinds(lex_no_file(r"(foo \ bar)")),
             vec![
                 TokenKind::LeftParen,
                 sym("foo"),
@@ -544,7 +557,7 @@ mod tests {
     #[test]
     fn two_top_level_expressions() {
         assert_eq!(
-            kinds(lex("(+ 1 2) (- 3 4)")),
+            kinds(lex_no_file("(+ 1 2) (- 3 4)")),
             vec![
                 TokenKind::LeftParen,
                 sym("+"),
@@ -564,30 +577,30 @@ mod tests {
 
     #[test]
     fn symbol_span() {
-        assert_eq!(lex("foo")[0], tok(sym("foo"), 1, 1));
+        assert_eq!(lex_no_file("foo")[0], tok(sym("foo"), 1, 1));
     }
 
     #[test]
     fn symbol_span_after_whitespace() {
         // "   foo" — column increments per char, foo starts after 3 spaces
-        assert_eq!(lex("   foo")[0], tok(sym("foo"), 1, 4));
+        assert_eq!(lex_no_file("   foo")[0], tok(sym("foo"), 1, 4));
     }
 
     #[test]
     fn paren_span() {
-        assert_eq!(lex("(foo)")[0], tok(TokenKind::LeftParen, 1, 1));
+        assert_eq!(lex_no_file("(foo)")[0], tok(TokenKind::LeftParen, 1, 1));
     }
 
     #[test]
     fn second_line_span() {
-        let tokens = lex("foo\nbar");
+        let tokens = lex_no_file("foo\nbar");
         assert_eq!(tokens[1], tok(sym("bar"), 2, 1));
     }
 
     #[test]
     fn column_resets_after_newline() {
         // "(+\n1)" — 1 is at line 1, column 1
-        let tokens = lex("(+\n1)");
+        let tokens = lex_no_file("(+\n1)");
         assert_eq!(tokens[2], tok(sym("1"), 2, 1));
     }
 }

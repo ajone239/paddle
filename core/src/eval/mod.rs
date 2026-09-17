@@ -12,7 +12,7 @@ pub use lower::lower;
 
 use thiserror::Error;
 
-use crate::{eval::value::Form, lexer::Span};
+use crate::{eval::value::Form, span::Span};
 
 #[derive(Debug, PartialEq, Error)]
 pub enum EvalError {

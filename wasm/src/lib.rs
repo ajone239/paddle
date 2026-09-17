@@ -5,6 +5,7 @@ use paddle_core::{
     cursor::Cursor,
     eval::{Env, value::Value},
     lexer,
+    span::intern,
 };
 use wasm_bindgen::prelude::*;
 
@@ -30,7 +31,9 @@ impl Runner {
     }
 
     pub fn run_code(&self, input: &str, callback: Function) {
-        let lexed = lexer::lex(&input);
+        let wasm_file_id = intern("<WASM>".to_string());
+
+        let lexed = lexer::lex(&input, wasm_file_id);
 
         let cursor = Cursor::new(&lexed, self.env.clone());
 

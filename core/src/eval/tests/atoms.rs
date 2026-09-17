@@ -1,5 +1,5 @@
 use super::*;
-use crate::lexer::Span;
+use crate::span::Span;
 
 #[test]
 fn integer_literal() {

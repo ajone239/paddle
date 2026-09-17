@@ -1,4 +1,4 @@
-use anyhow::{Result, bail};
+use anyhow::{Result, anyhow, bail};
 
 use std::{cell::RefCell, fs::read_to_string, path::PathBuf, rc::Rc};
 
@@ -6,6 +6,7 @@ use crate::{
     eval::{Env, eval, lower, value::Value},
     lexer::{self, Token},
     parser,
+    span::{FileId, intern},
 };
 
 pub struct Cursor<'a> {
@@ -39,24 +40,46 @@ impl<'a> Iterator for Cursor<'a> {
 
         let expr = lower(&ast);
 
-        // TODO(ajone239): make this error on the proper token
-        let val = eval(expr, self.env.clone())
-            .map_err(|e| e.context(format!("at {}:{}", start_span.line, start_span.column)));
+        let val = eval(expr, self.env.clone()).map_err(|e| e.context(format!("at {}", start_span)));
 
         Some(val)
     }
 }
 
 pub fn process_file(file_path: PathBuf, env: Rc<RefCell<Env>>) -> Result<Vec<Value>> {
-    let contents = read_to_string(file_path)?;
-    let lexed = lexer::lex(&contents);
+    let contents = read_to_string(&file_path)?;
+    let file_id = intern(
+        file_path
+            .to_str()
+            .ok_or(anyhow!(format!("Bad file {:?}", file_path)))?
+            .to_owned(),
+    );
+    let lexed = lexer::lex(&contents, file_id);
+
+    let cursor = Cursor::new(&lexed, env);
+    cursor.collect()
+}
+
+pub fn process_named_bytes(
+    file_path: PathBuf,
+    contents: &str,
+    env: Rc<RefCell<Env>>,
+) -> Result<Vec<Value>> {
+    let file_id = intern(
+        file_path
+            .to_str()
+            .ok_or(anyhow!(format!("Bad file {:?}", file_path)))?
+            .to_owned(),
+    );
+    let lexed = lexer::lex(&contents, file_id);
 
     let cursor = Cursor::new(&lexed, env);
     cursor.collect()
 }
 
 pub fn process(contents: &str, env: Rc<RefCell<Env>>) -> Result<Vec<Value>> {
-    let lexed = lexer::lex(contents);
+    let file_id = FileId::default();
+    let lexed = lexer::lex(contents, file_id);
 
     let cursor = Cursor::new(&lexed, env);
     cursor.collect()

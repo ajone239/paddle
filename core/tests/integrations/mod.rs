@@ -9,7 +9,7 @@ use std::{cell::RefCell, rc::Rc};
 use paddle_core::{
     cursor::process,
     eval::{Env, EvalError, value::Value},
-    lexer::Span,
+    span::Span,
 };
 
 static STD_LIB: &str = include_str!("../../../examples/base.pd");

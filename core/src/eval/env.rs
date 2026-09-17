@@ -4,15 +4,17 @@ use anyhow::{Context, Result, bail};
 use thiserror::Error;
 
 use crate::{
-    cursor::process,
+    cursor::process_named_bytes,
     eval::{
         builtins,
         value::{Builtin, BuiltinFn, Value},
     },
-    lexer::Span,
+    span::Span,
 };
 
+static STD_LIB_FILE: &str = "base.pd";
 static STD_LIB: &str = include_str!("../../../examples/base.pd");
+static STD_MAC_FILE: &str = "macros.pd";
 static STD_MAC: &str = include_str!("../../../examples/macros.pd");
 
 #[derive(Debug, PartialEq)]
@@ -141,8 +143,10 @@ impl Env {
     pub fn with_stdlib() -> Result<Rc<RefCell<Self>>> {
         let env = Rc::new(RefCell::new(Env::default()));
 
-        process(STD_LIB, env.clone()).context("failed to parse the std lib")?;
-        process(STD_MAC, env.clone()).context("failed to parse the std lib macros")?;
+        process_named_bytes(STD_LIB_FILE.into(), STD_LIB, env.clone())
+            .context("failed to parse the std lib")?;
+        process_named_bytes(STD_MAC_FILE.into(), STD_MAC, env.clone())
+            .context("failed to parse the std lib macros")?;
 
         Ok(env)
     }

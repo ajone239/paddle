@@ -5,7 +5,7 @@ use std::{
 
 use anyhow::Result;
 
-use crate::{eval::value::Value, lexer::Span};
+use crate::{eval::value::Value, span::Span};
 
 pub fn print(args: &Value) -> Result<Value> {
     let out = args

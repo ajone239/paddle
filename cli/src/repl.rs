@@ -7,11 +7,13 @@ use paddle_core::{
     cursor::{Cursor, count_paren, display_result, is_ready_to_process},
     eval::Env,
     lexer,
+    span::intern,
 };
 
 pub fn run_repl(env: Rc<RefCell<Env>>) -> Result<()> {
     let mut rl = DefaultEditor::new()?;
     let mut input = String::new();
+    let repl_file_id = intern("<REPL>".to_string());
 
     loop {
         let pcount = count_paren(&input);
@@ -47,7 +49,7 @@ pub fn run_repl(env: Rc<RefCell<Env>>) -> Result<()> {
 
         rl.add_history_entry(&input)?;
 
-        let lexed = lexer::lex(&input);
+        let lexed = lexer::lex(&input, repl_file_id);
         let cursor = Cursor::new(&lexed, env.clone());
 
         for res in cursor {
