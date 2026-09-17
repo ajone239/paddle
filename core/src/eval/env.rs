@@ -19,6 +19,7 @@ static STD_MAC: &str = include_str!("../../../examples/macros.pd");
 
 #[derive(Debug, PartialEq)]
 pub struct Env {
+    pub current_file: String,
     env: HashMap<String, Value>,
     builtin: Rc<HashMap<String, Value>>,
     parent: Option<Rc<RefCell<Self>>>,
@@ -72,6 +73,7 @@ impl Default for Env {
         }
 
         Self {
+            current_file: "__main__".to_string(),
             env: HashMap::new(),
             builtin: Rc::new(benv),
             parent: None,
@@ -86,8 +88,10 @@ fn tobi(f: Builtin, name: &str) -> Value {
 impl Env {
     pub fn new_child(parent: Rc<RefCell<Self>>) -> Self {
         let builtin = parent.borrow().builtin.clone();
+        let current_file = parent.borrow().current_file.to_owned();
 
         Self {
+            current_file,
             env: HashMap::new(),
             builtin,
             parent: Some(parent),

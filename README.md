@@ -115,9 +115,6 @@ graph { flow: down }
 
 - blend result macros and value.rs
 - `match` macro - structural pattern match
-- path based imports
-    + thread path in spans
-    + `if __name__ == '__main__': <code>`
 - Build `delay`/`force` from scratch, with memoization (~2–3 hrs)
 - Lazy infinite stream + sieve of Eratosthenes (~1 day)
     + Build `stream-cons` / `stream-car` / `stream-cdr` (tail is always a thunk) on top of `my-delay`/`my-force`

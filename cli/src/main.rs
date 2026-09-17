@@ -1,6 +1,6 @@
 use std::{cell::RefCell, fs::read_to_string, path::PathBuf, rc::Rc};
 
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use clap::Parser;
 
 use paddle::repl::run_repl;
@@ -35,7 +35,11 @@ fn main() -> Result<()> {
     };
 
     if let Some(file_path) = cli.file.clone() {
-        let file_id = intern(file_path.to_str().unwrap().to_owned());
+        let file_str = file_path
+            .to_str()
+            .ok_or(anyhow!(format!("Bad file {:?}", file_path)))?
+            .to_owned();
+        let file_id = intern(file_str);
 
         let contents = read_to_string(file_path)?;
         let lexed = lexer::lex(&contents, file_id);

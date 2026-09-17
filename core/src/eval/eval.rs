@@ -159,9 +159,13 @@ fn eval_form(form: Form, span: Span, tail: Value, env: Rc<RefCell<Env>>) -> Resu
             if list.next().is_some() {
                 return Err(EvalError::BadRequireArgCount(2, span).into());
             }
+            let last_file = env.borrow().current_file.to_owned();
+            env.borrow_mut().current_file = file_name.to_string();
 
-            process_file(file_name.to_string().into(), env)
+            process_file(file_name.to_string().into(), env.clone())
                 .context(format!("error processing files at {}", file_span))?;
+
+            env.borrow_mut().current_file = last_file;
 
             Ok(Trampoline::Done(Value::NoPrint))
         }
@@ -239,6 +243,10 @@ fn eval_form(form: Form, span: Span, tail: Value, env: Rc<RefCell<Env>>) -> Resu
 
             Ok(Trampoline::Done(lambda))
         }
+        Form::WhoAmI => Ok(Trampoline::Done(Value::Str(
+            env.borrow().current_file.to_owned().into(),
+            Span::default(),
+        ))),
     }
 }
 

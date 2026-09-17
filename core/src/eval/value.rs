@@ -297,6 +297,7 @@ pub enum Form {
     Lambda,
     Progn,
     SetBang,
+    WhoAmI,
 }
 
 impl Form {
@@ -315,6 +316,7 @@ impl Form {
             "define" | "def" => Some(Self::Define),
             "defmacro" | "defm" => Some(Self::DefineMacro),
             "lambda" | "lamda" | ".\\" => Some(Self::Lambda),
+            "whoami" | "__name__" => Some(Self::WhoAmI),
             _ => None,
         }
     }
