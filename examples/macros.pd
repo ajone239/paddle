@@ -1,3 +1,5 @@
+;; Fun Ifs
+
 (defm (unless cond body...)
  `(if (not ,cond) (progn @body...) '()))
 
@@ -40,40 +42,7 @@
                ,(and2 (cdr exprs))))))
     (and2 exprs...))
 
-
-(defm (for pair body...)
-      (define bind (car pair))
-      (define iter (eval (cdr pair)))
-      (define (for2 xs)
-        (if (not xs)
-            'nil
-            `((lambda (,bind) @body... ,(for2 (cdr xs)))
-              ',(car xs))))
-      (for2 iter))
-
-(defm (for/list pair body...)
-      (define bind (car pair))
-      (define iter (eval (cdr pair)))
-      (define (for2 xs)
-        (if (not xs)
-            '()
-            `(cons ((lambda (,bind)
-                @body...) ',(car xs)) ,(for2 (cdr xs)))))
-      (for2 iter))
-
-(defm (for/or pair body...)
-      (define bind (car pair))
-      (define iter (eval (cdr pair)))
-      (define (for2 xs)
-        (if (not xs)
-            #f
-            `(progn
-               (define res
-                 ((lambda (,bind) @body...) ',(car xs)))
-               (if res
-                 res
-                 ,(for2 (cdr xs))))))
-      (for2 iter))
+;; Let
 
 (defm (let pairs body...)
       (define vars (map car pairs))
@@ -102,6 +71,41 @@
       (define vals (map cadr pairs))
       `(letrec ((,name (lambda (@vars) @body...)))
          (,name @vals)))
+
+;; For
+
+(defm (for pair body...)
+      (define bind (car pair))
+      `(progn
+         (define f (lambda (,bind) @body...))
+         (letn loop ((xs ,(cdr pair)))
+               (if (null? xs)
+                 '()
+                 (progn
+                   (f (car xs))
+                   (loop (cdr xs)))))))
+
+(defm (for/list pair body...)
+      (define bind (car pair))
+      `(progn
+         (define f (lambda (,bind) @body...))
+         (letn loop ((xs ,(cdr pair)) (acc '()))
+               (if (null? xs)
+                 (reverse acc)
+                 (loop (cdr xs) (cons (f (car xs)) acc))))))
+
+(defm (for/or pair body...)
+      (define bind (car pair))
+      (define iter (eval (cdr pair)))
+      `(progn
+         (define f (lambda (,bind) @body...))
+         (letn loop ((xs ,(cdr pair)))
+               (if (null? xs)
+                 #f
+                 (progn
+                   (define res (f (car xs)))
+                   (if res res
+                     (loop (cdr xs))))))))
 
 
 ;; Results monads
@@ -144,12 +148,16 @@
                  ,(let?2 (cdr bindings)))))))
       (let?2 bindings))
 
+; Threading
+
 (defm (-> init pairs...)
       (def (threading rpairs)
            (if (null? rpairs)
                init
                `(@(car rpairs) ,(threading (cdr rpairs)))))
       (threading (reverse pairs...)))
+
+; Struct
 
 (defm (struct name fields...)
       (let ((make-symbol (.\ (parts...) (string->symbol (list->string parts...)))))
