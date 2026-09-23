@@ -158,6 +158,55 @@ impl Value {
 
         Ok(rv)
     }
+
+    pub fn dump(&self) -> String {
+        match self {
+            Value::NoPrint => "".to_string(),
+            Value::Nil(_) => format!("nil"),
+            Value::Bool(b, _) => format!("{}", if *b { "#t" } else { "#f" }),
+            Value::Num(n, _) => format!("{}", n),
+            Value::Char(b, _) => format!("'{}'", char::from(*b)),
+            Value::Symbol(s, _) => format!(":{}", s),
+            Value::Form(form, _) => format!("{:?}", form),
+            Value::Str(s, _) => format!("{}", s),
+            Value::Cons(pair, _) => {
+                let first = &pair.0;
+                let mut second = &pair.1;
+
+                if matches!(second, Value::Nil(_)) {
+                    return format!("'({})", first);
+                }
+
+                let mut vals = vec![first.to_string()];
+
+                while let Value::Cons(next_pair, _) = second {
+                    let first = &next_pair.0;
+                    vals.push(first.to_string());
+                    second = &next_pair.1;
+                }
+                if !matches!(second, Self::Nil(_)) {
+                    vals.push(second.to_string());
+                }
+
+                let nice_list = vals.join(" ");
+                format!("'({})", nice_list)
+            }
+            Value::Builtin(_, name, _) => format!("built-in: {} (...) {{...}}", name),
+            Value::Func {
+                name, args, body, ..
+            } => {
+                format!("func: {} ({}):\n{}", name, args.join(" "), body)
+            }
+            Value::Macro {
+                name, args, body, ..
+            } => {
+                format!("macro: {} ({}):\n{}", name, args.join(" "), body)
+            }
+            Value::Lambda { args, body, .. } => {
+                format!("lambda: ({}):\n{}", args.join(" "), body)
+            }
+        }
+    }
 }
 
 impl Display for Value {
