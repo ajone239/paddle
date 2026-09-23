@@ -64,8 +64,33 @@ pub fn run_repl(env: Rc<RefCell<Env>>) -> Result<()> {
 
 fn handle_repl_cmd(env: Rc<RefCell<Env>>, line: &str) -> bool {
     match line {
-        ":env" => {
+        ":e" | ":env" => {
             env.borrow().dump();
+            true
+        }
+        ":v" | ":version" => {
+            println!("REPL: {}", env!("CARGO_PKG_VERSION"));
+            println!("Core: {}", paddle_core::core_version());
+            true
+        }
+        s if s.starts_with(":env_get") => {
+            let values: Vec<&str> = line.split_whitespace().collect();
+            if values.len() != 2 {
+                println!("Usage: :env_get <value_name>");
+                return true;
+            }
+            let val = values[1];
+
+            match env.borrow().resolve(val) {
+                Some(value) => {
+                    println!("Value [{val}]");
+                    println!("{}", value.dump());
+                }
+                None => {
+                    println!("Value [{val}] not found in current env");
+                }
+            }
+
             true
         }
         _ => false,
