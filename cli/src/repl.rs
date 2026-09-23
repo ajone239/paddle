@@ -83,7 +83,7 @@ fn handle_repl_cmd(env: Rc<RefCell<Env>>, line: &str) -> bool {
 
             match env.borrow().resolve(val) {
                 Some(value) => {
-                    println!("Value [{val}]");
+                    println!("Value [{val}]:");
                     println!("{}", value.dump());
                 }
                 None => {

@@ -47,7 +47,9 @@
             document.documentElement.style.setProperty('--app-height', `${height}px`);
             document.documentElement.style.setProperty('--app-top', `${top}px`);
         };
+
         setAppHeight();
+
         if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', setAppHeight);
             window.visualViewport.addEventListener('scroll', setAppHeight);
@@ -58,6 +60,9 @@
         init().then(() => {
             const runner = Runner.new();
             let promptNum = 0;
+
+            document.getElementById('core-version').textContent = Runner.core_version();
+            document.getElementById('repl-version').textContent = Runner.version();
 
             const tagToStyle = (tag) => {
                 switch (tag) {
@@ -118,6 +123,12 @@
                 runner.run_code(input, insertContent);
             };
 
+            const setMenuVisible = (tof) => {
+                let menu = document.getElementById('info-menu');
+
+                menu.style.display = tof ? 'flex' : 'none';
+            }
+
             document.getElementById('input').addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -131,11 +142,47 @@
                 }
             });
             document.getElementById('run').addEventListener('click', runit);
+
+            document.getElementById('info-ham').addEventListener('click', () => setMenuVisible(true));
+
+            document.getElementById('info-menu').addEventListener('click', () => setMenuVisible(false));
+
+
         }).catch(err => alert(JSON.stringify(err)));
     </script>
 
     <div id="wrapper">
         <pre id="paddle-deco"></pre>
+        <div id="info-menu">
+        <div id="info-submenu">
+            <h3> Paddle: Info </h3>
+            <p>
+                This is the web REPL for Paddle--a LISP interpreter.
+                This interpreter was written in
+                <a href="https://rust-lang.org/">Rust</a>
+                and compiled to
+                <a href="https://webassembly.org/">WebAssembly</a>
+                for running here in your browser.
+            </p>
+            <p>
+            Check out the source code <a href="https://github.com/ajone239/paddle">here</a>!
+            </p>
+            <h4> Versions: </h4>
+            <ul>
+                <li> WASM REPL: <span id="repl-version"/> </li>
+                <li> Core: <span id="core-version"/> </li>
+            </ul>
+        </div>
+        </div>
+        <div id="info-area">
+            <div id="info-ham">
+                <div class="menu-icon">
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                </div>
+            </div>
+        </div>
         <div id="output-area" role="log" aria-live="polite">
             <ol id="output"></ol>
         </div>
