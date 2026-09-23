@@ -47,4 +47,12 @@ impl Runner {
             let _ = callback.call2(&JsValue::NULL, &tag.into(), &content.into());
         }
     }
+
+    pub fn version() -> String {
+        env!("CARGO_PKG_VERSION").to_string()
+    }
+
+    pub fn core_version() -> String {
+        paddle_core::core_version().to_string()
+    }
 }
