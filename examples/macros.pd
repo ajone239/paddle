@@ -177,3 +177,21 @@
                                               `(cdr ,(loop (- i 1)))))))
                              ))
                       (loop (+ 1 i) (cdr fs) (cons getter acc))))))))
+
+; currying
+
+(defm (defcur head body...)
+  (let ((name (car head))
+        (args (cdr head)))
+    `(def ,name
+          ,(letn loop ((args args))
+                 (if (null? args)
+                   `(progn @body...)
+                   `(.\ (,(car args)) ,(loop (cdr args))))))))
+
+; (defcur (S x y z) ((x z) (y z)))
+; (defcur (K x y) x)
+; (defcur (I x) x)
+;
+; (((S K) K) 'ident)
+; (I 'ident)
