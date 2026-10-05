@@ -197,3 +197,19 @@ pub fn make_char(args: &Value) -> Result<Value> {
 
     Ok(Value::Char(byte, Span::default()))
 }
+
+pub fn char_ord(args: &Value) -> Result<Value> {
+    let Value::Cons(args, _) = args else {
+        bail!("should give me an arg list");
+    };
+
+    if let Value::Cons(_, _) = &args.1 {
+        bail!("only one arg");
+    };
+
+    let Value::Char(c, _) = args.0 else {
+        bail!("char->num takes a char");
+    };
+
+    Ok(Value::Num(c as f64, Span::default()))
+}

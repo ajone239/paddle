@@ -58,6 +58,7 @@ impl Default for Env {
             ("getchar", builtins::inandout::getchar),
             ("getline", builtins::inandout::getline),
             ("char", builtins::string::make_char),
+            ("char->num", builtins::string::char_ord),
             ("string-length", builtins::string::string_length),
             ("string-ref", builtins::string::string_ref),
             ("substring", builtins::string::substring),
