@@ -65,6 +65,7 @@
 ; 10 is the byte value of ascii '\n'
 ; yes it's hacky but it saved me parser work
 (def nl (char 10))
+(def cr (char 13))
 
 (def (read-line)
   (letn loop ((acc '()))
