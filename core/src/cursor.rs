@@ -71,7 +71,7 @@ pub fn process_named_bytes(
             .ok_or(anyhow!(format!("Bad file {:?}", file_path)))?
             .to_owned(),
     );
-    let lexed = lexer::lex(&contents, file_id);
+    let lexed = lexer::lex(contents, file_id);
 
     let cursor = Cursor::new(&lexed, env);
     cursor.collect()

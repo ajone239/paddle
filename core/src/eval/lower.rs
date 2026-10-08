@@ -10,11 +10,11 @@ pub fn lower(ast: &Expr) -> Value {
 
 fn quote_eval(ast: &Expr) -> Value {
     match ast {
-        Expr::Atom(atom, span) => classify(atom, span.clone()),
+        Expr::Atom(atom, span) => classify(atom, *span),
         Expr::List(list, span) => {
             // TODO(austin.jones): I don't think this is right way to handle the
             //                     list span
-            let mut rv = Value::Nil(span.clone());
+            let mut rv = Value::Nil(*span);
 
             for val in list.iter().map(quote_eval).rev() {
                 let span = val.get_span();
