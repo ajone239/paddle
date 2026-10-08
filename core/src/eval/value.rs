@@ -131,7 +131,7 @@ impl Value {
             | Value::Builtin(_, _, s)
             | Value::Func { span: s, .. }
             | Value::Macro { span: s, .. }
-            | Value::Lambda { span: s, .. } => s.clone(),
+            | Value::Lambda { span: s, .. } => *s,
         }
     }
 
@@ -162,10 +162,15 @@ impl Value {
     pub fn dump(&self) -> String {
         match self {
             Value::NoPrint => "".to_string(),
-            Value::Nil(_) => format!("nil"),
-            Value::Bool(b, _) => format!("{}", if *b { "#t" } else { "#f" }),
+            Value::Nil(_) => "nil".to_string(),
+            Value::Bool(b, _) => (if *b { "#t" } else { "#f" }).to_string(),
             Value::Num(n, _) => format!("{}", n),
-            Value::Char(b, _) => format!("'{}'", char::from(*b)),
+            Value::Char(b, _) => match char::from(*b) {
+                '\n' => "\\n".to_string(),
+                '\t' => "\\t".to_string(),
+                '\r' => "\\r".to_string(),
+                c => format!("'{}'", c),
+            },
             Value::Symbol(s, _) => format!(":{}", s),
             Value::Form(form, _) => format!("{:?}", form),
             Value::Str(s, _) => format!("{}", s),
@@ -216,7 +221,12 @@ impl Display for Value {
             Value::Nil(_) => write!(f, "nil"),
             Value::Bool(b, _) => write!(f, "{}", if *b { "#t" } else { "#f" }),
             Value::Num(n, _) => write!(f, "{}", n),
-            Value::Char(b, _) => write!(f, "'{}'", char::from(*b)),
+            Value::Char(b, _) => match char::from(*b) {
+                '\n' => write!(f, "\\n"),
+                '\t' => write!(f, "\\t"),
+                '\r' => write!(f, "\\r"),
+                c => write!(f, "'{}'", c),
+            },
             Value::Symbol(s, _) => write!(f, ":{}", s),
             Value::Form(form, _) => write!(f, "{:?}", form),
             Value::Str(s, _) => write!(f, "{}", s),
@@ -392,7 +402,7 @@ impl<'a> ConsIter<'a> {
     }
 
     pub fn is_empty(&self) -> bool {
-        matches!(self.current, None) || !matches!(self.current, Some(Value::Cons(_, _)))
+        self.current.is_none() || !matches!(self.current, Some(Value::Cons(_, _)))
     }
 }
 

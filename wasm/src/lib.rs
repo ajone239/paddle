@@ -22,6 +22,12 @@ pub struct Runner {
     env: Rc<RefCell<Env>>,
 }
 
+impl Default for Runner {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[wasm_bindgen]
 impl Runner {
     pub fn new() -> Self {
@@ -33,7 +39,7 @@ impl Runner {
     pub fn run_code(&self, input: &str, callback: Function) {
         let wasm_file_id = intern("<WASM>".to_string());
 
-        let lexed = lexer::lex(&input, wasm_file_id);
+        let lexed = lexer::lex(input, wasm_file_id);
 
         let cursor = Cursor::new(&lexed, self.env.clone());
 
