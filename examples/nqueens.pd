@@ -48,7 +48,6 @@
                      (nv (append proc rv)))
                 (loop (cdr opts) nv)))))))
 
-
 (define (reverse xs)
   (foldl cons '() xs))
 

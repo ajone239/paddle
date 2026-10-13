@@ -92,10 +92,10 @@
 (define (check-move b i)
   (def r (// i 9))
   (def c (% i 9))
-  (when (check-row b r)
-    (when (check-col b c)
-      (when (check-square b (// r 3) (// c 3))
-        #t))))
+  (and
+    (check-row b r)
+    (check-col b c)
+    (check-square b (// r 3) (// c 3))))
 
 (define (lens l i v)
   (when l

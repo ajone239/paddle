@@ -35,7 +35,7 @@
 (defmacro (and exprs...)
     (define (and2 exprs)
       (if (null? exprs)
-        #f
+        #t
         `(let ((test ,(car exprs)))
            (if (not test)
                test
