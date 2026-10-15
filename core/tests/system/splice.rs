@@ -1,5 +1,5 @@
 use super::*;
-use crate::eval::EvalError;
+use paddle_core::eval::EvalError;
 
 // --- position within the surrounding list ---
 

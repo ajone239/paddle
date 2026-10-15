@@ -1,5 +1,7 @@
 use super::*;
 
+use paddle_core::{eval::EvalError, span::Span};
+
 #[test]
 fn call_immediately() {
     assert_eq!(eval_str("((lambda (x) (* x 2)) 5)"), num(10.0));

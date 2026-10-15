@@ -3,7 +3,7 @@ use super::*;
 #[test]
 fn defm_basic_expansion() {
     assert_eq!(
-        eval_str_env(&vec!["(defm (double x) (list '+ x x))", "(double 5)",]),
+        eval_str_env(&["(defm (double x) (list '+ x x))", "(double 5)",]),
         num(10.0)
     );
 }
@@ -11,7 +11,7 @@ fn defm_basic_expansion() {
 #[test]
 fn defm_args_not_evaluated_before_expansion() {
     assert_eq!(
-        eval_str_env(&vec![
+        eval_str_env(&[
             "(defm (ignore-arg x) (list 'quote 42))",
             "(ignore-arg undefined-var)",
         ]),
@@ -22,7 +22,7 @@ fn defm_args_not_evaluated_before_expansion() {
 #[test]
 fn defm_when_true() {
     assert_eq!(
-        eval_str_env(&vec![
+        eval_str_env(&[
             "(defm (when cond body) (list 'if cond body '()))",
             "(when #t 99)",
         ]),
@@ -33,7 +33,7 @@ fn defm_when_true() {
 #[test]
 fn defm_when_false_returns_nil() {
     assert_eq!(
-        eval_str_env(&vec![
+        eval_str_env(&[
             "(defm (when cond body) (list 'if cond body '()))",
             "(when #f 99)",
         ]),
@@ -44,7 +44,7 @@ fn defm_when_false_returns_nil() {
 #[test]
 fn defm_unless_false_runs_body() {
     assert_eq!(
-        eval_str_env(&vec![
+        eval_str_env(&[
             "(defm (unless cond body) (list 'if (list 'not cond) body '()))",
             "(unless #f 7)",
         ]),
@@ -55,7 +55,7 @@ fn defm_unless_false_runs_body() {
 #[test]
 fn defm_unless_true_returns_nil() {
     assert_eq!(
-        eval_str_env(&vec![
+        eval_str_env(&[
             "(defm (unless cond body) (list 'if (list 'not cond) body '()))",
             "(unless #t 7)",
         ]),
@@ -66,7 +66,7 @@ fn defm_unless_true_returns_nil() {
 #[test]
 fn define_macro_keyword() {
     assert_eq!(
-        eval_str_env(&vec!["(defmacro (inc x) (list '+ x 1))", "(inc 41)",]),
+        eval_str_env(&["(defmacro (inc x) (list '+ x 1))", "(inc 41)",]),
         num(42.0)
     );
 }
@@ -74,7 +74,7 @@ fn define_macro_keyword() {
 #[test]
 fn macro_used_inside_function() {
     assert_eq!(
-        eval_str_env(&vec![
+        eval_str_env(&[
             "(defm (when cond body) (list 'if cond body '()))",
             "(def (safe-inc x) (when (< 0 x) (+ x 1)))",
             "(safe-inc 5)",
@@ -86,7 +86,7 @@ fn macro_used_inside_function() {
 #[test]
 fn macro_used_inside_function_condition_false() {
     assert_eq!(
-        eval_str_env(&vec![
+        eval_str_env(&[
             "(defm (when cond body) (list 'if cond body '()))",
             "(def (safe-inc x) (when (< 0 x) (+ x 1)))",
             "(safe-inc -1)",

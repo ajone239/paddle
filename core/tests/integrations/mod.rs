@@ -6,11 +6,7 @@
 
 use std::{cell::RefCell, rc::Rc};
 
-use paddle_core::{
-    cursor::process,
-    eval::{Env, EvalError, value::Value},
-    span::Span,
-};
+use paddle_core::{cursor::process, env::Env, eval::EvalError, span::Span, value::Value};
 
 static STD_LIB: &str = include_str!("../../../examples/base.pd");
 static MACROS_LIB: &str = include_str!("../../../examples/macros.pd");

@@ -5,7 +5,7 @@ use rustyline::{DefaultEditor, error::ReadlineError};
 
 use paddle_core::{
     cursor::{Cursor, count_paren, display_result, is_ready_to_process},
-    eval::Env,
+    env::Env,
     lexer,
     span::intern,
 };

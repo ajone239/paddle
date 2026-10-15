@@ -1,3 +1,5 @@
+use paddle_core::{eval::EvalError, span::Span};
+
 use super::*;
 
 #[test]
@@ -57,7 +59,7 @@ fn define_func_returns_no_print() {
 #[test]
 fn define_func_fact() {
     assert_eq!(
-        eval_str_env(&vec![
+        eval_str_env(&[
             "(def (fact n) (if (< n 1) 1 (* n (fact (- n 1)))))",
             "(fact 5)"
         ]),
@@ -68,7 +70,7 @@ fn define_func_fact() {
 #[test]
 fn define_func_fact_cute() {
     assert_eq!(
-        eval_str_env(&vec![
+        eval_str_env(&[
             "
 (def (fact n)
     (if (< n 1)
@@ -104,12 +106,12 @@ fn define_func_wrong_arity() {
 
 #[test]
 fn define_and_resolve() {
-    assert_eq!(eval_str_env(&vec!["(def x 5)", "(+ x 1)"]), num(6.0));
+    assert_eq!(eval_str_env(&["(def x 5)", "(+ x 1)"]), num(6.0));
 }
 
 #[test]
 fn redefine() {
-    assert_eq!(eval_str_env(&vec!["(def x 1)", "(def x 2)", "x"]), num(2.0));
+    assert_eq!(eval_str_env(&["(def x 1)", "(def x 2)", "x"]), num(2.0));
 }
 
 #[test]
@@ -119,7 +121,7 @@ fn define_returns_no_print() {
 
 #[test]
 fn define_expression_value() {
-    assert_eq!(eval_str_env(&vec!["(def x (+ 1 2))", "x"]), num(3.0));
+    assert_eq!(eval_str_env(&["(def x (+ 1 2))", "x"]), num(3.0));
 }
 
 #[test]

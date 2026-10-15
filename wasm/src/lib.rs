@@ -1,12 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use js_sys::Function;
-use paddle_core::{
-    cursor::Cursor,
-    eval::{Env, value::Value},
-    lexer,
-    span::intern,
-};
+use paddle_core::{cursor::Cursor, env::Env, lexer, span::intern, value::Value};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]

@@ -1,18 +1,10 @@
-mod builtins;
-mod env;
 mod eval;
-mod lower;
-#[cfg(test)]
-mod tests;
-pub mod value;
 
-pub use env::Env;
 pub use eval::eval;
-pub use lower::lower;
 
 use thiserror::Error;
 
-use crate::{eval::value::Form, span::Span};
+use crate::{span::Span, value::Form};
 
 #[derive(Debug, PartialEq, Error)]
 pub enum EvalError {

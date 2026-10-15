@@ -5,7 +5,7 @@ use std::{
 
 use anyhow::Result;
 
-use crate::{eval::value::Value, span::Span};
+use crate::{span::Span, value::Value};
 
 pub fn print(args: &Value) -> Result<Value> {
     let out = args

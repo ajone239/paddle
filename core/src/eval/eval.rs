@@ -4,14 +4,13 @@ use std::rc::Rc;
 
 use anyhow::{Context, Ok, Result, bail};
 
-use crate::cursor::process_file;
-use crate::eval::value::CallableInfo;
-use crate::eval::{
-    EvalError,
+use crate::{
+    cursor::process_file,
     env::Env,
-    value::{Form, Value},
+    eval::EvalError,
+    span::Span,
+    value::{CallableInfo, Form, Value},
 };
-use crate::span::Span;
 
 enum Trampoline {
     Done(Value),

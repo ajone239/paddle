@@ -1,3 +1,5 @@
+use paddle_core::{eval::EvalError, span::Span};
+
 use super::*;
 
 #[test]

@@ -1,5 +1,5 @@
 use super::*;
-use crate::eval::env::BuiltinError;
+use paddle_core::env::BuiltinError;
 
 #[test]
 fn cdr_of_cons() {

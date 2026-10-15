@@ -1,9 +1,6 @@
 use anyhow::{Result, bail};
 
-use crate::{
-    eval::{env::BuiltinError, value::Value},
-    span::Span,
-};
+use crate::{env::BuiltinError, span::Span, value::Value};
 
 pub fn add(args: &Value) -> Result<Value> {
     if !matches!(args, Value::Cons(_, _) | Value::Nil(_)) {

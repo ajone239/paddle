@@ -1,5 +1,5 @@
 use super::*;
-use paddle_core::eval::{EvalError, value::Form};
+use paddle_core::{eval::EvalError, value::Form};
 
 #[test]
 fn undefined_symbol_bubbles_up() {

@@ -1,5 +1,4 @@
 use super::*;
-use crate::span::Span;
 
 #[test]
 fn integer_literal() {
@@ -8,7 +7,7 @@ fn integer_literal() {
 
 #[test]
 fn float_literal() {
-    assert_eq!(eval_str("3.14"), num(3.14));
+    assert_eq!(eval_str("3.15"), num(3.15));
 }
 
 #[test]

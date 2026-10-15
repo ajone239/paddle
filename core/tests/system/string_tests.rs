@@ -172,7 +172,7 @@ fn string_num_integer() {
 
 #[test]
 fn string_num_decimal() {
-    assert_eq!(eval_str(r#"(cdr (string->num "3.14"))"#), num(3.14));
+    assert_eq!(eval_str(r#"(cdr (string->num "3.15"))"#), num(3.15));
 }
 
 #[test]

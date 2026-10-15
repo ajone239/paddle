@@ -3,10 +3,13 @@ use anyhow::{Result, anyhow, bail};
 use std::{cell::RefCell, fs::read_to_string, path::PathBuf, rc::Rc};
 
 use crate::{
-    eval::{Env, eval, lower, value::Value},
-    lexer::{self, Token},
+    env::Env,
+    eval::eval,
+    lexer::{Token, lex},
+    lower::lower,
     parser,
     span::{FileId, intern},
+    value::Value,
 };
 
 pub struct Cursor<'a> {
@@ -54,7 +57,7 @@ pub fn process_file(file_path: PathBuf, env: Rc<RefCell<Env>>) -> Result<Vec<Val
             .ok_or(anyhow!(format!("Bad file {:?}", file_path)))?
             .to_owned(),
     );
-    let lexed = lexer::lex(&contents, file_id);
+    let lexed = lex(&contents, file_id);
 
     let cursor = Cursor::new(&lexed, env);
     cursor.collect()
@@ -71,7 +74,7 @@ pub fn process_named_bytes(
             .ok_or(anyhow!(format!("Bad file {:?}", file_path)))?
             .to_owned(),
     );
-    let lexed = lexer::lex(contents, file_id);
+    let lexed = lex(contents, file_id);
 
     let cursor = Cursor::new(&lexed, env);
     cursor.collect()
@@ -79,7 +82,7 @@ pub fn process_named_bytes(
 
 pub fn process(contents: &str, env: Rc<RefCell<Env>>) -> Result<Vec<Value>> {
     let file_id = FileId::default();
-    let lexed = lexer::lex(contents, file_id);
+    let lexed = lex(contents, file_id);
 
     let cursor = Cursor::new(&lexed, env);
     cursor.collect()

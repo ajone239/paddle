@@ -1,5 +1,4 @@
 use super::*;
-use crate::eval::env::BuiltinError;
 
 #[test]
 fn car_of_cons() {

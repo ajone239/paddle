@@ -1,7 +1,5 @@
-use crate::{
-    eval::{env::BuiltinError, value::Value},
-    span::Span,
-};
+use crate::{env::BuiltinError, span::Span, value::Value};
+
 use anyhow::{Result, bail};
 
 pub fn and(args: &Value) -> Result<Value> {

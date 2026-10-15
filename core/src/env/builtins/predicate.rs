@@ -1,4 +1,4 @@
-use crate::{eval::value::Value, span::Span};
+use crate::{span::Span, value::Value};
 use anyhow::{Result, bail};
 
 pub fn is_number(args: &Value) -> Result<Value> {

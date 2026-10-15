@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use anyhow::{Result, bail};
 
-use crate::eval::env::Env;
+use crate::env::Env;
 use crate::span::Span;
 
 #[derive(Clone, PartialEq)]
@@ -151,7 +151,7 @@ impl Value {
                 let nice_list = vals.join(" ");
                 format!("'({})", nice_list)
             }
-            Value::Builtin(_, _) => format!("built-in: (...) {{...}}"),
+            Value::Builtin(_, _) => "built-in: (...) {{...}}".to_string(),
             Value::Func(info, _) => {
                 format!("func: ({}):\n{}", info.args.join(" "), info.body)
             }

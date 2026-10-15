@@ -1,8 +1,10 @@
 use std::rc::Rc;
 
-use crate::eval::value::{Form, Value};
-use crate::parser::Expr;
-use crate::span::Span;
+use crate::{
+    parser::Expr,
+    span::Span,
+    value::{Form, Value},
+};
 
 pub fn lower(ast: &Expr) -> Value {
     quote_eval(ast)
@@ -51,11 +53,11 @@ mod tests {
     use std::rc::Rc;
 
     use super::lower;
-    use crate::eval::tests::strip_value_span;
-    use crate::eval::value::Value;
     use crate::lexer::lex_no_file;
     use crate::parser::parse_expr;
     use crate::span::Span;
+    use crate::test_utils::strip_value_span;
+    use crate::value::Value;
 
     fn lower_str(s: &str) -> Value {
         let tokens = lex_no_file(s);

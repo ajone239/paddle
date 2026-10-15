@@ -1,9 +1,6 @@
 use std::rc::Rc;
 
-use crate::{
-    eval::{env::BuiltinError, value::Value},
-    span::Span,
-};
+use crate::{env::BuiltinError, span::Span, value::Value};
 use anyhow::{Context, Result, bail};
 
 pub fn cons(args: &Value) -> Result<Value> {

@@ -6,7 +6,7 @@ use clap::Parser;
 use paddle::repl::run_repl;
 use paddle_core::{
     cursor::{Cursor, display_result},
-    eval::Env,
+    env::Env,
     lexer,
     span::intern,
 };
