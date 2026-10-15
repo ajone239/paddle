@@ -5,6 +5,7 @@ use std::rc::Rc;
 use anyhow::{Context, Ok, Result, bail};
 
 use crate::cursor::process_file;
+use crate::eval::value::CallableInfo;
 use crate::eval::{
     EvalError,
     env::Env,
@@ -45,43 +46,36 @@ fn eval_step(ast: Value, env: Rc<RefCell<Env>>) -> Result<Trampoline> {
         _ => {
             let head = eval(pair.0.clone(), env.clone())
                 .context(format!("error evaling head of list at {}", cons_span))?;
-            let is_macro = matches!(head, Value::Macro { .. });
             let tail = &pair.1;
 
-            let (body, args, fenv, fspan) = match head {
-                Value::Func {
-                    name: _,
-                    body,
-                    args,
-                    env,
-                    span,
-                }
-                | Value::Lambda {
-                    env,
-                    body,
-                    args,
-                    span,
-                } => (body, args, env.clone(), span),
-                Value::Macro {
-                    name: _,
-                    body,
-                    args,
-                    span,
-                } => (body, args, env.clone(), span),
-                Value::Builtin(f, name, _) => {
+            // let (body, args, fenv, fspan) = match head {
+            let (is_macro, info, fspan) = match head {
+                Value::Macro(info, fspan) => (true, info, fspan),
+                Value::Func(info, fspan) => (false, info, fspan),
+                Value::Builtin(f, _) => {
                     let results = f.0(&tail
                         .to_cons_iter()
                         .map(|v| eval(v.clone(), env.clone()))
                         .collect::<Result<_, _>>()?)
-                    .context(format!("error calling [{}] at {}", name, cons_span))?;
+                    .context(format!(
+                        "error calling [{}] at {}",
+                        pair.0.clone(),
+                        cons_span
+                    ))?;
                     return Ok(Trampoline::Done(results));
                 }
                 v => return Ok(Trampoline::Done(v.clone())),
             };
 
-            let nenv = setup_env(tail, cons_span, &args, is_macro, env.clone(), fenv)?;
+            let fenv = if is_macro {
+                env.clone()
+            } else {
+                info.env.clone()
+            };
 
-            let body = body.deref().clone().set_span(fspan);
+            let nenv = setup_env(tail, cons_span, &info.args, is_macro, env.clone(), fenv)?;
+
+            let body = info.body.deref().clone().set_span(fspan);
             if is_macro {
                 let body = eval(body, nenv)?;
                 Ok(Trampoline::Continue(body, env.clone()))
@@ -234,12 +228,13 @@ fn eval_form(form: Form, span: Span, tail: Value, env: Rc<RefCell<Env>>) -> Resu
         Form::Lambda => {
             let (_, args, body) = make_callable(&form, &tail)?;
 
-            let lambda = Value::Lambda {
+            let info = CallableInfo {
                 args,
                 body,
                 env: env.clone(),
-                span,
             };
+
+            let lambda = Value::Func(Rc::new(info), span);
 
             Ok(Trampoline::Done(lambda))
         }
@@ -321,22 +316,18 @@ fn define(form: &Form, span: Span, body: &Value, env: Rc<RefCell<Env>>) -> Resul
             let Some(name) = name else {
                 unreachable!();
             };
+
             let tag = name.clone();
 
+            let info = CallableInfo {
+                args,
+                body,
+                env: env.clone(),
+            };
+
             let proc = match form {
-                Form::Define => Value::Func {
-                    name,
-                    args,
-                    body,
-                    env: env.clone(),
-                    span,
-                },
-                Form::DefineMacro => Value::Macro {
-                    name,
-                    args,
-                    body,
-                    span,
-                },
+                Form::Define => Value::Func(Rc::new(info), span),
+                Form::DefineMacro => Value::Macro(Rc::new(info), span),
                 _ => unreachable!("should only get here from define or definemacro"),
             };
 
@@ -348,8 +339,8 @@ fn define(form: &Form, span: Span, body: &Value, env: Rc<RefCell<Env>>) -> Resul
     Ok(())
 }
 
-type CallableInfo = (Option<String>, Vec<String>, Rc<Value>);
-fn make_callable(form: &Form, body: &Value) -> Result<CallableInfo> {
+type MakeCallableInfo = (Option<String>, Vec<String>, Rc<Value>);
+fn make_callable(form: &Form, body: &Value) -> Result<MakeCallableInfo> {
     let bspan = body.get_span();
     let mut list = body.to_cons_iter();
     let head = list

@@ -116,7 +116,7 @@ mod tests {
         };
     }
 
-    fn atom(s: &str, line: usize, column: usize) -> Expr<'_> {
+    fn atom(s: &str, line: u16, column: u16) -> Expr<'_> {
         Expr::Atom(
             s,
             Span {

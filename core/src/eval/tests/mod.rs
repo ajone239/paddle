@@ -48,42 +48,9 @@ pub(crate) fn strip_value_span(v: &Value) -> Value {
             Rc::new((strip_value_span(&pair.0), strip_value_span(&pair.1))),
             Span::default(),
         ),
-        Value::Builtin(f, name, _) => Value::Builtin(*f, name.clone(), Span::default()),
-        Value::Macro {
-            name,
-            args,
-            body,
-            span: _,
-        } => Value::Macro {
-            name: name.clone(),
-            args: args.clone(),
-            body: Rc::new(strip_value_span(body)),
-            span: Span::default(),
-        },
-        Value::Func {
-            name,
-            args,
-            body,
-            env,
-            span: _,
-        } => Value::Func {
-            name: name.clone(),
-            args: args.clone(),
-            body: Rc::new(strip_value_span(body)),
-            env: env.clone(),
-            span: Span::default(),
-        },
-        Value::Lambda {
-            args,
-            body,
-            env,
-            span: _,
-        } => Value::Lambda {
-            args: args.clone(),
-            body: Rc::new(strip_value_span(body)),
-            env: env.clone(),
-            span: Span::default(),
-        },
+        Value::Builtin(f, _) => Value::Builtin(*f, Span::default()),
+        Value::Func(f, _) => Value::Func(f.clone(), Span::default()),
+        Value::Macro(m, _) => Value::Macro(m.clone(), Span::default()),
     }
 }
 

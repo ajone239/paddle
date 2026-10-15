@@ -70,7 +70,7 @@ impl Default for Env {
         ];
 
         for (name, f) in bins {
-            benv.insert(name.to_string(), tobi(*f, name));
+            benv.insert(name.to_string(), tobi(*f));
         }
 
         Self {
@@ -82,8 +82,8 @@ impl Default for Env {
     }
 }
 
-fn tobi(f: Builtin, name: &str) -> Value {
-    Value::Builtin(BuiltinFn(f), name.to_owned(), Span::default())
+fn tobi(f: Builtin) -> Value {
+    Value::Builtin(BuiltinFn(f), Span::default())
 }
 
 impl Env {
@@ -175,16 +175,6 @@ impl Env {
             println!("{}: {}", k, v)
         }
 
-        let l = venv
-            .iter()
-            .filter(|(_, v)| matches!(v, Value::Lambda { .. }));
-
-        println!();
-        println!("Lambdas:");
-        for (k, v) in l {
-            println!("{}: {}", k, v)
-        }
-
         let f = venv.iter().filter(|(_, v)| matches!(v, Value::Func { .. }));
 
         println!();
@@ -205,7 +195,6 @@ impl Env {
 
         let r = venv.iter().filter(|(_, v)| {
             !(matches!(v, Value::Builtin(..))
-                || matches!(v, Value::Lambda { .. })
                 || matches!(v, Value::Func { .. })
                 || matches!(v, Value::Macro { .. }))
         });

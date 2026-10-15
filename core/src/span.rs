@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
-pub struct FileId(usize);
+pub struct FileId(u16);
 
 pub struct Interner {
     files: Vec<String>,
@@ -15,15 +15,16 @@ impl Interner {
     }
     fn intern(&mut self, filename: String) -> FileId {
         if let Some(id) = self.files.iter().position(|s| s == &filename) {
-            return FileId(id);
+            return FileId(id as u16);
         }
 
         self.files.push(filename);
-        FileId(self.files.len() - 1)
+        let id = (self.files.len() - 1) as u16;
+        FileId(id)
     }
 
     fn resolve(&self, id: FileId) -> &str {
-        &self.files[id.0]
+        &self.files[id.0 as usize]
     }
 }
 
@@ -37,8 +38,8 @@ pub fn intern(filename: String) -> FileId {
 
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct Span {
-    pub line: usize,
-    pub column: usize,
+    pub line: u16,
+    pub column: u16,
     pub file_name_id: FileId,
 }
 

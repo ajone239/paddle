@@ -133,7 +133,7 @@ mod tests {
         tokens.into_iter().map(|t| t.kind).collect()
     }
 
-    fn tok(kind: TokenKind, line: usize, column: usize) -> Token {
+    fn tok(kind: TokenKind, line: u16, column: u16) -> Token {
         Token {
             kind,
             span: Span {

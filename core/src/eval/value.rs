@@ -8,6 +8,13 @@ use crate::eval::env::Env;
 use crate::span::Span;
 
 #[derive(Clone, PartialEq)]
+pub struct CallableInfo {
+    pub args: Vec<String>,
+    pub body: Rc<Value>,
+    pub env: Rc<RefCell<Env>>,
+}
+
+#[derive(Clone, PartialEq)]
 pub enum Value {
     NoPrint,
     Nil(Span),
@@ -18,26 +25,9 @@ pub enum Value {
     Form(Form, Span),
     Str(Rc<str>, Span),
     Cons(Rc<(Value, Value)>, Span),
-    Builtin(BuiltinFn, String, Span),
-    Macro {
-        name: String,
-        args: Vec<String>,
-        body: Rc<Value>,
-        span: Span,
-    },
-    Func {
-        name: String,
-        args: Vec<String>,
-        body: Rc<Value>,
-        env: Rc<RefCell<Env>>,
-        span: Span,
-    },
-    Lambda {
-        args: Vec<String>,
-        body: Rc<Value>,
-        env: Rc<RefCell<Env>>,
-        span: Span,
-    },
+    Builtin(BuiltinFn, Span),
+    Func(Rc<CallableInfo>, Span),
+    Macro(Rc<CallableInfo>, Span),
 }
 
 impl Value {
@@ -52,10 +42,9 @@ impl Value {
             Value::Cons(_, _)
             | Value::Symbol(_, _)
             | Value::Form(_, _)
-            | Value::Builtin(_, _, _)
-            | Value::Func { .. }
-            | Value::Macro { .. }
-            | Value::Lambda { .. } => true,
+            | Value::Builtin(_, _)
+            | Value::Func(_, _)
+            | Value::Macro(_, _) => true,
         }
     }
 
@@ -79,42 +68,9 @@ impl Value {
             Value::Cons(p, _) => Value::Cons(p, new_span),
             Value::Symbol(s, _) => Value::Symbol(s, new_span),
             Value::Form(f, _) => Value::Form(f, new_span),
-            Value::Builtin(f, s, _) => Value::Builtin(f, s, new_span),
-            Value::Func {
-                name,
-                args,
-                body,
-                env,
-                span: _,
-            } => Value::Func {
-                name,
-                args,
-                body,
-                env,
-                span: new_span,
-            },
-            Value::Macro {
-                name,
-                args,
-                body,
-                span: _,
-            } => Value::Macro {
-                name,
-                args,
-                body,
-                span: new_span,
-            },
-            Value::Lambda {
-                args,
-                body,
-                env,
-                span: _,
-            } => Value::Lambda {
-                args,
-                body,
-                env,
-                span: new_span,
-            },
+            Value::Builtin(f, _) => Value::Builtin(f, new_span),
+            Value::Macro(m, _) => Value::Macro(m, new_span),
+            Value::Func(f, _) => Value::Macro(f, new_span),
         }
     }
     pub fn get_span(&self) -> Span {
@@ -128,10 +84,9 @@ impl Value {
             | Value::Cons(_, s)
             | Value::Symbol(_, s)
             | Value::Form(_, s)
-            | Value::Builtin(_, _, s)
-            | Value::Func { span: s, .. }
-            | Value::Macro { span: s, .. }
-            | Value::Lambda { span: s, .. } => *s,
+            | Value::Builtin(_, s)
+            | Value::Macro(_, s)
+            | Value::Func(_, s) => *s,
         }
     }
 
@@ -196,19 +151,12 @@ impl Value {
                 let nice_list = vals.join(" ");
                 format!("'({})", nice_list)
             }
-            Value::Builtin(_, name, _) => format!("built-in: {} (...) {{...}}", name),
-            Value::Func {
-                name, args, body, ..
-            } => {
-                format!("func: {} ({}):\n{}", name, args.join(" "), body)
+            Value::Builtin(_, _) => format!("built-in: (...) {{...}}"),
+            Value::Func(info, _) => {
+                format!("func: ({}):\n{}", info.args.join(" "), info.body)
             }
-            Value::Macro {
-                name, args, body, ..
-            } => {
-                format!("macro: {} ({}):\n{}", name, args.join(" "), body)
-            }
-            Value::Lambda { args, body, .. } => {
-                format!("lambda: ({}):\n{}", args.join(" "), body)
+            Value::Macro(info, _) => {
+                format!("macro: ({}):\n{}", info.args.join(" "), info.body)
             }
         }
     }
@@ -252,14 +200,13 @@ impl Display for Value {
                 let nice_list = vals.join(" ");
                 write!(f, "'({})", nice_list)
             }
-            Value::Builtin(_, name, _) => write!(f, "built-in: {} (...) {{...}}", name),
-            Value::Func { name, args, .. } => {
-                write!(f, "func: {} ({}) {{...}}", name, args.join(" "))
+            Value::Builtin(_, _) => write!(f, "built-in: (...) {{...}}"),
+            Value::Func(info, _) => {
+                write!(f, "func: ({}):{{...}}", info.args.join(" "))
             }
-            Value::Macro { name, args, .. } => {
-                write!(f, "macro: {} ({}) {{...}}", name, args.join(" "))
+            Value::Macro(info, _) => {
+                write!(f, "macro: ({}):{{...}}", info.args.join(" "))
             }
-            Value::Lambda { args, .. } => write!(f, "lambda: ({}) {{...}}", args.join(" ")),
         }
     }
 }
@@ -282,48 +229,18 @@ impl Debug for Value {
             Self::Form(arg0, arg1) => f.debug_tuple("Form").field(arg0).field(arg1).finish(),
             Self::Str(arg0, arg1) => f.debug_tuple("Str").field(arg0).field(arg1).finish(),
             Self::Cons(arg0, arg1) => f.debug_tuple("Cons").field(arg0).field(arg1).finish(),
-            Self::Builtin(arg0, arg1, arg2) => f
-                .debug_tuple("Builtin")
-                .field(arg0)
-                .field(arg1)
-                .field(arg2)
-                .finish(),
-            Self::Macro {
-                name,
-                args,
-                body,
-                span,
-            } => f
+            Self::Builtin(arg0, arg1) => f.debug_tuple("Builtin").field(arg0).field(arg1).finish(),
+            Self::Macro(info, span) => f
                 .debug_struct("Macro")
-                .field("name", name)
-                .field("args", args)
-                .field("body", body)
+                .field("args", &info.args)
+                .field("body", &info.body)
                 .field("span", span)
                 .field("env", &"{...}")
                 .finish(),
-            Value::Func {
-                name,
-                args,
-                body,
-                span,
-                env: _,
-            } => f
+            Value::Func(info, span) => f
                 .debug_struct("Func")
-                .field("name", name)
-                .field("args", args)
-                .field("body", body)
-                .field("span", span)
-                .field("env", &"{...}")
-                .finish(),
-            Value::Lambda {
-                args,
-                body,
-                span,
-                env: _,
-            } => f
-                .debug_struct("Lambda")
-                .field("args", args)
-                .field("body", body)
+                .field("args", &info.args)
+                .field("body", &info.body)
                 .field("span", span)
                 .field("env", &"{...}")
                 .finish(),
