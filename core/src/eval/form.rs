@@ -1,12 +1,13 @@
-use std::cell::RefCell;
 use std::rc::Rc;
+use std::{cell::RefCell, ops::Deref};
 
-use anyhow::{Context, Ok, Result, bail};
+use anyhow::{Context, Result, bail};
 
+use crate::span;
 use crate::{
     cursor::process_file,
     env::Env,
-    eval::{EvalError, Trampoline, eval, quasi::quasi_quote_eval},
+    eval::{EvalError, Trampoline, eval, eval_step, quasi::quasi_quote_eval},
     span::Span,
     value::{CallableInfo, Form, Value},
 };
@@ -158,11 +159,16 @@ fn define(form: &Form, span: Span, body: &Value, env: Rc<RefCell<Env>>) -> Resul
         Value::Cons(_, _) => {
             let (name, args, body) = make_callable(form, body)?;
 
-            let Some(name) = name else {
-                unreachable!();
-            };
+            let name = name.expect("name must be defined for a callable define");
 
             let tag = name.clone();
+
+            let new_body = expand_macro(body.deref().clone(), env.clone());
+
+            match new_body {
+                Ok(b) => println!("exp_suc: {}", b),
+                Err(e) => println!("exp_err: {:?}", e),
+            }
 
             let info = CallableInfo {
                 args,
@@ -184,6 +190,62 @@ fn define(form: &Form, span: Span, body: &Value, env: Rc<RefCell<Env>>) -> Resul
     Ok(())
 }
 
+fn expand_macro(ast: Value, env: Rc<RefCell<Env>>) -> Result<Value> {
+    println!("> {}", ast);
+    let Value::Cons(pair, cons_span) = ast else {
+        return match ast {
+            _ => Ok(ast),
+        };
+    };
+
+    let head = match pair.0 {
+        Value::Nil(s) => return Ok(Value::Nil(s)),
+        Value::Form(_, span) => {
+            let tail = expand_macro(pair.1.clone(), env.clone())?;
+            return Ok(Value::Cons(Rc::new((pair.0.clone(), tail)), span));
+        }
+        Value::Cons(_, _) => {
+            let new_head = expand_macro(pair.0.clone(), env.clone())?;
+
+            let tail = expand_macro(pair.1.clone(), env.clone())?;
+            return Ok(Value::Cons(Rc::new((new_head, tail)), cons_span));
+        }
+        _ => {
+            let head = eval(pair.0.clone(), env.clone());
+
+            let Ok(v) = head else {
+                let tail = expand_macro(pair.1.clone(), env.clone())?;
+                return Ok(Value::Cons(Rc::new((pair.0.clone(), tail)), cons_span));
+            };
+
+            v
+        }
+    };
+
+    match head {
+        Value::Func(_, span) | Value::Builtin(_, span) => {
+            let tail = expand_macro(pair.1.clone(), env.clone())?;
+            return Ok(Value::Cons(Rc::new((pair.0.clone(), tail)), span));
+        }
+        Value::Macro(info, span) => {
+            let nenv = super::setup_env(
+                &pair.1,
+                cons_span,
+                &info.args,
+                true,
+                env.clone(),
+                env.clone(),
+            )?;
+
+            let body = info.body.deref().clone().set_span(span);
+            let body = eval(body, nenv.clone())?;
+
+            expand_macro(body, env)
+        }
+        v => return Ok(v.clone()),
+    }
+}
+
 type MakeCallableInfo = (Option<String>, Vec<String>, Rc<Value>);
 fn make_callable(form: &Form, body: &Value) -> Result<MakeCallableInfo> {
     let bspan = body.get_span();
@@ -199,7 +261,7 @@ fn make_callable(form: &Form, body: &Value) -> Result<MakeCallableInfo> {
     let args_list = head
         .to_cons_iter()
         .map(|e| match e {
-            Value::Symbol(a, _) => Ok(a.to_string()),
+            Value::Symbol(a, _) => Ok::<String, anyhow::Error>(a.to_string()),
             _ => Err(EvalError::BadCallableArgsListType(*form, e.get_span()).into()),
         })
         .collect::<Result<Vec<String>, _>>()?;

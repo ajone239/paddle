@@ -146,10 +146,10 @@ impl Env {
     pub fn with_stdlib() -> Result<Rc<RefCell<Self>>> {
         let env = Rc::new(RefCell::new(Env::default()));
 
-        process_named_bytes(STD_LIB_FILE.into(), STD_LIB, env.clone())
-            .context("failed to parse the std lib")?;
         process_named_bytes(STD_MAC_FILE.into(), STD_MAC, env.clone())
             .context("failed to parse the std lib macros")?;
+        process_named_bytes(STD_LIB_FILE.into(), STD_LIB, env.clone())
+            .context("failed to parse the std lib")?;
 
         Ok(env)
     }
