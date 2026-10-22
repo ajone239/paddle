@@ -166,21 +166,10 @@ fn define(form: &Form, span: Span, body: &Value, env: Rc<RefCell<Env>>) -> Resul
             let new_body = match form {
                 Form::DefineMacro => body.clone(),
                 Form::Define => {
-                    println!("<expand {}>", name);
                     let new_body = expand_macro(body.deref().clone(), env.clone());
-                    println!("</expand {}>", name);
 
                     match new_body {
-                        Ok(nb) => {
-                            println!("OLD: {}", *body.clone());
-                            println!("NEW: {}", nb);
-
-                            println!();
-
-                            println!("OLD: {:?}", *body.clone());
-                            println!("NEW: {:?}", nb);
-                            Rc::new(nb)
-                        }
+                        Ok(nb) => Rc::new(nb),
                         Err(e) => {
                             println!("Expansion of [{}] failed because of: {}", name, e);
                             body.clone()
@@ -211,7 +200,6 @@ fn define(form: &Form, span: Span, body: &Value, env: Rc<RefCell<Env>>) -> Resul
 }
 
 fn expand_macro(ast: Value, env: Rc<RefCell<Env>>) -> Result<Value> {
-    println!(">> {}", ast);
     let Value::Cons(pair, cons_span) = ast else {
         return Ok(ast);
     };
@@ -219,9 +207,8 @@ fn expand_macro(ast: Value, env: Rc<RefCell<Env>>) -> Result<Value> {
     let tail = expand_macro(pair.1.clone(), env.clone())?;
 
     let head = match pair.0 {
-        Value::Nil(s) => return Ok(Value::Nil(s)),
-        Value::Form(_, span) => {
-            return Ok(Value::Cons(Rc::new((pair.0.clone(), tail)), span));
+        Value::Nil(s) | Value::Form(_, s) => {
+            return Ok(Value::Cons(Rc::new((pair.0.clone(), tail)), s));
         }
         Value::Cons(_, _) => {
             let new_head = expand_macro(pair.0.clone(), env.clone())?;
@@ -238,27 +225,23 @@ fn expand_macro(ast: Value, env: Rc<RefCell<Env>>) -> Result<Value> {
         }
     };
 
-    match head {
-        Value::Func(_, span) | Value::Builtin(_, span) => {
-            return Ok(Value::Cons(Rc::new((pair.0.clone(), tail)), span));
-        }
-        Value::Macro(info, span) => {
-            let nenv = setup_env(
-                &pair.1,
-                cons_span,
-                &info.args,
-                true,
-                env.clone(),
-                env.clone(),
-            )?;
+    let Value::Macro(info, span) = head else {
+        return Ok(Value::Cons(Rc::new((pair.0.clone(), tail)), cons_span));
+    };
 
-            let body = info.body.deref().clone().set_span(span);
-            let body = eval(body, nenv.clone())?;
+    let nenv = setup_env(
+        &pair.1,
+        cons_span,
+        &info.args,
+        true,
+        env.clone(),
+        env.clone(),
+    )?;
 
-            expand_macro(body, env)
-        }
-        v => return Ok(Value::Cons(Rc::new((v, tail)), cons_span)),
-    }
+    let body = info.body.deref().clone().set_span(span);
+    let body = eval(body, nenv.clone())?;
+
+    expand_macro(body, env)
 }
 
 type MakeCallableInfo = (Option<String>, Vec<String>, Rc<Value>);
