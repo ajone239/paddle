@@ -1,4 +1,7 @@
-use std::cell::RefCell;
+use std::{
+    cell::RefCell,
+    fmt::{Debug, Display},
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct FileId(u16);
@@ -36,16 +39,24 @@ pub fn intern(filename: String) -> FileId {
     INTERNER.with_borrow_mut(|i| i.intern(filename))
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[derive(Clone, Copy, PartialEq, Default)]
 pub struct Span {
     pub line: u16,
     pub column: u16,
     pub file_name_id: FileId,
 }
 
-impl std::fmt::Display for Span {
+impl Display for Span {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let file = INTERNER.with_borrow(|i| i.resolve(self.file_name_id).to_string());
         write!(f, "{}:{}:{}", file, self.line, self.column)
+    }
+}
+
+// TODO(austin.jones): this needs to be killed
+impl Debug for Span {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let _ = f;
+        Ok(())
     }
 }

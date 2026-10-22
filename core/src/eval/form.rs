@@ -3,14 +3,14 @@ use std::{cell::RefCell, ops::Deref};
 
 use anyhow::{Context, Result, bail};
 
-use crate::span;
 use crate::{
     cursor::process_file,
     env::Env,
-    eval::{EvalError, Trampoline, eval, eval_step, quasi::quasi_quote_eval},
     span::Span,
     value::{CallableInfo, Form, Value},
 };
+
+use super::{EvalError, Trampoline, eval, quasi::quasi_quote_eval, setup_env};
 
 pub(super) fn eval_form(
     form: Form,
@@ -163,16 +163,36 @@ fn define(form: &Form, span: Span, body: &Value, env: Rc<RefCell<Env>>) -> Resul
 
             let tag = name.clone();
 
-            let new_body = expand_macro(body.deref().clone(), env.clone());
+            let new_body = match form {
+                Form::DefineMacro => body.clone(),
+                Form::Define => {
+                    println!("<expand {}>", name);
+                    let new_body = expand_macro(body.deref().clone(), env.clone());
+                    println!("</expand {}>", name);
 
-            match new_body {
-                Ok(b) => println!("exp_suc: {}", b),
-                Err(e) => println!("exp_err: {:?}", e),
-            }
+                    match new_body {
+                        Ok(nb) => {
+                            println!("OLD: {}", *body.clone());
+                            println!("NEW: {}", nb);
+
+                            println!();
+
+                            println!("OLD: {:?}", *body.clone());
+                            println!("NEW: {:?}", nb);
+                            Rc::new(nb)
+                        }
+                        Err(e) => {
+                            println!("Expansion of [{}] failed because of: {}", name, e);
+                            body.clone()
+                        }
+                    }
+                }
+                _ => unreachable!("should only get here from define or definemacro"),
+            };
 
             let info = CallableInfo {
                 args,
-                body,
+                body: new_body,
                 env: env.clone(),
             };
 
@@ -191,30 +211,26 @@ fn define(form: &Form, span: Span, body: &Value, env: Rc<RefCell<Env>>) -> Resul
 }
 
 fn expand_macro(ast: Value, env: Rc<RefCell<Env>>) -> Result<Value> {
-    println!("> {}", ast);
+    println!(">> {}", ast);
     let Value::Cons(pair, cons_span) = ast else {
-        return match ast {
-            _ => Ok(ast),
-        };
+        return Ok(ast);
     };
+
+    let tail = expand_macro(pair.1.clone(), env.clone())?;
 
     let head = match pair.0 {
         Value::Nil(s) => return Ok(Value::Nil(s)),
         Value::Form(_, span) => {
-            let tail = expand_macro(pair.1.clone(), env.clone())?;
             return Ok(Value::Cons(Rc::new((pair.0.clone(), tail)), span));
         }
         Value::Cons(_, _) => {
             let new_head = expand_macro(pair.0.clone(), env.clone())?;
-
-            let tail = expand_macro(pair.1.clone(), env.clone())?;
             return Ok(Value::Cons(Rc::new((new_head, tail)), cons_span));
         }
         _ => {
             let head = eval(pair.0.clone(), env.clone());
 
             let Ok(v) = head else {
-                let tail = expand_macro(pair.1.clone(), env.clone())?;
                 return Ok(Value::Cons(Rc::new((pair.0.clone(), tail)), cons_span));
             };
 
@@ -224,11 +240,10 @@ fn expand_macro(ast: Value, env: Rc<RefCell<Env>>) -> Result<Value> {
 
     match head {
         Value::Func(_, span) | Value::Builtin(_, span) => {
-            let tail = expand_macro(pair.1.clone(), env.clone())?;
             return Ok(Value::Cons(Rc::new((pair.0.clone(), tail)), span));
         }
         Value::Macro(info, span) => {
-            let nenv = super::setup_env(
+            let nenv = setup_env(
                 &pair.1,
                 cons_span,
                 &info.args,
@@ -242,7 +257,7 @@ fn expand_macro(ast: Value, env: Rc<RefCell<Env>>) -> Result<Value> {
 
             expand_macro(body, env)
         }
-        v => return Ok(v.clone()),
+        v => return Ok(Value::Cons(Rc::new((v, tail)), cons_span)),
     }
 }
 

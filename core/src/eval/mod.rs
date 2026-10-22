@@ -61,15 +61,6 @@ enum Trampoline {
     Continue(Value, Rc<RefCell<Env>>),
 }
 
-impl Trampoline {
-    fn unwrap(self) -> Value {
-        match self {
-            Trampoline::Done(value) => value,
-            Trampoline::Continue(value, _) => value,
-        }
-    }
-}
-
 pub fn eval(ast: Value, env: Rc<RefCell<Env>>) -> Result<Value> {
     let mut current = (ast, env);
 
