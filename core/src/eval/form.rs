@@ -53,10 +53,12 @@ pub(super) fn eval_form(
             let last_file = env.borrow().current_file.to_owned();
             env.borrow_mut().current_file = file_name.to_string();
 
-            process_file(file_name.to_string().into(), env.clone())
-                .context(format!("error processing files at {}", file_span))?;
+            let success = process_file(file_name.to_string().into(), env.clone())
+                .context(format!("error processing files at {}", file_span));
 
             env.borrow_mut().current_file = last_file;
+
+            success?;
 
             Ok(Trampoline::Done(Value::NoPrint))
         }
