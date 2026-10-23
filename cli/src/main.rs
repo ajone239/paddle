@@ -17,9 +17,13 @@ struct Cli {
     /// Specify the file to run
     file: Option<PathBuf>,
 
-    /// runs the repl
+    /// Runs the repl
     #[arg(short, long)]
     repl: bool,
+
+    /// Disable macro pre-expansion
+    #[arg(short, long)]
+    disable_pre_macro: bool,
 
     /// Skips std-lib
     #[arg(short, long)]
@@ -28,10 +32,12 @@ struct Cli {
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
+    let preexpand_macros = !cli.disable_pre_macro;
+
     let env = if !cli.no_std {
-        Env::with_stdlib()?
+        Env::with_stdlib(preexpand_macros)?
     } else {
-        Rc::new(RefCell::new(Env::default()))
+        Rc::new(RefCell::new(Env::new(preexpand_macros)))
     };
 
     if let Some(file_path) = cli.file.clone() {

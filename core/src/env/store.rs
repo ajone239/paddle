@@ -18,6 +18,7 @@ static STD_MAC: &str = include_str!("../../../examples/macros.pd");
 #[derive(Debug, PartialEq)]
 pub struct Env {
     pub current_file: String,
+    preexpand_macros: bool,
     env: HashMap<String, Value>,
     builtin: Rc<HashMap<String, Value>>,
     parent: Option<Rc<RefCell<Self>>>,
@@ -25,6 +26,16 @@ pub struct Env {
 
 impl Default for Env {
     fn default() -> Self {
+        Self::new(true)
+    }
+}
+
+fn tobi(f: Builtin) -> Value {
+    Value::Builtin(BuiltinFn(f), Span::default())
+}
+
+impl Env {
+    pub fn new(preexpand_macros: bool) -> Self {
         let mut benv = HashMap::new();
 
         let bins: &[(&str, Builtin)] = &[
@@ -75,23 +86,20 @@ impl Default for Env {
             current_file: "__main__".to_string(),
             env: HashMap::new(),
             builtin: Rc::new(benv),
+            preexpand_macros,
             parent: None,
         }
     }
-}
 
-fn tobi(f: Builtin) -> Value {
-    Value::Builtin(BuiltinFn(f), Span::default())
-}
-
-impl Env {
     pub fn new_child(parent: Rc<RefCell<Self>>) -> Self {
         let builtin = parent.borrow().builtin.clone();
         let current_file = parent.borrow().current_file.to_owned();
+        let preexpand_macros = parent.borrow().preexpand_macros;
 
         Self {
             current_file,
             env: HashMap::new(),
+            preexpand_macros,
             builtin,
             parent: Some(parent),
         }
@@ -123,6 +131,10 @@ impl Env {
         );
     }
 
+    pub fn preexpand_macros(&self) -> bool {
+        self.preexpand_macros
+    }
+
     pub fn resolve(&self, name: &str) -> Option<Value> {
         if let Some(val) = self.builtin.get(name) {
             return Some(val.clone());
@@ -143,8 +155,8 @@ impl Env {
         None
     }
 
-    pub fn with_stdlib() -> Result<Rc<RefCell<Self>>> {
-        let env = Rc::new(RefCell::new(Env::default()));
+    pub fn with_stdlib(preexpand_macros: bool) -> Result<Rc<RefCell<Self>>> {
+        let env = Rc::new(RefCell::new(Env::new(preexpand_macros)));
 
         process_named_bytes(STD_MAC_FILE.into(), STD_MAC, env.clone())
             .context("failed to parse the std lib macros")?;

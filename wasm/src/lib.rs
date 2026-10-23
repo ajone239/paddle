@@ -26,7 +26,7 @@ impl Default for Runner {
 #[wasm_bindgen]
 impl Runner {
     pub fn new() -> Self {
-        let env = Env::with_stdlib().expect("shouldn't fail");
+        let env = Env::with_stdlib(false).expect("shouldn't fail");
 
         Self { env }
     }

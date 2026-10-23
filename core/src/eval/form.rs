@@ -165,6 +165,7 @@ fn define(form: &Form, span: Span, body: &Value, env: Rc<RefCell<Env>>) -> Resul
 
             let new_body = match form {
                 Form::DefineMacro => body.clone(),
+                Form::Define if !env.borrow().preexpand_macros() => body.clone(),
                 Form::Define => {
                     let new_body = expand_macro(body.deref().clone(), env.clone());
 
