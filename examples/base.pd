@@ -1,73 +1,73 @@
-(def (map f xs)
-     (def (map2 xs acc)
-        (if (null? xs)
-            acc
-            (map2 (cdr xs) (cons (f (car xs)) acc))))
-     (reverse (map2 xs '())))
+(define (map f xs)
+  (letn loop ((xs xs) (acc '()))
+    (if (null? xs)
+      (reverse acc)
+      (loop (cdr xs) (cons (f (car xs)) acc)))))
+
 
 (define (flatmap f xs)
   (foldr append '() (map f xs)))
 
-(def (filter p xs)
+(define (filter p xs)
      (if (null? xs)
        '()
        (if (p (car xs))
            (cons (car xs) (filter p (cdr xs)))
            (filter p (cdr xs)))))
 
-(def (range n)
-     (def (range2 n acc)
-          (if (< n 0)
-            acc
-            (range2 (- n 1) (cons n acc))))
-     (range2 (- n 1) '()))
+(define (range n)
+  (letn loop ((n (- n 1)) (acc '()))
+    (if (< n 0)
+      acc
+      (loop (- n 1) (cons n acc)))))
 
-(def (foldl f init xs)
-     (if (not (xs))
-         init
-         (foldl f (f (car xs) init) (cdr xs))))
+(define (foldl f init xs)
+  (if (not (xs))
+    init
+    (foldl f (f (car xs) init) (cdr xs))))
 
-(def (foldr f init xs)
-     (def (fold xs)
-          (def xxs (cdr xs))
+(define (foldr f init xs)
+     (define (fold xs)
+          (define xxs (cdr xs))
           (if (not (xxs))
             (car xs)
             (f (car xs) (fold xxs))))
      (f init (fold xs)))
 
-(def (sum xs) (foldl + 0 xs))
+(define (sum xs) (foldl + 0 xs))
 
-(def (reverse xs) (foldl cons '() xs))
+(define (reverse xs) (foldl cons '() xs))
 
-(def (length xs)
-     (if (not xs)
-       0
-       (+ 1 (length (cdr xs)))))
+(define (length xs)
+  (letn loop ((xs xs) (l 0))
+    (if (null? xs)
+      l
+      (loop (cdr xs) (+ l 1)))))
 
-(def len length)
+(define len length)
 
-(def (> x y) (< y x))
-(def (<= x y) (not (< y x)))
-(def (>= x y) (not (< x y)))
+(define (> x y) (< y x))
+(define (<= x y) (not (< y x)))
+(define (>= x y) (not (< x y)))
 
-(def (pow x y)
+(define (pow x y)
      (if (< y 1)
        1
        (* x (pow x (- y 1)))))
 
-(def ^ pow)
+(define ^ pow)
 
-(def (cadr x) (car (cdr x)))
-(def (caddr x) (car (cdr (cdr x))))
-(def (cadddr x) (car (cdr (cdr (cdr x)))))
-(def (caddddr x) (car (cdr (cdr (cdr (cdr x))))))
+(define (cadr x) (car (cdr x)))
+(define (caddr x) (car (cdr (cdr x))))
+(define (cadddr x) (car (cdr (cdr (cdr x)))))
+(define (caddddr x) (car (cdr (cdr (cdr (cdr x))))))
 
 ; 10 is the byte value of ascii '\n'
 ; yes it's hacky but it saved me parser work
-(def nl (char 10))
-(def cr (char 13))
+(define nl (char 10))
+(define cr (char 13))
 
-(def (read-line)
+(define (read-line)
   (letn loop ((acc '()))
     (let? ((c (getchar)))
       (if (= c nl)

@@ -21,7 +21,7 @@ pub(super) fn eval_form(
     match form {
         Form::Quote => {
             let Value::Cons(tailtail, _) = tail else {
-                unreachable!("this is how quote is formed: {}", tail)
+                bail!("this is how quote is formed: {} {}", span, tail)
             };
             Ok(Trampoline::Done(tailtail.0.clone()))
         }
@@ -210,14 +210,11 @@ fn expand_macro(ast: Value, env: Rc<RefCell<Env>>) -> Result<Value> {
     let tail = expand_macro(pair.1.clone(), env.clone())?;
 
     let head = match pair.0 {
-        Value::Nil(s) | Value::Form(_, s) => {
-            return Ok(Value::Cons(Rc::new((pair.0.clone(), tail)), s));
-        }
         Value::Cons(_, _) => {
             let new_head = expand_macro(pair.0.clone(), env.clone())?;
             return Ok(Value::Cons(Rc::new((new_head, tail)), cons_span));
         }
-        _ => {
+        Value::Symbol(_, _) => {
             let head = eval(pair.0.clone(), env.clone());
 
             let Ok(v) = head else {
@@ -225,6 +222,9 @@ fn expand_macro(ast: Value, env: Rc<RefCell<Env>>) -> Result<Value> {
             };
 
             v
+        }
+        _ => {
+            return Ok(Value::Cons(Rc::new((pair.0.clone(), tail)), cons_span));
         }
     };
 

@@ -1,3 +1,19 @@
+;; Macro functions
+
+(define (mmap f xs)
+  (define (foldl f init xs)
+    (if (not (xs))
+      init
+      (foldl f (f (car xs) init) (cdr xs))))
+  (define (reverse xs) (foldl cons '() xs))
+  (define (map2 xs acc)
+    (if (null? xs)
+      acc
+      (map2 (cdr xs) (cons (f (car xs)) acc))))
+  (reverse (map2 xs '())))
+
+(define (cadr x) (car (cdr x)))
+
 ;; Fun Ifs
 
 (defm (unless cond body...)
@@ -45,13 +61,13 @@
 ;; Let
 
 (defm (let pairs body...)
-      (define vars (map car pairs))
-      (define vals (map cadr pairs))
+      (define vars (mmap car pairs))
+      (define vals (mmap cadr pairs))
       `((lambda ,vars @body...) @vals))
 
 (defm (let* pairs body...)
-      (define vars (map car pairs))
-      (define vals (map cadr pairs))
+      (define vars (mmap car pairs))
+      (define vals (mmap cadr pairs))
       (define (let*2 vars vals)
         (if (|| (null? vars) (null? vals))
           `(progn @body...)
@@ -59,16 +75,16 @@
       (let*2 vars vals))
 
 (defm (letrec pairs body...)
-      (define vars (map car pairs))
-      (define vars-nil (map (lambda (v) `(,v ())) vars))
-      (define set-pairs (map (lambda (p) `(set! ,(car p) ,(cadr p))) pairs))
+      (define vars (mmap car pairs))
+      (define vars-nil (mmap (lambda (v) `(,v ())) vars))
+      (define set-pairs (mmap (lambda (p) `(set! ,(car p) ,(cadr p))) pairs))
       `(let (@vars-nil)
                 @set-pairs
                 @body...))
 
 (defm (letn name pairs body...)
-      (define vars (map car pairs))
-      (define vals (map cadr pairs))
+      (define vars (mmap car pairs))
+      (define vals (mmap cadr pairs))
       `(letrec ((,name (lambda (@vars) @body...)))
          (,name @vals)))
 
