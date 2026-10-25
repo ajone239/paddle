@@ -94,16 +94,8 @@ fn normalize_err(err: anyhow::Error) -> anyhow::Error {
 /// stdlib pre-loaded, matching what the binary does.  Returns the last value.
 fn run(program: &str) -> Value {
     let env = Rc::new(RefCell::new(Env::default()));
-    process(STD_LIB, env.clone()).expect("stdlib failed to load");
-    let mut results = process(program, env.clone()).expect("program failed to run");
-    strip_value_span(&results.pop().expect("program produced no values"))
-}
-
-/// Run with stdlib + macros.pd loaded.  Returns the last value.
-fn run_macros(program: &str) -> Value {
-    let env = Rc::new(RefCell::new(Env::default()));
-    process(STD_LIB, env.clone()).expect("stdlib failed to load");
     process(MACROS_LIB, env.clone()).expect("macros failed to load");
+    process(STD_LIB, env.clone()).expect("stdlib failed to load");
     let mut results = process(program, env.clone()).expect("program failed to run");
     strip_value_span(&results.pop().expect("program produced no values"))
 }
