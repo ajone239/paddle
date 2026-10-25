@@ -4,16 +4,15 @@
       (reverse acc)
       (loop (cdr xs) (cons (f (car xs)) acc)))))
 
-
 (define (flatmap f xs)
   (foldr append '() (map f xs)))
 
 (define (filter p xs)
-     (if (null? xs)
-       '()
-       (if (p (car xs))
-           (cons (car xs) (filter p (cdr xs)))
-           (filter p (cdr xs)))))
+  (letn loop ((xs xs) (acc '()))
+    (cond
+      ((null? xs) (reverse acc))
+      ((p (car xs)) (loop (cdr xs) (cons (car xs) acc)))
+      (else (loop (cdr xs) acc)))))
 
 (define (range n)
   (letn loop ((n (- n 1)) (acc '()))
@@ -51,9 +50,10 @@
 (define (>= x y) (not (< x y)))
 
 (define (pow x y)
-     (if (< y 1)
-       1
-       (* x (pow x (- y 1)))))
+  (letn loop ((y y) (acc 1))
+    (if (< y 1)
+      acc
+      (loop (- y 1) (* x acc)))))
 
 (define ^ pow)
 

@@ -95,8 +95,7 @@
       `(progn
          (define f (lambda (,bind) @body...))
          (letn loop ((xs ,(cdr pair)))
-               (if (null? xs)
-                 '()
+               (unless (null? xs)
                  (progn
                    (f (car xs))
                    (loop (cdr xs)))))))
@@ -111,15 +110,12 @@
                  (loop (cdr xs) (cons (f (car xs)) acc))))))
 
 (defm (for/or pair body...)
-      (define bind (car pair))
-      (define iter (eval (cdr pair)))
       `(progn
-         (define f (lambda (,bind) @body...))
+         (define f (lambda (,(car pair)) @body...))
          (letn loop ((xs ,(cdr pair)))
                (if (null? xs)
                  #f
-                 (progn
-                   (define res (f (car xs)))
+                 (let ((res (f (car xs))))
                    (if res res
                      (loop (cdr xs))))))))
 
