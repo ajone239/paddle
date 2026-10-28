@@ -21,7 +21,7 @@ pub mod test_utils {
         lower::lower,
         parser::parse_expr,
         span::Span,
-        value::Value,
+        value::{Form, Value},
     };
 
     // `Value` and `EvalError` both carry a `Span` now, and both derive `PartialEq`
@@ -121,6 +121,10 @@ pub mod test_utils {
         strip_value_span(&last.unwrap().unwrap())
     }
 
+    pub fn nil() -> Value {
+        Value::Nil(Span::default())
+    }
+
     pub fn num(n: f64) -> Value {
         Value::Num(n, Span::default())
     }
@@ -129,8 +133,24 @@ pub mod test_utils {
         Value::Symbol(s.into(), Span::default())
     }
 
+    pub fn form(f: Form) -> Value {
+        Value::Form(f, Span::default())
+    }
+
     pub fn cons(head: Value, tail: Value) -> Value {
         Value::Cons(Rc::new((head, tail)), Span::default())
+    }
+
+    pub fn progn(tail: Value) -> Value {
+        cons(form(Form::Progn), tail)
+    }
+
+    pub fn quote(tail: Value) -> Value {
+        cons(form(Form::Quote), tail)
+    }
+
+    pub fn if_st(cond: Value, t: Value, f: Value) -> Value {
+        cons(form(Form::If), cons(cond, cons(t, cons(f, nil()))))
     }
 
     pub fn eval_err(s: &str) -> anyhow::Error {

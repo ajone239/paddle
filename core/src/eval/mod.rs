@@ -125,7 +125,6 @@ fn eval_step(ast: Value, env: Rc<RefCell<Env>>) -> Result<Trampoline> {
             let body = info.body.deref().clone().set_span(fspan);
             if is_macro {
                 let body = eval(body, nenv)?;
-                // println!("{}", body);
                 Ok(Trampoline::Continue(body, env.clone()))
             } else {
                 Ok(Trampoline::Continue(body, nenv.clone()))

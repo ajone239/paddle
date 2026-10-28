@@ -24,8 +24,8 @@ fn env_persists_across_separate_process_calls() {
 fn chained_function_definitions() {
     assert_eq!(
         run("(def (double x) (* x 2))
-                 (def (quad x) (double (double x)))
-                 (quad 5)"),
+             (def (quad x) (double (double x)))
+             (quad 5)"),
         num(20.0)
     );
 }

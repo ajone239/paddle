@@ -21,38 +21,13 @@ mod filter;
 mod length;
 mod let_forms;
 mod list_accessors;
+mod macro_expansion;
 mod map;
 mod power;
 mod programs;
 mod range;
 
-fn num(n: f64) -> Value {
-    Value::Num(n, Span::default())
-}
-
-// `Value` and `EvalError` both carry a `Span` now, and both derive `PartialEq`
-// over it. Real spans from parsing never equal the `Span::default()` placeholder
-// tests build expected values with, so every comparison helper normalizes spans
-// away before handing values back to the tests.
-fn strip_value_span(v: &Value) -> Value {
-    match v {
-        Value::NoPrint => Value::NoPrint,
-        Value::Nil(_) => Value::Nil(Span::default()),
-        Value::Bool(b, _) => Value::Bool(*b, Span::default()),
-        Value::Char(c, _) => Value::Char(*c, Span::default()),
-        Value::Num(n, _) => Value::Num(*n, Span::default()),
-        Value::Symbol(s, _) => Value::Symbol(s.clone(), Span::default()),
-        Value::Form(f, _) => Value::Form(*f, Span::default()),
-        Value::Str(s, _) => Value::Str(s.clone(), Span::default()),
-        Value::Cons(pair, _) => Value::Cons(
-            Rc::new((strip_value_span(&pair.0), strip_value_span(&pair.1))),
-            Span::default(),
-        ),
-        Value::Builtin(f, _) => Value::Builtin(*f, Span::default()),
-        Value::Macro(m, _) => Value::Macro(m.clone(), Span::default()),
-        Value::Func(f, _) => Value::Func(f.clone(), Span::default()),
-    }
-}
+use paddle_core::test_utils::*;
 
 fn strip_eval_error_span(e: EvalError) -> EvalError {
     match e {

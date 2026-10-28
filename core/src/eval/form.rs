@@ -79,7 +79,9 @@ pub(super) fn eval_form(
             Ok(Trampoline::Continue(val, env.clone()))
         }
         Form::DefineMacro | Form::Define => {
-            define(&form, span, &tail, env)?;
+            let (tag, value) = define(&form, span, &tail, env.clone())?;
+
+            env.borrow_mut().define(&tag, value);
 
             Ok(Trampoline::Done(Value::NoPrint))
         }
@@ -144,7 +146,7 @@ pub(super) fn eval_form(
     }
 }
 
-fn define(form: &Form, span: Span, body: &Value, env: Rc<RefCell<Env>>) -> Result<()> {
+fn define(form: &Form, span: Span, body: &Value, env: Rc<RefCell<Env>>) -> Result<(String, Value)> {
     let mut list = body.to_cons_iter();
     let head = list.next().ok_or(EvalError::BadDefineArgs(span))?;
 
@@ -156,7 +158,7 @@ fn define(form: &Form, span: Span, body: &Value, env: Rc<RefCell<Env>>) -> Resul
                 return Err(EvalError::BadDefineArgs(span).into());
             }
             let value = eval(tail.clone(), env.clone())?;
-            env.borrow_mut().define(atom, value);
+            Ok((atom.to_string(), value))
         }
         Value::Cons(_, _) => {
             let (name, args, body) = make_callable(form, body)?;
@@ -194,12 +196,10 @@ fn define(form: &Form, span: Span, body: &Value, env: Rc<RefCell<Env>>) -> Resul
                 _ => unreachable!("should only get here from define or definemacro"),
             };
 
-            env.borrow_mut().define(tag.as_str(), proc);
+            Ok((tag, proc))
         }
         _ => return Err(EvalError::BadDefineHead(span).into()),
-    };
-
-    Ok(())
+    }
 }
 
 fn expand_macro(ast: Value, env: Rc<RefCell<Env>>) -> Result<Value> {

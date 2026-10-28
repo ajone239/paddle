@@ -43,18 +43,12 @@ fn let_star_later_binding_sees_earlier() {
 
 #[test]
 fn let_star_chain_of_three() {
-    assert_eq!(
-        run("(let* ((a 1) (b (+ a 1)) (c (+ b 1))) c)"),
-        num(3.0)
-    );
+    assert_eq!(run("(let* ((a 1) (b (+ a 1)) (c (+ b 1))) c)"), num(3.0));
 }
 
 #[test]
 fn let_star_inner_shadows_outer() {
-    assert_eq!(
-        run("(def z 99) (let* ((z 7) (w (* z 2))) w)"),
-        num(14.0)
-    );
+    assert_eq!(run("(def z 99) (let* ((z 7) (w (* z 2))) w)"), num(14.0));
 }
 
 //  letrec
@@ -69,11 +63,9 @@ fn letrec_test() {
 #[test]
 fn letrec_mutual_recursion() {
     assert_eq!(
-        run(
-            "(letrec ((ev? (.\\ (n) (if (= n 0) #t (od? (- n 1))))) \
+        run("(letrec ((ev? (.\\ (n) (if (= n 0) #t (od? (- n 1))))) \
                               (od? (.\\ (n) (if (= n 0) #f (ev? (- n 1)))))) \
-                       (ev? 10))"
-        ),
+                       (ev? 10))"),
         Value::Bool(true, Span::default())
     );
 }

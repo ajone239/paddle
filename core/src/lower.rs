@@ -50,31 +50,17 @@ fn classify(atom: &str, span: Span) -> Value {
 
 #[cfg(test)]
 mod tests {
-    use std::rc::Rc;
-
     use super::lower;
     use crate::lexer::lex_no_file;
     use crate::parser::parse_expr;
     use crate::span::Span;
-    use crate::test_utils::strip_value_span;
+    use crate::test_utils::*;
     use crate::value::Value;
 
     fn lower_str(s: &str) -> Value {
         let tokens = lex_no_file(s);
         let (ast, _) = parse_expr(&tokens).unwrap();
         strip_value_span(&lower(&ast))
-    }
-
-    fn cons(head: Value, tail: Value) -> Value {
-        Value::Cons(Rc::new((head, tail)), Span::default())
-    }
-
-    fn num(n: f64) -> Value {
-        Value::Num(n, Span::default())
-    }
-
-    fn sym(s: &str) -> Value {
-        Value::Symbol(Rc::from(s), Span::default())
     }
 
     #[test]
