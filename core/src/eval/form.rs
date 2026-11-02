@@ -54,7 +54,7 @@ pub(super) fn eval_form(
             env.borrow_mut().current_file = file_name.to_string();
 
             let success = process_file(file_name.to_string().into(), env.clone())
-                .context(format!("error processing files at {}", file_span));
+                .with_context(|| format!("error processing files at {}", file_span));
 
             env.borrow_mut().current_file = last_file;
 
@@ -103,7 +103,7 @@ pub(super) fn eval_form(
 
             env.borrow_mut()
                 .set_bang(atom, value)
-                .context(format!("error set!ing at {}", span))?;
+                .with_context(|| format!("error set!ing at {}", span))?;
 
             Ok(Trampoline::Done(Value::NoPrint))
         }

@@ -87,11 +87,13 @@ fn eval_step(ast: Value, env: Rc<RefCell<Env>>) -> Result<Trampoline> {
         Value::Nil(_) => Ok(Trampoline::Done(Value::Nil(Span::default()))),
         Value::Form(f, span) => eval_form(f, span, pair.1.clone(), env),
         _ => {
-            let head = eval(pair.0.clone(), env.clone()).context(format!(
-                "error evaling head of list [{}] at {}",
-                pair.0.clone(),
-                cons_span
-            ))?;
+            let head = eval(pair.0.clone(), env.clone()).with_context(|| {
+                format!(
+                    "error evaling head of list [{}] at {}",
+                    pair.0.clone(),
+                    cons_span
+                )
+            })?;
             let tail = &pair.1;
 
             let (is_macro, info, fspan) = match head {
@@ -102,11 +104,9 @@ fn eval_step(ast: Value, env: Rc<RefCell<Env>>) -> Result<Trampoline> {
                         .to_cons_iter()
                         .map(|v| eval(v.clone(), env.clone()))
                         .collect::<Result<_, _>>()?)
-                    .context(format!(
-                        "error calling [{}] at {}",
-                        pair.0.clone(),
-                        cons_span
-                    ))?;
+                    .with_context(|| {
+                        format!("error calling [{}] at {}", pair.0.clone(), cons_span)
+                    })?;
                     return Ok(Trampoline::Done(results));
                 }
                 // TODO(austin.jones): understand or kill this.
