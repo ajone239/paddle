@@ -70,7 +70,7 @@ impl Value {
             Value::Form(f, _) => Value::Form(f, new_span),
             Value::Builtin(f, _) => Value::Builtin(f, new_span),
             Value::Macro(m, _) => Value::Macro(m, new_span),
-            Value::Func(f, _) => Value::Macro(f, new_span),
+            Value::Func(f, _) => Value::Func(f, new_span),
         }
     }
     pub fn get_span(&self) -> Span {
