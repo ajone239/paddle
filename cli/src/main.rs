@@ -21,6 +21,10 @@ struct Cli {
     #[arg(short, long)]
     repl: bool,
 
+    /// Provide a string for quick running
+    #[arg(short, long)]
+    clause: Option<String>,
+
     /// Disable macro pre-expansion
     #[arg(short, long)]
     disable_pre_macro: bool,
@@ -40,6 +44,17 @@ fn main() -> Result<()> {
         Rc::new(RefCell::new(Env::new(preexpand_macros)))
     };
 
+    if let Some(clause) = cli.clause.clone() {
+        let file_id = intern("CLI_CLAUSE".to_string());
+        let lexed = lexer::lex(&clause, file_id);
+
+        let cursor = Cursor::new(&lexed, env.clone());
+
+        for r in cursor {
+            display_result(r);
+        }
+    }
+
     if let Some(file_path) = cli.file.clone() {
         let file_str = file_path
             .to_str()
@@ -57,7 +72,7 @@ fn main() -> Result<()> {
         }
     }
 
-    if cli.repl || cli.file.is_none() {
+    if cli.repl || (cli.file.is_none() && cli.clause.is_none()) {
         run_repl(env)?
     }
 
