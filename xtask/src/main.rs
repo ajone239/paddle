@@ -10,6 +10,8 @@ fn main() -> ExitCode {
         .arg("3")
         .arg("--prepare")
         .arg("cargo build --release")
+        .arg("paddle ./examples/nqueens.pd")
+        .arg("./target/release/paddle ./examples/nqueens.pd")
         .arg("paddle ./examples/sudoku.pd")
         .arg("./target/release/paddle ./examples/sudoku.pd")
         .status()
